@@ -1,3 +1,3 @@
-sudo apt install postgresql # version 9.5<br>
-sudo apt install postgis # version 2.2<br>
-sudo apt install npm # node package manager<br>
+__sudo apt install postgresql__ # version 9.5<br>
+__sudo apt install postgis__ # version 2.2<br>
+__sudo apt install npm__ # node package manager<br>

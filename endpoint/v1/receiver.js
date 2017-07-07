@@ -1,7 +1,7 @@
 'use strict';
 
-const connection = require("../database/connection");
-const logger = require('../util/logger');
+const connection = require("../../database/connection");
+const logger = require('../../util/logger');
 
 module.exports = {
 

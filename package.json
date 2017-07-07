@@ -9,6 +9,10 @@
   "author": "SASA SpA-AG",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.15.3"
+    "express": "^4.15.3",
+    "express-group-routes": "^1.1.0",
+    "pg": "^6.4.0",
+    "pg-native": "^1.10.1",
+    "tracer": "^0.8.9"
   }
 }

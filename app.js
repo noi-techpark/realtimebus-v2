@@ -1,10 +1,32 @@
+'use strict';
+
 const express = require('express');
+const connection = require("./database/connection");
+const logger = require("./util/logger");
+
+const v1Receiver = require("./v1/receiver");
+
+require('express-group-routes');
 const app = express();
 
-app.get('/', function (req, res) {
-    res.send('Hello World!')
+connection.connect(function (error) {
+    if (error) throw error;
+
+    logger.warn("Connected to database");
+
+    startServer();
 });
 
-app.listen(80, function () {
-    console.log('Example app listening on port 80!')
-});
+function startServer() {
+    app.group("/v1", (router) => {
+
+        router.get("/receiver",function (req, res) {
+            v1Receiver.receiver(req, res);
+        });
+
+    });
+
+    app.listen(80, function () {
+        logger.warn('Example app listening on port 80!')
+    });
+}

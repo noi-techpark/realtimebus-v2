@@ -1,12 +1,13 @@
 'use strict';
 
+require('express-group-routes');
+
 const express = require('express');
 const connection = require("./database/connection");
 const logger = require("./util/logger");
 
 const v1Receiver = require("./endpoint/v1/receiver");
 
-require('express-group-routes');
 const app = express();
 
 connection.connect(function (error) {

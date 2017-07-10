@@ -66,6 +66,6 @@ function startServer() {
     });
 
     app.listen(8080, function () {
-        logger.debug('Server started on port 80')
+        logger.warn('Server started on port 80')
     })
 }

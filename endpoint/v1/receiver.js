@@ -24,44 +24,60 @@ module.exports = {
             let featureList = FeatureList.createFromGeoJson(req.body);
             let positionUpdater = new ActualPositionUpdater();
 
-            logger.debug("Test");
+            logger.debug(`Inserting ${featureList.getFeatures().length} buses`);
 
-            let promiseChain = [];
+            let chain = Promise.resolve();
 
-            for (let feature in featureList.getFeatures()) {
+            for (let feature of featureList.getFeatures()) {
                 // TODO: Check if feature contains trip id
+
+                logger.log(`Feature: ${JSON.stringify(feature)}`);
+
+                feature.properties.frt_fid = parseInt(feature.properties.frt_fid);
+                let tripId = feature.properties.frt_fid;
 
                 /*if (empty($feature['properties']['frt_fid'])) {
                     $this->logger->info("feature has no frt_fid");
                     continue;
                 }*/
 
-                // $this->db->beginTransaction();
-
                 let wktString = DataWriter.wktFromGeoArray(feature.geometry);
 
                 feature.geometry_sql = `ST_Transform(ST_GeomFromText('${wktString}', ${dataSrid}), ${dbSrid})`;
 
                 let lineReference = new ActualPositionLineReference();
-                let lineReferenceData = lineReference.getLineReference(feature);
 
-                logger.debug(`lineReferenceData='${$lineReferenceData}'`);
+                chain = chain
+                    .then(() => {
+                        return lineReference.getLineReference(feature)
+                    })
+                    .then((result) => {
+                        feature.properties = Object.assign(feature.properties, result);
 
-                // $feature['properties'] = array_merge($feature['properties'], $lineReferenceData);
+                        logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
 
-                feature.properties = Object.assign(feature.properties, lineReferenceData);
-
-                promiseChain.push(positionUpdater.insert(feature.properties.frt_fid, feature));
+                        return result
+                    })
+                    .then(() => {
+                        return positionUpdater.checkConditions(tripId, feature)
+                    })
+                    .then(() => {
+                        return positionUpdater.checkIfInternal(tripId, feature)
+                    })
+                    .then(() => {
+                        return positionUpdater.insertIntoDatabase(tripId, feature)
+                    })
+                    .catch(error => {
+                        logger.error(`Error inserting trip ${tripId}: ${error}`);
+                    });
             }
 
-            /*Promise.all(promiseChain)
-                .then(() => {
-                    resolve()
-                }, error => {
+            chain.then(() => {
+                resolve()
+            })
+                .catch(error => {
                     reject(error)
-                });*/
-
-            resolve();
+                })
         });
     }
 };

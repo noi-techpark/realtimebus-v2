@@ -4,6 +4,8 @@ require('express-group-routes');
 require("./util/utils");
 
 const express = require('express');
+const bodyParser = require('body-parser');
+
 const connection = require("./database/connection");
 const logger = require("./util/logger");
 
@@ -16,8 +18,16 @@ function logRequests(req, res, next) {
     next();
 }
 
+process.on('unhandledRejection', (reason, promise) => {
+    console.log('Unhandled Rejection at: Promise', promise, 'reason:', reason);
+    // application specific logging, throwing an error, or other logic here
+});
+
 const app = express();
+
 app.use(logRequests);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded());
 
 connection.connect(function (error) {
     if (error) throw error;

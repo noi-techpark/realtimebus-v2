@@ -5,7 +5,7 @@ const logger = require("../../util/logger");
 
 const ActualPositionLineReference = require("./writertask/ActualPositionLineReference");
 
-class DataWriter {
+module.exports = class DataWriter {
 
     static wktFromGeoArray(jsonArray) {
         if (jsonArray.type === 'Point') {
@@ -14,4 +14,4 @@ class DataWriter {
             throw new Error(`Geometry type '${jsonArray.type}' is not supported.`);
         }
     }
-}
+};

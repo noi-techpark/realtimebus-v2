@@ -9,11 +9,12 @@
   "author": "SASA SpA-AG",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.17.2",
     "express": "^4.15.3",
     "express-group-routes": "^1.1.0",
     "pg": "^6.4.0",
     "pg-native": "^1.10.1",
-    "tracer": "^0.8.9",
-    "pg-pool": "latest"
+    "pg-pool": "latest",
+    "tracer": "^0.8.9"
   }
 }

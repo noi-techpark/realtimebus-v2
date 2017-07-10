@@ -63,6 +63,8 @@ module.exports = class Positions {
             })
             .then(sql => connection.query(sql))
             .then(result => {
+                console.log(result);
+
                 let featureList = new FeatureList();
 
                 for (let row of result.rows) {

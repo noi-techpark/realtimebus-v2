@@ -20,6 +20,13 @@ class FeatureList {
         return this.features;
     }
 
+    getFeatureCollection() {
+        return {
+            type: "FeatureCollection",
+            features: this.features,
+        };
+    }
+
     static createFromGeoJson(json) {
         return FeatureList.createFromArray(json)
     }

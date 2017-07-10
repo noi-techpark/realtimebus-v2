@@ -28,6 +28,9 @@ const app = express();
 app.use(logRequests);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded());
+app.use(bodyParser.raw({
+    limit: '10mb'
+}));
 
 connection.connect(function (error) {
     if (error) throw error;
@@ -51,6 +54,9 @@ function startServer() {
                 })
         });
 
+        router.post("/vdv", function (req, res) {
+            res.status(200).send(req.body);
+        });
     });
 
     app.listen(80, function () {

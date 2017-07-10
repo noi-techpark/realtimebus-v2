@@ -51,7 +51,7 @@ function startServer() {
                     res.status(200).json(positions);
                 })
                 .catch(error => {
-                    logger.error(`Error: ${error}`);
+                    logger.error(error);
                     res.status(500).json({success: false, error: error})
                 })
         });
@@ -62,7 +62,7 @@ function startServer() {
                     res.status(200).json({success: true});
                 })
                 .catch(error => {
-                    logger.error(`Error: ${error}`);
+                    logger.error(error);
                     res.status(500).json({success: false, error: error})
                 })
         });
@@ -73,7 +73,7 @@ function startServer() {
                     res.status(200).json(positions);
                 })
                 .catch(error => {
-                    logger.error(`Error: ${error}`);
+                    logger.error(error);
                     res.status(500).json({success: false, error: error})
                 })
         });

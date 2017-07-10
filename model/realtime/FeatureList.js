@@ -1,6 +1,6 @@
 'use strict';
 
-module.exports = class FeatureList {
+class FeatureList {
 
     constructor() {
         this.features = []
@@ -20,19 +20,12 @@ module.exports = class FeatureList {
         return this.features;
     }
 
-    getFeatureCollection() {
-        return {
-            type: "FeatureCollection",
-            features: this.features,
-        };
-    }
-
     static createFromGeoJson(json) {
         return FeatureList.createFromArray(json)
     }
 
     static createFromArray(array) {
-        if (!"features" in array) {
+        if (!array.hasOwnProperty("features")) {
             throw("Supplied JSON does not contain required object 'features'");
         }
 
@@ -46,3 +39,5 @@ module.exports = class FeatureList {
         return instance;
     }
 }
+
+module.exports = FeatureList;

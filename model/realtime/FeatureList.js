@@ -13,29 +13,27 @@ module.exports = class FeatureList {
             properties: properties
         };
 
-        this.features.add(feature);
+        this.features.push(feature);
     }
 
     getFeatures() {
         return this.features;
     }
 
+    getFeatureCollection() {
+        return {
+            type: "FeatureCollection",
+            features: this.features,
+        };
+    }
+
     static createFromGeoJson(json) {
-        console.log(json);
-
-        let data = JSON.parse(json);
-
-        console.log("error");
-
-        // TODO: Check if JSON parsing succeeded?
-
-        return FeatureList.createFromArray(data)
+        return FeatureList.createFromArray(json)
     }
 
     static createFromArray(array) {
-        if (!"features" in obj) {
-            console.log("error");
-            throw new Error("Supplied JSON does not contain required object 'features'");
+        if (!"features" in array) {
+            throw("Supplied JSON does not contain required object 'features'");
         }
 
         let instance = new FeatureList();

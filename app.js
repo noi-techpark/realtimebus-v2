@@ -10,6 +10,7 @@ const fs = require('fs');
 const logger = require("./util/logger");
 
 const v1Receiver = require("./endpoint/v1/receiver");
+const v1Realtime = require("./endpoint/v1/realtime");
 
 function logRequests(req, res, next) {
     logger.info(`${req.method} ${req.url}`);
@@ -42,9 +43,20 @@ function startServer() {
     app.group("/v1", (router) => {
 
         router.post("/receiver", function (req, res) {
-            v1Receiver.receiver(req, res)
+            v1Receiver.receiver(req)
                 .then(() => {
                     res.status(200).json({success: true});
+                })
+                .catch(error => {
+                    logger.error(`Error: ${error}`);
+                    res.status(500).json({success: false, error: error})
+                })
+        });
+
+        router.get("/positions", function (req, res) {
+            v1Realtime.positions(req)
+                .then(positions => {
+                    res.status(200).json(positions);
                 })
                 .catch(error => {
                     logger.error(`Error: ${error}`);
@@ -65,7 +77,7 @@ function startServer() {
         });
     });
 
-    app.listen(8080, function () {
+    app.listen(80, function () {
         logger.warn('Server started on port 80')
     })
 }

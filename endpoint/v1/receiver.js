@@ -11,7 +11,7 @@ const ActualPositionUpdater = require("../../model/realtime/writertask/ActualPos
 
 module.exports = {
 
-    receiver: function (req, res) {
+    receiver: function (req) {
         return new Promise(function (resolve, reject) {
             // TODO: What do these do and why are they needed?
 

@@ -9,6 +9,7 @@
   "author": "SASA SpA-AG",
   "license": "ISC",
   "dependencies": {
+    "adm-zip": "^0.4.7",
     "body-parser": "^1.17.2",
     "express": "^4.15.3",
     "express-fileupload": "^0.1.4",

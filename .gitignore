@@ -4,6 +4,9 @@
 # User-specific stuff:
 .idea/**/workspace.xml
 .idea/**/tasks.xml
+.idea/**/webServers.xml
+.idea/**/deployment.xml
+
 .idea/dictionaries
 
 # Sensitive or high-churn files:

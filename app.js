@@ -69,8 +69,8 @@ function startServer() {
 
         router.post("/vdv", function (req, res) {
             v1Vdv.upload(req)
-                .then(positions => {
-                    res.status(200).json(positions);
+                .then(success => {
+                    res.status(200).json(success);
                 })
                 .catch(error => {
                     logger.error(error);

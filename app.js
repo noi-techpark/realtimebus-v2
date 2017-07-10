@@ -8,7 +8,15 @@ const logger = require("./util/logger");
 
 const v1Receiver = require("./endpoint/v1/receiver");
 
+require('express-group-routes');
+
+function logRequests(req, res, next) {
+    logger.info(`${req.method} ${req.url}`);
+    next();
+}
+
 const app = express();
+app.use(logRequests);
 
 connection.connect(function (error) {
     if (error) throw error;
@@ -21,8 +29,13 @@ connection.connect(function (error) {
 function startServer() {
     app.group("/v1", (router) => {
 
-        router.get("/receiver",function (req, res) {
-            v1Receiver.receiver(req, res);
+        router.get("/receiver", function (req, res) {
+            v1Receiver.receiver(req, res)
+                .then(() => {
+                    res.status(200).json({success: true});
+                }, error => {
+                    res.status(500).json({success: false, error: error});
+                });
         });
 
     });

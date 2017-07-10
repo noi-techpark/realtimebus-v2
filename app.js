@@ -8,7 +8,6 @@ const connection = require("./database/connection");
 const express = require('express');
 const fs = require('fs');
 const logger = require("./util/logger");
-const date = require('time')(Date);
 
 const v1Realtime = require("./endpoint/v1/realtime");
 const v1Receiver = require("./endpoint/v1/receiver");
@@ -32,8 +31,6 @@ app.use(bodyParser.urlencoded());
 app.use(bodyParser.raw({
     limit: '10mb'
 }));
-
-date.setTimezone("Europe/Rome");
 
 connection.connect(function (error) {
     if (error) throw error;

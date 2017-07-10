@@ -6,6 +6,7 @@ require("./util/utils");
 const express = require('express');
 const connection = require("./database/connection");
 const logger = require("./util/logger");
+const bodyParser = require('body-parser');
 
 const v1Receiver = require("./endpoint/v1/receiver");
 
@@ -17,7 +18,11 @@ function logRequests(req, res, next) {
 }
 
 const app = express();
+
 app.use(logRequests);
+app.use(bodyParser.raw({
+    limit: '10mb'
+}));
 
 connection.connect(function (error) {
     if (error) throw error;
@@ -41,6 +46,9 @@ function startServer() {
                 })
         });
 
+        router.post("/vdv", function (req, res) {
+            res.status(200).send(req.body);
+        });
     });
 
     app.listen(80, function () {

@@ -24,60 +24,44 @@ module.exports = {
             let featureList = FeatureList.createFromGeoJson(req.body);
             let positionUpdater = new ActualPositionUpdater();
 
-            logger.debug(`Inserting ${featureList.getFeatures().length} buses`);
+            logger.debug("Test");
 
-            let chain = Promise.resolve();
+            let promiseChain = [];
 
-            for (let feature of featureList.getFeatures()) {
+            for (let feature in featureList.getFeatures()) {
                 // TODO: Check if feature contains trip id
-
-                logger.log(`Feature: ${JSON.stringify(feature)}`);
-
-                feature.properties.frt_fid = parseInt(feature.properties.frt_fid);
-                let tripId = feature.properties.frt_fid;
 
                 /*if (empty($feature['properties']['frt_fid'])) {
                     $this->logger->info("feature has no frt_fid");
                     continue;
                 }*/
 
+                // $this->db->beginTransaction();
+
                 let wktString = DataWriter.wktFromGeoArray(feature.geometry);
 
                 feature.geometry_sql = `ST_Transform(ST_GeomFromText('${wktString}', ${dataSrid}), ${dbSrid})`;
 
                 let lineReference = new ActualPositionLineReference();
+                let lineReferenceData = lineReference.getLineReference(feature);
 
-                chain = chain
-                    .then(() => {
-                        return lineReference.getLineReference(feature)
-                    })
-                    .then((result) => {
-                        feature.properties = Object.assign(feature.properties, result);
+                logger.debug(`lineReferenceData='${$lineReferenceData}'`);
 
-                        logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
+                // $feature['properties'] = array_merge($feature['properties'], $lineReferenceData);
 
-                        return result
-                    })
-                    .then(() => {
-                        return positionUpdater.checkConditions(tripId, feature)
-                    })
-                    .then(() => {
-                        return positionUpdater.checkIfInternal(tripId, feature)
-                    })
-                    .then(() => {
-                        return positionUpdater.insertIntoDatabase(tripId, feature)
-                    })
-                    .catch(error => {
-                        logger.error(`Error inserting trip ${tripId}: ${error}`);
-                    });
+                feature.properties = Object.assign(feature.properties, lineReferenceData);
+
+                promiseChain.push(positionUpdater.insert(feature.properties.frt_fid, feature));
             }
 
-            chain = chain.then(result => {
-                resolve()
-            })
-                .catch(error => {
+            /*Promise.all(promiseChain)
+                .then(() => {
+                    resolve()
+                }, error => {
                     reject(error)
-                })
+                });*/
+
+            resolve();
         });
     }
 };

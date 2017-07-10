@@ -3,15 +3,13 @@
 require('express-group-routes');
 require("./util/utils");
 
-const express = require('express');
 const bodyParser = require('body-parser');
-
 const connection = require("./database/connection");
+const express = require('express');
+const fs = require('fs');
 const logger = require("./util/logger");
 
 const v1Receiver = require("./endpoint/v1/receiver");
-
-require('express-group-routes');
 
 function logRequests(req, res, next) {
     logger.info(`${req.method} ${req.url}`);
@@ -37,7 +35,7 @@ connection.connect(function (error) {
 
     logger.warn("Connected to database");
 
-    startServer();
+    startServer()
 });
 
 function startServer() {
@@ -50,16 +48,24 @@ function startServer() {
                 })
                 .catch(error => {
                     logger.error(`Error: ${error}`);
-                    res.status(500).json({success: false, error: error});
+                    res.status(500).json({success: false, error: error})
                 })
         });
 
         router.post("/vdv", function (req, res) {
-            res.status(200).send(req.body);
+            fs.writeFile('vdv/vdv.zip', req.body, function(err) {
+                if (err) {
+                    res.status(500).json({success: false});
+                    return
+                }
+
+                logger.debug("Saved zip file containing VDV data");
+                res.status(200).json({success: true})
+            });
         });
     });
 
-    app.listen(80, function () {
-        logger.warn('Example app listening on port 80!')
-    });
+    app.listen(8080, function () {
+        logger.debug('Server started on port 80')
+    })
 }

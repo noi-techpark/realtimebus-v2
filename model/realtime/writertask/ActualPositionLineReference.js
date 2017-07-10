@@ -1,14 +1,20 @@
 'use strict';
 
 const connection = require("../../../database/connection");
-const logger = require("../../../util/logger");
 
-module.exports = class ActualPositionLineReference {
+class ActualPositionLineReference {
 
     getLineReference(feature) {
-        // TODO: WHERE rec_frt.teq_nummer = ${feature.properties.frt_fid}
+        let retVal = {
+            li_nr: 'null',
+            str_li_var: null,
+            li_lfd_nr: 'null',
+            interpolation_distance: 'null',
+            interpolation_linear_ref: 'null',
+        };
 
-        return Promise.resolve(`
+        if ("geometry_sql" in feature) {
+            let getLineSegmentSql = `
                 SELECT
                 lid_verlauf.li_nr,
                     lid_verlauf.str_li_var,
@@ -19,43 +25,33 @@ module.exports = class ActualPositionLineReference {
                 INNER JOIN vdv.lid_verlauf
                 ON rec_frt.li_nr = lid_verlauf.li_nr
                 AND rec_frt.str_li_var = lid_verlauf.str_li_var
-                WHERE rec_frt.frt_fid = ${feature.properties.frt_fid}
+                WHERE rec_frt.teq_nummer = ${feature.properties.frt_fid}
                 ORDER BY ST_Distance(lid_verlauf.the_geom, ${feature.geometry_sql})
                 LIMIT 1
-            `)
-            .then(sql => connection.query(sql))
-            .then(result => {
-                console.log(result);
+            `;
 
-                if (result.rowCount === 0) {
-                    logger.debug(`Trip ${feature.properties.frt_fid} does not yet exist in database`);
-
-                    return {
-                        li_nr: 'null',
-                        str_li_var: null,
-                        li_lfd_nr: 'null',
-                        interpolation_distance: 'null',
-                        interpolation_linear_ref: 'null',
-                    };
+            connection.query(getLineSegmentSql, function (err, res) {
+                if (err) {
+                    throw new Error(`Could not run query ${err}`);
                 }
 
-                let reference = result.rows[0];
-                logger.log(`lineReferenceData='${reference}'`);
-
-                return reference;
+                retVal = res.rows[0];
             });
+        }
+
+        return retVal;
     }
 
-    /*execute(featureId, feature, filterValue) {
-        if (filterValue != DataFilter::IS_OK) {
+    execute(featureId, feature, filterValue) {
+        /*if (filterValue != DataFilter::IS_OK) {
             return;
-        }
+        }*/
 
         // TODO: Why is there a return here? (Also found in original code 🤔)
 
         return;
 
-        $getLineSegmentSql =
+        /*$getLineSegmentSql =
     <<<
         EOQ
         SELECT
@@ -115,6 +111,6 @@ module.exports = class ActualPositionLineReference {
             frt_fid = {$data[0]['frt_fid']}
             EOQ;
             $this->db->exec($setLineSegmentSql);
-        }
-    }*/
-};
+        }*/
+    }
+}

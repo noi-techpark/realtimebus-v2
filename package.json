@@ -11,10 +11,15 @@
   "dependencies": {
     "body-parser": "^1.17.2",
     "express": "^4.15.3",
+    "express-fileupload": "^0.1.4",
     "express-group-routes": "^1.1.0",
+    "multer": "^1.3.0",
+    "multipart": "^0.1.5",
+    "node-zip": "^1.1.1",
     "pg": "^6.4.0",
     "pg-native": "^1.10.1",
     "pg-pool": "latest",
-    "tracer": "^0.8.9"
+    "tracer": "^0.8.9",
+    "unzip": "^0.1.11"
   }
 }

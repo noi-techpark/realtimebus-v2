@@ -13,7 +13,7 @@ class FeatureList {
             properties: properties
         };
 
-        this.features.push(feature);
+        this.features.add(feature);
     }
 
     getFeatures() {
@@ -21,12 +21,21 @@ class FeatureList {
     }
 
     static createFromGeoJson(json) {
-        return FeatureList.createFromArray(json)
+        console.log(json);
+
+        let data = JSON.parse(json);
+
+        console.log("error");
+
+        // TODO: Check if JSON parsing succeeded?
+
+        return FeatureList.createFromArray(data)
     }
 
     static createFromArray(array) {
-        if (!array.hasOwnProperty("features")) {
-            throw("Supplied JSON does not contain required object 'features'");
+        if (!"features" in obj) {
+            console.log("error");
+            throw new Error("Supplied JSON does not contain required object 'features'");
         }
 
         let instance = new FeatureList();

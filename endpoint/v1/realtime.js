@@ -23,10 +23,10 @@ module.exports = {
             let outputFormat = config.database_coordinate_format;
             let positions = new Positions(outputFormat);
             
-            let linesStr = req.query.lines;
+            let lines = req.query.lines;
 
-            if (typeof linesStr !== 'undefined' && linesStr.length > 0) {
-                positions.setLines(LineUtils.getLinesFromQuery(linesStr));
+            if (typeof lines !== 'undefined' && lines.length > 0) {
+                positions.setLines(LineUtils.getLinesFromQuery(lines));
             }
 
             resolve(positions.getAll());

@@ -1,18 +1,20 @@
 'use strict';
 
+const logger = require("../../util/logger");
+
 module.exports = class LineUtils {
 
-    static getLinesFromQuery(linesStr) {
+    static getLinesFromQuery(lineString) {
         let lines = [];
 
-        if (!linesStr) {
+        if (typeof lineString !== 'undefined' && lineString.length > 0) {
             let regex = /^d+:[a-z0-9]+(,d+:[a-z0-9]+)*$/i;
 
-            if (!regex.test(linesStr)) {
-                throw(`${linesStr} has invalid format`);
+            if (!regex.test(lineString)) {
+                throw(`Filter '${lineString}' has invalid format`);
             }
 
-            let lineFragments = linesStr.split(',');
+            let lineFragments = lineString.split(',');
             for (let lineFragment of lineFragments) {
                 let exploded = lineFragment.split(":");
                 let line = {
@@ -23,7 +25,7 @@ module.exports = class LineUtils {
                 lines.push(line);
             }
         } else {
-            console.warn("Line filter is active but no lines requested")
+            logger.warn("Line filter is active but no lines requested")
         }
 
         return lines;

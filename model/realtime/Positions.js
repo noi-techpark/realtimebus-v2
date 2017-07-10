@@ -1,7 +1,9 @@
 'use strict';
 
 const connection = require("../../database/connection");
+
 const FeatureList = require("../../model/realtime/FeatureList");
+const LineUtils = require("../../model/realtime/LineUtils");
 
 module.exports = class Positions {
 
@@ -19,13 +21,14 @@ module.exports = class Positions {
                 let whereLines = '';
 
                 if (typeof this.lines !== 'undefined' && this.lines.length > 0) {
-                    // TODO: Filter lines
-                    // whereLines = "    AND (" + LinesUtils::whereLines('rec_frt.li_nr', 'rec_frt.str_li_var', this.lines) + ")";
+                    console.info(`Filter is enabled: lines='${this.lines}'`);
+                    whereLines = " AND (" + LineUtils.whereLines('rec_frt.li_nr', 'rec_frt.str_li_var', this.lines) + ")";
                 }
 
                 // TODO:
                 // INNER JOIN vdv.rec_frt
                 //      ON vehicle_position_act.frt_fid=rec_frt.teq_nummer
+
                 return `
                     SELECT
                     rec_frt.frt_fid,
@@ -73,7 +76,7 @@ module.exports = class Positions {
             })
             .then(sql => connection.query(sql))
             .then(result => {
-                console.log(result);
+                // console.log(result);
 
                 let featureList = new FeatureList();
 
@@ -104,4 +107,4 @@ module.exports = class Positions {
                 return featureList.getFeatureCollection();
             });
     }
-}
+};

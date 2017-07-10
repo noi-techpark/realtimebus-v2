@@ -29,7 +29,7 @@ module.exports.updatePositions = function (req, res) {
         for (let feature of featureList.getFeatures()) {
             // TODO: Check if feature contains trip id
 
-            logger.log(`Feature: ${JSON.stringify(feature)}`);
+            // logger.log(`Feature: ${JSON.stringify(feature)}`);
 
             if (!feature.hasOwnProperty("properties")) {
                 logger.error("Required property 'properties' is missing");
@@ -60,7 +60,7 @@ module.exports.updatePositions = function (req, res) {
                 .then((result) => {
                     feature.properties = Object.assign(feature.properties, result);
 
-                    logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
+                    // logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
 
                     return result
                 })

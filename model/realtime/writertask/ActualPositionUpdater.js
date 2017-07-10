@@ -35,7 +35,7 @@ module.exports = class ActualPositionUpdater {
             .then(sql => connection.query(sql))
             .then(result => {
                 if (result.rows[0].cnt > 0) {
-                    logger.debug(`Trip ${tripId} already in database, updating...`);
+                    logger.log(`Trip ${tripId} already in database, updating...`);
 
                     return `
                         UPDATE vdv.vehicle_position_act SET

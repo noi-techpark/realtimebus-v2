@@ -93,13 +93,13 @@ class ActualPositionUpdater {
         return new Promise(function (resolve, reject) {
             // TODO: What does this filter do?
             /*if ($filterValue != DataFilter::IS_OK) {
-                return;
-            }*/
+             return;
+             }*/
 
             // TODO: Perform check
             /*if (empty($feature['properties']['frt_fid'])) {
-                return;
-            }*/
+             return;
+             }*/
 
             resolve()
         })
@@ -108,7 +108,7 @@ class ActualPositionUpdater {
     }
 
     insertTravelTimes(frtFid) {
-        let deleteOldSql = `DELETE FROM vdv.travel_times WHERE frt_fid=${frtFid}`;
+        let deleteOldSql = `DELETE FROM vdv.travel_times WHERE frt_fid = ${frtFid}`;
         await
         connection.query(deleteOldSql);
 
@@ -119,13 +119,13 @@ class ActualPositionUpdater {
     execute(featureId, feature, filterValue) {
         // TODO: What does this filter do?
         /*if ($filterValue != DataFilter::IS_OK) {
-            return;
-        }*/
+         return;
+         }*/
 
         // TODO: Perform check
         /*if (empty($feature['properties']['frt_fid'])) {
-            return;
-        }*/
+         return;
+         }*/
 
         // do not copy data, if it is an internal course
     }

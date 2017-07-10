@@ -104,6 +104,7 @@ module.exports = class ActualPositionUpdater {
         })
     }
 
+    // TODO: Is this used somewhere?
     insertTravelTimes(frtFid) {
         let deleteOldSql = `DELETE FROM vdv.travel_times WHERE frt_fid = ${frtFid}`;
         await
@@ -113,17 +114,17 @@ module.exports = class ActualPositionUpdater {
         timeTableUtils.insertTravelTimes(frtFid);
     }
 
-    execute(featureId, feature, filterValue) {
+    /*execute(featureId, feature, filterValue) {
         // TODO: What does this filter do?
-        /*if ($filterValue != DataFilter::IS_OK) {
-         return;
-         }*/
+        if ($filterValue != DataFilter::IS_OK) {
+            return;
+        }
 
         // TODO: Perform check
-        /*if (empty($feature['properties']['frt_fid'])) {
-         return;
-         }*/
+        if (empty($feature['properties']['frt_fid'])) {
+            return;
+        }
 
         // do not copy data, if it is an internal course
-    }
+    }*/
 };

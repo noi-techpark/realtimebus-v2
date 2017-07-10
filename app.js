@@ -8,7 +8,7 @@ const connection = require("./database/connection");
 const express = require('express');
 const fs = require('fs');
 const logger = require("./util/logger");
-const time = require('time')(Date);
+const date = require('time')(Date);
 
 const v1Realtime = require("./endpoint/v1/realtime");
 const v1Receiver = require("./endpoint/v1/receiver");

@@ -24,6 +24,8 @@ module.exports = {
             let featureList = FeatureList.createFromGeoJson(req.body);
             let positionUpdater = new ActualPositionUpdater();
 
+            logger.debug("Test");
+
             let promiseChain = [];
 
             for (let feature in featureList.getFeatures()) {
@@ -52,12 +54,14 @@ module.exports = {
                 promiseChain.push(positionUpdater.insert(feature.properties.frt_fid, feature));
             }
 
-            Promise.all(promiseChain)
+            /*Promise.all(promiseChain)
                 .then(() => {
                     resolve()
                 }, error => {
                     reject(error)
-                });
+                });*/
+
+            resolve();
         });
     }
 };

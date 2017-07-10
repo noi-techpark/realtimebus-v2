@@ -21,7 +21,11 @@ class FeatureList {
     }
 
     static createFromGeoJson(json) {
+        console.log(json);
+
         let data = JSON.parse(json);
+
+        console.log("error");
 
         // TODO: Check if JSON parsing succeeded?
 
@@ -30,6 +34,7 @@ class FeatureList {
 
     static createFromArray(array) {
         if (!"features" in obj) {
+            console.log("error");
             throw new Error("Supplied JSON does not contain required object 'features'");
         }
 

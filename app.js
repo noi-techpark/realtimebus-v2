@@ -1,6 +1,7 @@
 'use strict';
 
 require('express-group-routes');
+require("./util/utils");
 
 const express = require('express');
 const connection = require("./database/connection");
@@ -29,13 +30,15 @@ connection.connect(function (error) {
 function startServer() {
     app.group("/v1", (router) => {
 
-        router.get("/receiver", function (req, res) {
+        router.post("/receiver", function (req, res) {
             v1Receiver.receiver(req, res)
                 .then(() => {
                     res.status(200).json({success: true});
-                }, error => {
+                })
+                .catch(error => {
+                    logger.error(`Error: ${error}`);
                     res.status(500).json({success: false, error: error});
-                });
+                })
         });
 
     });

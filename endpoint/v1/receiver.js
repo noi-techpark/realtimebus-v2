@@ -41,6 +41,11 @@ module.exports.updatePositions = function (req, res) {
                 continue;
             }
 
+            if (feature.properties.frt_fid === 0) {
+                logger.error("Required property 'frt_fid' is 0");
+                continue;
+            }
+
             feature.properties.frt_fid = parseInt(feature.properties.frt_fid);
             let tripId = feature.properties.frt_fid;
 

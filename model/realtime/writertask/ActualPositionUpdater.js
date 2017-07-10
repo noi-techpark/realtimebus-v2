@@ -15,10 +15,13 @@ module.exports = class ActualPositionUpdater {
             `)
             .then(sql => connection.query(sql))
             .then(result => {
+                if (result.rowCount === 0) {
+                    throw(`Trip '${feature.properties.frt_fid}' not found in 'vdv.rec_frt'`);
+                }
+
                 if (result.rows[0].str_li_var >= 990) {
                     throw(`Internal trip: ${result.rows[0].str_li_var}`);
                 }
-
             })
     }
 

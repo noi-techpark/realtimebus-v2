@@ -45,7 +45,6 @@ connection.connect(function (error) {
 
 function startServer() {
     app.group("/v1", (router) => {
-
         router.get("/positions", function (req, res) {
             v1Realtime.positions(req)
                 .then(positions => {

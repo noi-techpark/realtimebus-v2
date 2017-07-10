@@ -15,9 +15,9 @@ module.exports = {
         return new Promise(function (resolve, reject) {
             // TODO: What do these do and why are they needed?
 
-            let maxSpeed = 40;      // $this->container->getParameter('vdv.import.max_speed');
-            let dbSrid = 25832;     // $this->container->getParameter('vdv.srid');
-            let dataSrid = 4326;    // $this->container->getParameter('vdv.import.srid');
+            let maxSpeed = 40;   // $this->container->getParameter('vdv.import.max_speed');
+            let dbSrid = 25832;  // $this->container->getParameter('vdv.srid');                 ETRS89, UTM zone 32N
+            let dataSrid = 4326; // $this->container->getParameter('vdv.import.srid');          WGS84
 
             logger.debug("receiver(): dbSrid=%d, dataSrid=%s", dbSrid, dataSrid);
 

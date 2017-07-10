@@ -13,6 +13,8 @@ const v1Realtime = require("./endpoint/v1/realtime");
 const v1Receiver = require("./endpoint/v1/receiver");
 const v1Vdv = require("./endpoint/v1/vdv");
 
+const ExtrapolatePositions = require("./operations/ExtrapolatePositions");
+
 function logRequests(req, res, next) {
     logger.warn(`${req.method} ${req.url}`);
     next();
@@ -36,6 +38,8 @@ connection.connect(function (error) {
     if (error) throw error;
 
     logger.warn("Connected to database");
+
+    new ExtrapolatePositions().run();
 
     startServer()
 });

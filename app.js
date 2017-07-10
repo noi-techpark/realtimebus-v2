@@ -8,9 +8,11 @@ const connection = require("./database/connection");
 const express = require('express');
 const fs = require('fs');
 const logger = require("./util/logger");
+const time = require('time')(Date);
 
-const v1Receiver = require("./endpoint/v1/receiver");
 const v1Realtime = require("./endpoint/v1/realtime");
+const v1Receiver = require("./endpoint/v1/receiver");
+const v1Vdv = require("./endpoint/v1/vdv");
 
 function logRequests(req, res, next) {
     logger.info(`${req.method} ${req.url}`);
@@ -31,6 +33,8 @@ app.use(bodyParser.raw({
     limit: '10mb'
 }));
 
+date.setTimezone("Europe/Rome");
+
 connection.connect(function (error) {
     if (error) throw error;
 
@@ -41,17 +45,6 @@ connection.connect(function (error) {
 
 function startServer() {
     app.group("/v1", (router) => {
-
-        router.post("/receiver", function (req, res) {
-            v1Receiver.receiver(req)
-                .then(() => {
-                    res.status(200).json({success: true});
-                })
-                .catch(error => {
-                    logger.error(`Error: ${error}`);
-                    res.status(500).json({success: false, error: error})
-                })
-        });
 
         router.get("/positions", function (req, res) {
             v1Realtime.positions(req)
@@ -64,20 +57,30 @@ function startServer() {
                 })
         });
 
-        router.post("/vdv", function (req, res) {
-            fs.writeFile('vdv/vdv.zip', req.body, function(err) {
-                if (err) {
-                    res.status(500).json({success: false});
-                    return
-                }
+        router.post("/receiver", function (req, res) {
+            v1Receiver.receiver(req)
+                .then(() => {
+                    res.status(200).json({success: true});
+                })
+                .catch(error => {
+                    logger.error(`Error: ${error}`);
+                    res.status(500).json({success: false, error: error})
+                })
+        });
 
-                logger.debug("Saved zip file containing VDV data");
-                res.status(200).json({success: true})
-            });
+        router.post("/vdv", function (req, res) {
+            v1Vdv.upload(req)
+                .then(positions => {
+                    res.status(200).json(positions);
+                })
+                .catch(error => {
+                    logger.error(`Error: ${error}`);
+                    res.status(500).json({success: false, error: error})
+                })
         });
     });
 
-    app.listen(80, function () {
-        logger.warn('Server started on port 80')
+    app.listen(88, function () {
+        logger.debug('Server started on port 80')
     })
 }

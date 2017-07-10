@@ -14,7 +14,7 @@ const v1Receiver = require("./endpoint/v1/receiver");
 const v1Vdv = require("./endpoint/v1/vdv");
 
 function logRequests(req, res, next) {
-    logger.info(`${req.method} ${req.url}`);
+    logger.warn(`${req.method} ${req.url}`);
     next();
 }
 
@@ -42,6 +42,7 @@ connection.connect(function (error) {
 
 function startServer() {
     app.group("/v1", (router) => {
+
         router.get("/positions", function (req, res) {
             v1Realtime.positions(req)
                 .then(positions => {
@@ -54,7 +55,7 @@ function startServer() {
         });
 
         router.post("/receiver", function (req, res) {
-            v1Receiver.receiver(req)
+            v1Receiver.updatePositions(req)
                 .then(() => {
                     res.status(200).json({success: true});
                 })

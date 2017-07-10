@@ -1,6 +1,6 @@
 'use strict';
 
-class FeatureList {
+module.exports = class FeatureList {
 
     constructor() {
         this.features = []
@@ -45,6 +45,4 @@ class FeatureList {
 
         return instance;
     }
-}
-
-module.exports = FeatureList;
+};

@@ -7,7 +7,7 @@ const ActualPositionLineReference = require("./writertask/ActualPositionLineRefe
 
 module.exports = class DataWriter {
 
-    static wktFromGeoArray(jsonArray) {
+    static pointFromGeoArray(jsonArray) {
         if (jsonArray.type === 'Point') {
             return `POINT(${jsonArray.coordinates[0]} ${jsonArray.coordinates[1]})`;
         } else {

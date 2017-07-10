@@ -8,6 +8,9 @@ const DataWriter = require("../../model/realtime/DataWriter");
 
 const ActualPositionLineReference = require("../../model/realtime/writertask/ActualPositionLineReference");
 const ActualPositionUpdater = require("../../model/realtime/writertask/ActualPositionUpdater");
+const LineUtils = require("../../model/realtime/LineUtils");
+
+const config = require("../../config");
 
 const Positions = require("../../model/realtime/Positions");
 
@@ -16,18 +19,17 @@ module.exports = {
     positions: function (req) {
         return new Promise(function (resolve, reject) {
             // TODO: What do these do and why are they needed?
-            let srid = 25832; // $this->container->getParameter('realtimebus.map.srid');
 
-            let positions = new Positions(srid);
+            let outputFormat = config.database_coordinate_format;
+            let positions = new Positions(outputFormat);
             
             let linesStr = req.query.lines;
 
             if (typeof linesStr !== 'undefined' && linesStr.length > 0) {
-                // TODO: Filter lines
-                // positions.setLines(LinesUtils::getLinesFromQuery($linesStr));
+                positions.setLines(LineUtils.getLinesFromQuery(linesStr));
             }
 
-            resolve(positions.positions());
+            resolve(positions.getAll());
         });
     }
 };

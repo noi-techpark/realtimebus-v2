@@ -5,11 +5,8 @@ const logger = require("../../../util/logger");
 
 module.exports = class ActualPositionUpdater {
 
-    constructor() {
-    }
-
     checkIfInternal(tripId, feature) {
-        logger.trace(`checkIfInternal() trip=${tripId}`);
+        logger.log(`checkIfInternal() trip=${tripId}`);
 
         return Promise.resolve(`
                 SELECT str_li_var
@@ -19,15 +16,14 @@ module.exports = class ActualPositionUpdater {
             .then(sql => connection.query(sql))
             .then(result => {
                 if (result.rows[0].str_li_var >= 990) {
-                    throw("Internal trip");
+                    throw(`Internal trip: ${result.rows[0].str_li_var}`);
                 }
 
             })
     }
 
-
     insertIntoDatabase(tripId, feature) {
-        logger.trace(`insertIntoDatabase() trip=${tripId}`);
+        logger.log(`insertIntoDatabase() trip=${tripId}`);
 
         return Promise.resolve(`
                 SELECT COUNT(*)  AS cnt FROM vdv.vehicle_position_act
@@ -85,44 +81,11 @@ module.exports = class ActualPositionUpdater {
             })
     }
 
-
-    checkConditions(tripId, feature) {
-        return new Promise(function (resolve, reject) {
-            logger.trace(`insert() trip=${tripId}`);
-
-            // TODO: What does this filter do?
-            /*if ($filterValue != DataFilter::IS_OK) {
-             return;
-             }*/
-
-            // TODO: Perform check
-            /*if (empty($feature['properties']['frt_fid'])) {
-             return;
-             }*/
-
-            resolve()
-        })
-    }
-
     insertTravelTimes(frtFid) {
         let deleteOldSql = `DELETE FROM vdv.travel_times WHERE frt_fid = ${frtFid}`;
         connection.query(deleteOldSql);
 
         let timeTableUtils = new TimeTableUtils();
         timeTableUtils.insertTravelTimes(frtFid);
-    }
-
-    execute(featureId, feature, filterValue) {
-        // TODO: What does this filter do?
-        /*if ($filterValue != DataFilter::IS_OK) {
-         return;
-         }*/
-
-        // TODO: Perform check
-        /*if (empty($feature['properties']['frt_fid'])) {
-         return;
-         }*/
-
-        // do not copy data, if it is an internal course
     }
 };

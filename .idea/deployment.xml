@@ -5,7 +5,7 @@
       <paths name="RealtimeTestServer">
         <serverdata>
           <mappings>
-            <mapping deploy="/RealtimeServer2" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/RealtimeServer" local="$PROJECT_DIR$" web="/" />
           </mappings>
           <excludedPaths>
             <excludedPath path="/RealtimeServer/node_modules" />

@@ -9,75 +9,72 @@ const DataWriter = require("../../model/realtime/DataWriter");
 const ActualPositionLineReference = require("../../model/realtime/writertask/ActualPositionLineReference");
 const ActualPositionUpdater = require("../../model/realtime/writertask/ActualPositionUpdater");
 
-module.exports = {
+const config = require("../../config");
 
-    receiver: function (req, res) {
-        return new Promise(function (resolve, reject) {
-            // TODO: What do these do and why are they needed?
+module.exports.updatePositions = function (req, res) {
+    return new Promise(function (resolve, reject) {
+        // TODO: What do these do and why are they needed?
 
-            let maxSpeed = 40;   // $this->container->getParameter('vdv.import.max_speed');
-            let dbSrid = 25832;  // $this->container->getParameter('vdv.srid');                 ETRS89, UTM zone 32N
-            let dataSrid = 4326; // $this->container->getParameter('vdv.import.srid');          WGS84
+        let databaseFormat = config.database_coordinate_format;
+        let inputFormat = config.output_coordinate_format;
 
-            logger.debug("receiver(): dbSrid=%d, dataSrid=%s", dbSrid, dataSrid);
+        let featureList = FeatureList.createFromGeoJson(req.body);
+        let positionUpdater = new ActualPositionUpdater();
+        let lineReference = new ActualPositionLineReference();
 
-            let featureList = FeatureList.createFromGeoJson(req.body);
-            let positionUpdater = new ActualPositionUpdater();
+        logger.debug(`Inserting ${featureList.getFeatures().length} buses`);
 
-            logger.debug(`Inserting ${featureList.getFeatures().length} buses`);
+        let chain = Promise.resolve();
 
-            let chain = Promise.resolve();
+        for (let feature of featureList.getFeatures()) {
+            // TODO: Check if feature contains trip id
 
-            for (let feature of featureList.getFeatures()) {
-                // TODO: Check if feature contains trip id
+            logger.log(`Feature: ${JSON.stringify(feature)}`);
 
-                logger.log(`Feature: ${JSON.stringify(feature)}`);
-
-                feature.properties.frt_fid = parseInt(feature.properties.frt_fid);
-                let tripId = feature.properties.frt_fid;
-
-                /*if (empty($feature['properties']['frt_fid'])) {
-                    $this->logger->info("feature has no frt_fid");
-                    continue;
-                }*/
-
-                let wktString = DataWriter.wktFromGeoArray(feature.geometry);
-
-                feature.geometry_sql = `ST_Transform(ST_GeomFromText('${wktString}', ${dataSrid}), ${dbSrid})`;
-
-                let lineReference = new ActualPositionLineReference();
-
-                chain = chain
-                    .then(() => {
-                        return lineReference.getLineReference(feature)
-                    })
-                    .then((result) => {
-                        feature.properties = Object.assign(feature.properties, result);
-
-                        logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
-
-                        return result
-                    })
-                    .then(() => {
-                        return positionUpdater.checkConditions(tripId, feature)
-                    })
-                    .then(() => {
-                        return positionUpdater.checkIfInternal(tripId, feature)
-                    })
-                    .then(() => {
-                        return positionUpdater.insertIntoDatabase(tripId, feature)
-                    })
-                    .catch(error => {
-                        logger.error(`Error inserting trip ${tripId}: ${error}`);
-                    });
+            if (!feature.hasOwnProperty("properties")) {
+                logger.error("Required property 'properties' is missing");
+                continue;
             }
 
-            chain = chain.then(result => {
-                resolve()
-            })
-                .catch(error => {
-                    reject(error)
+            if (!feature.properties.hasOwnProperty("frt_fid")) {
+                logger.error("Required property 'frt_fid' is missing");
+                continue;
+            }
+
+            feature.properties.frt_fid = parseInt(feature.properties.frt_fid);
+            let tripId = feature.properties.frt_fid;
+
+            let pointString = DataWriter.pointFromGeoArray(feature.geometry);
+
+            feature.geometry_sql = `ST_Transform(ST_GeomFromText('${pointString}', ${inputFormat}), ${databaseFormat})`;
+
+            chain = chain
+                .then(() => {
+                    return lineReference.getLineReference(feature)
                 })
-        });
-    }
+                .then((result) => {
+                    feature.properties = Object.assign(feature.properties, result);
+
+                    logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
+
+                    return result
+                })
+                .then(() => {
+                    return positionUpdater.checkIfInternal(tripId, feature)
+                })
+                .then(() => {
+                    return positionUpdater.insertIntoDatabase(tripId, feature)
+                })
+                .catch(error => {
+                    logger.error(`Error inserting trip ${tripId}: ${error}`);
+                });
+        }
+
+        chain = chain.then(result => {
+            resolve()
+        })
+            .catch(error => {
+                reject(error)
+            })
+    });
 };

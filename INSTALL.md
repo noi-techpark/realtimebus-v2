@@ -78,14 +78,14 @@ To fix this error you can either:
         sudo apt-get install libcap2-bin
         sudo setcap cap_net_bind_service=+ep `readlink -f \`which node\``
       
-  You can now launch the server using:
+    You can now launch the server using:
   
         node app.js
         
 - Change the port to a number over 1024
 
-  To change the port number, edit the appropriate line in `app.js`
+    To change the port number, edit the appropriate line in `app.js`
       
-  You can now launch the server using:
+    You can now launch the server using:
   
         node app.js

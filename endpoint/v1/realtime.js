@@ -17,25 +17,22 @@ const Positions = require("../../model/realtime/Positions");
 module.exports = {
 
     positions: function (req, res) {
-        Promise.resolve()
-            .then(() => {
-                let outputFormat = config.database_coordinate_format;
-                let positions = new Positions(outputFormat);
+        Promise.resolve().then(() => {
+            let outputFormat = config.database_coordinate_format;
+            let positions = new Positions(outputFormat);
 
-                let lines = req.query.lines;
+            let lines = req.query.lines;
 
-                if (typeof lines !== 'undefined' && lines.length > 0) {
-                    positions.setLines(LineUtils.getLinesFromQuery(lines));
-                }
+            if (typeof lines !== 'undefined' && lines.length > 0) {
+                positions.setLines(LineUtils.getLinesFromQuery(lines));
+            }
 
-                return positions.getAll();
-            })
-            .then(positions => {
-                res.status(200).jsonp(positions);
-            })
-            .catch(error => {
-                logger.error(error);
-                res.status(500).jsonp({success: false, error: error})
-            })
+            return positions.getAll();
+        }).then(positions => {
+            res.status(200).jsonp(positions);
+        }).catch(error => {
+            logger.error(error);
+            res.status(500).jsonp({success: false, error: error})
+        })
     }
 };

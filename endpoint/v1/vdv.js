@@ -42,7 +42,7 @@ const SERVICE_PROVIDERS = "ZUL_VERKEHRSBETRIEB.X10";
 
 const fileList = [VALIDITY, CALENDAR, PATHS, AREAS, TRIP_TYPES, TRIP_PEEK_TIMES, VEHICLE_TYPES, LINE_SERVICES,
     STOP_TYPES, BUS_STOP_TYPES, DAY_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, TRIP_STOP_TIMES, BUS_STOP_STOP_TIMES,
-    TRIP_INFO_EXTENDED, LINES, VARIANTS, BUS_STOPS, BUS_STOP_CONNECTIONS, TEQ_MAPPING, SERVICE_PROVIDERS];
+    TRIP_INFO_EXTENDED, LINES, VARIANTS, BUS_STOPS, BUS_STOP_CONNECTIONS, SERVICE_PROVIDERS];
 
 module.exports = {
 
@@ -91,16 +91,16 @@ module.exports = {
 
                     fileList.forEach(file => {
                         chain = chain.then(() => {
-                            return new Promise(function (resolve, reject) {
+                            return new Promise(function (res, rej) {
                                 parseVdvFile(VDV_FILES + '/' + file, function (table, columns, records) {
                                     if (records.length === 0) {
-                                        return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
+                                        return rej(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
                                     }
 
-                                    resolve()
+                                    res();
                                 })
                             })
-                        })
+                        });
                     });
 
                     chain = chain.then(() => {

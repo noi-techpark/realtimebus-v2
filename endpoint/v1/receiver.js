@@ -51,40 +51,32 @@ module.exports.updatePositions = function (req, res) {
 
             feature.geometry_sql = `ST_Transform(ST_GeomFromText('${pointString}', ${inputFormat}), ${databaseFormat})`;
 
-            chain = chain
-                .then(() => {
-                    return lineReference.getLineReference(feature)
-                })
-                .then((result) => {
-                    feature.properties = Object.assign(feature.properties, result);
+            chain = chain.then(() => {
+                return lineReference.getLineReference(feature)
+            }).then((result) => {
+                feature.properties = Object.assign(feature.properties, result);
 
-                    // logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
+                // logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
 
-                    return result
-                })
-                .then(() => {
-                    return positionUpdater.checkIfInternal(tripId, feature)
-                })
-                .then(() => {
-                    return positionUpdater.insertIntoDatabase(tripId, feature)
-                })
-                .catch(error => {
-                    logger.error(`Error inserting trip ${tripId}: ${error}`);
-                });
+                return result
+            }).then(() => {
+                return positionUpdater.checkIfInternal(tripId, feature)
+            }).then(() => {
+                return positionUpdater.insertIntoDatabase(tripId, feature)
+            }).catch(error => {
+                logger.error(`Error inserting trip ${tripId}: ${error}`);
+            });
         }
 
-        chain = chain.then(result => {
+        chain = chain.then(() => {
             resolve()
+        }).catch(error => {
+            reject(error)
         })
-            .catch(error => {
-                reject(error)
-            })
+    }).then(() => {
+        res.status(200).jsonp({success: true});
+    }).catch(error => {
+        logger.error(error);
+        res.status(500).jsonp({success: false, error: error})
     })
-        .then(() => {
-            res.status(200).jsonp({success: true});
-        })
-        .catch(error => {
-            logger.error(error);
-            res.status(500).jsonp({success: false, error: error})
-        })
 };

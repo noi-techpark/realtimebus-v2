@@ -81,10 +81,10 @@ module.exports.updatePositions = function (req, res) {
             })
     })
         .then(() => {
-            res.status(200).json({success: true});
+            res.status(200).jsonp({success: true});
         })
         .catch(error => {
             logger.error(error);
-            res.status(500).json({success: false, error: error})
+            res.status(500).jsonp({success: false, error: error})
         })
 };

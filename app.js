@@ -35,6 +35,8 @@ app.use(bodyParser.raw({
     limit: '10mb'
 }));
 
+app.set('jsonp callback name', 'jsonp');
+
 connection.connect(function (error) {
     if (error) throw error;
 

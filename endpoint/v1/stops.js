@@ -26,11 +26,11 @@ module.exports = {
                 return stopFinder.getStops()
             })
             .then(stops => {
-                res.status(200).json(stops);
+                res.status(200).jsonp(stops);
             })
             .catch(error => {
                 logger.error(error);
-                res.status(500).json({success: false, error: error})
+                res.status(500).jsonp({success: false, error: error})
             })
     },
 
@@ -45,11 +45,11 @@ module.exports = {
                 return stopFinder.getNextStops(tripId);
             })
             .then(stops => {
-                res.status(200).json(stops);
+                res.status(200).jsonp(stops);
             })
             .catch(error => {
                 logger.error(error);
-                res.status(500).json({success: false, error: error})
+                res.status(500).jsonp({success: false, error: error})
             })
     },
 
@@ -75,11 +75,11 @@ module.exports = {
                 return coursesFinder.getCourses(stop, limit);
             })
             .then(stops => {
-                res.status(200).json(stops);
+                res.status(200).jsonp(stops);
             })
             .catch(error => {
                 logger.error(error);
-                res.status(500).json({success: false, error: error})
+                res.status(500).jsonp({success: false, error: error})
             })
     }
 };

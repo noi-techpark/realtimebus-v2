@@ -31,11 +31,11 @@ module.exports = {
                 return positions.getAll();
             })
             .then(positions => {
-                res.status(200).json(positions);
+                res.status(200).jsonp(positions);
             })
             .catch(error => {
                 logger.error(error);
-                res.status(500).json({success: false, error: error})
+                res.status(500).jsonp({success: false, error: error})
             })
     }
 };

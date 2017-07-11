@@ -13,7 +13,7 @@ module.exports = class ExtrapolatePositions {
         let scriptStart = new Date().getTime();
         let period = 1.3;
 
-        // TODO: Quit logging (maybe fix deprecation warnings)
+        // TODO: Quiet logging (maybe fix deprecation warnings)
 
         return Promise.resolve()
             .then(connection.query("SET search_path=vdv,public;"))

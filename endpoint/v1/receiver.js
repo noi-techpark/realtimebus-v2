@@ -13,8 +13,6 @@ const config = require("../../config");
 
 module.exports.updatePositions = function (req, res) {
     new Promise(function (resolve, reject) {
-        // TODO: What do these do and why are they needed?
-
         let databaseFormat = config.database_coordinate_format;
         let inputFormat = config.output_coordinate_format;
 

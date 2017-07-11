@@ -8,7 +8,7 @@ module.exports = class ActualPositionLineReference {
     getLineReference(feature) {
         // TODO: WHERE rec_frt.teq_nummer = ${feature.properties.frt_fid}
 
-        // TODO: Fix this error
+        // TODO: Fix this error (Possibly already fixed?)
         // Error inserting trip NaN: Error: ERROR:  column "nan" does not exist
         // LINE 12: WHERE rec_frt.frt_fid = NaN
 

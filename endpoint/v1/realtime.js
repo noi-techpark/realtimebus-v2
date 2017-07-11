@@ -19,8 +19,6 @@ module.exports = {
     positions: function (req, res) {
         Promise.resolve()
             .then(() => {
-                // TODO: What do these do and why are they needed?
-
                 let outputFormat = config.database_coordinate_format;
                 let positions = new Positions(outputFormat);
 

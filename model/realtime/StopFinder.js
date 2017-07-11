@@ -75,7 +75,7 @@ module.exports = class StopFinder {
                 rec_ort.ort_name,
                 rec_ort.ort_ref_ort_name,
                 ST_AsGeoJSON(rec_ort.the_geom) as json_geom
-            FROM  vdv.rec_ort`
+            FROM  vdv.rec_ort `
         )
             .then(sql => {
                 // noinspection EqualityComparisonWithCoercionJS

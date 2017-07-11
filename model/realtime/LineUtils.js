@@ -8,7 +8,7 @@ module.exports = class LineUtils {
         let lines = [];
 
         if (typeof lineString !== 'undefined' && lineString.length > 0) {
-            let regex = /^d+:[a-z0-9]+(,d+:[a-z0-9]+)*$/i;
+            let regex = /\d+:[0-9]+(,\d+:[0-9]+)*$/;
 
             if (!regex.test(lineString)) {
                 throw(`Filter '${lineString}' does not match required filter format '${regex}'`);

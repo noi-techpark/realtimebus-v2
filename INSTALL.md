@@ -7,7 +7,7 @@
 * [Running the project](#running-the-project)
   * [Troubleshooting](#troubleshooting)
 
-
+<br/>
 
 # Platforms
 
@@ -16,7 +16,7 @@ platforms:
 
 * Linux with at least 4GB of RAM
 
-
+<br/>
 
 # Get the source code
 
@@ -31,7 +31,7 @@ To update an existing clone you can use the following commands:
     git pull
     git submodule update --init --recursive
 
-
+<br/>
 
 # Dependencies
 
@@ -56,7 +56,7 @@ To install all needed NodeJs dependencies run the following command in your proj
 
     npm install
 
-
+<br/>
 
 # Running the project
 

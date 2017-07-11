@@ -113,7 +113,6 @@ module.exports = {
         }).then(() => {
             res.status(200).json({success: true});
         }).catch(err => {
-            console.log(err.status);
             logger.error(err);
             res.status(err.status).json({success: false, error: err})
         });

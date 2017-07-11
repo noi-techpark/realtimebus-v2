@@ -1,3 +1,91 @@
-__sudo apt install postgresql__ # version 9.5<br>
-__sudo apt install postgis__ # version 2.2<br>
-__sudo apt install npm__ # node package manager<br>
+# Table of contents
+
+* [Platforms](#platforms)
+* [Get the source code](#get-the-source-code)
+* [Dependencies](#dependencies)
+    * [Node dependencies](#node-dependencies)
+* [Running the project](#running-the-project)
+  * [Troubleshooting](#troubleshooting)
+
+# Platforms
+
+You should be able to compile RealtimeServer successfully on the following
+platforms:
+
+* Linux with at least 4GB of RAM
+
+# Get the source code
+
+You can clone the repository and all its submodules using the
+following command:
+
+    git clone https://sasagitlab.opensasa.info/development/realtimebus-v2.git
+
+To update an existing clone you can use the following commands:
+
+    cd realtimebus
+    git pull
+    git submodule update --init --recursive
+
+
+# Dependencies
+
+To run RealtimeServer you will need:
+
+* The latest version of [NodeJs](https://nodejs.org/en/) (Tested on v4.2.6)
+* The latest version of [PostgreSQL](https://www.postgresql.org) (9.5 or greater)
+* The latest version of [PostGIS](http://postgis.net) (2.2 or greater)
+* The latest version of [MapServer](mapserver) (2.2 or greater) (optional)
+
+You can install all needed dependencies using the following command:
+
+    sudo apt install nodejs npm postgresql postgis
+    
+If you want to serve bus path overlays to use on a map (OSM, Google Maps), you need to install MapServer. 
+Please refer to the [official installation guide](http://www.mapserver.org/installation/index.html) for help.
+    
+
+## Node dependencies
+
+To install all needed NodeJs dependencies run the following command in your project directory:
+
+    npm install
+
+# Running the project
+
+1. Enter the project directory and execute `node`:
+
+        cd ~/RealtimeServer
+        node app.js
+        
+2. The server should now be running on port 80 and can be accessed using:
+        
+        curl http://localhost/v1/
+        
+
+## Troubleshooting
+
+The Server runs on port 80 by default. On some Linux Distros listening on port 80 requires elevated permissions.
+
+To fix this error you can either:
+
+- Run this project using elevated permissions (Unrecommended)
+    
+        sudo node app.js
+        
+- Give Safe User Permission To Use Port 80 (Recommended)
+
+      sudo apt-get install libcap2-bin
+      sudo setcap cap_net_bind_service=+ep `readlink -f \`which node\``
+      
+  You can now launch the server using:
+  
+        node app.js
+        
+- Change the port to a number over 1024
+
+  To change the port number, edit the appropriate line in `app.js`
+      
+  You can now launch the server using:
+  
+        node app.js

@@ -1,4 +1,4 @@
-### SASA SpA-AG Realtime Server
+## SASA SpA-AG Realtime Server
 
 RealtimeServer is the backend code of [http://realtime.opensasa.info](). 
 It provides real time positions of the public transport vehicles managed by SASA SpA-AG in South Tyrol. 
@@ -16,7 +16,7 @@ If you want to install this project, please refer to our [installation instructi
 
 ### Build With
 
-- [NodeJs](https://nodejs.org/en/) - The web framework used
+- [NodeJs](https://nodejs.org/) - The web framework used
 - [Express.js](https://expressjs.com) - RESTful interface
 - [PostgreSQL](https://www.postgresql.org) - Database
 

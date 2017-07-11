@@ -1,6 +1,8 @@
 'use strict';
 
-if (!('toJSON' in Error.prototype))
+const util = require('util');
+
+if (!('toJSON' in Error.prototype)) {
     Object.defineProperty(Error.prototype, 'toJSON', {
         value: function () {
             let alt = {};
@@ -14,7 +16,17 @@ if (!('toJSON' in Error.prototype))
         configurable: true,
         writable: true
     });
+}
 
-Error.prototype.getStatusCode = function () {
-    return statusCode || 500;
-};
+function HttpError(code, message) {
+    Error.captureStackTrace(this, HttpError);
+
+    this.name = HttpError.name;
+    this.code = code;
+    this.message = message;
+}
+
+util.inherits(HttpError, Error);
+
+module.exports = HttpError;
+

@@ -53,14 +53,17 @@ connection.connect(function (error) {
 });
 
 function startServer() {
-    app.group("/v1", (router) => {
+    router.post("/receiver", function (req, res) {
+        v1Receiver.updatePositions(req, res)
+    });
 
+    router.post("/vdv", function (req, res) {
+        v1Vdv.upload(req, res)
+    });
+
+    app.group("/v1", (router) => {
         router.get("/positions", function (req, res) {
             v1Realtime.positions(req, res)
-        });
-
-        router.post("/receiver", function (req, res) {
-            v1Receiver.updatePositions(req, res)
         });
 
         router.get("/stops", function (req, res) {
@@ -74,13 +77,9 @@ function startServer() {
         router.get("/:stop/buses", function (req, res) {
             v1Stops.nextBusesAtStop(req, res)
         });
-
-        router.post("/vdv", function (req, res) {
-            v1Vdv.upload(req, res)
-        });
     });
 
-    let listener = app.listen(80, function () {
+    let listener = app.listen(88, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

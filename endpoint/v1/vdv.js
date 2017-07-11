@@ -40,7 +40,7 @@ const TRAVEL_TIMES = "SEL_FZT_FELD.X10";
 const TEQ_MAPPING = "teqnummern.csv";
 const SERVICE_PROVIDERS = "ZUL_VERKEHRSBETRIEB.X10";
 
-const fileList = [VALIDITY, CALENDAR, PATHS, AREAS, TRIP_TYPES, TRIP_PEEK_TIMES, VEHICLE_TYPES, LINE_SERVICES,
+const vdvFileList = [VALIDITY, CALENDAR, PATHS, AREAS, TRIP_TYPES, TRIP_PEEK_TIMES, VEHICLE_TYPES, LINE_SERVICES,
     STOP_TYPES, BUS_STOP_TYPES, DAY_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, TRIP_STOP_TIMES, BUS_STOP_STOP_TIMES,
     TRIP_INFO_EXTENDED, LINES, VARIANTS, BUS_STOPS, BUS_STOP_CONNECTIONS, SERVICE_PROVIDERS];
 
@@ -79,9 +79,9 @@ module.exports = {
                         return reject(err);
                     }
 
-                    logger.info(`Found ${files.length} files`);
+                    logger.debug(`Found ${files.length} files`);
 
-                    fileList.forEach(file => {
+                    vdvFileList.forEach(file => {
                         if (!files.indexOf(file) === -1) {
                             return reject(new Error(`The file ${file} is missing. VDV import was aborted. No changes have been applied to the current data.`));
                         }
@@ -89,19 +89,21 @@ module.exports = {
 
                     let chain = Promise.resolve();
 
-                    fileList.forEach(file => {
+                    vdvFileList.forEach(file => {
                         chain = chain.then(() => {
-                            return new Promise(function (res, rej) {
+                            return new Promise(function (resolve, reject) {
                                 parseVdvFile(VDV_FILES + '/' + file, function (table, columns, records) {
                                     if (records.length === 0) {
-                                        return rej(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
+                                        return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
                                     }
 
-                                    res();
+                                    resolve();
                                 })
                             })
                         });
                     });
+
+                    logger.debug(`Successfully validated ${vdvFileList.length} VDV files`);
 
                     chain = chain.then(() => {
                         resolve()
@@ -111,7 +113,7 @@ module.exports = {
                 })
             })
         }).then(() => {
-            res.status(200).json({success: true});
+            res.status(200).json({success: true})
         }).catch(err => {
             logger.error(err);
             res.status(err.status).json({success: false, error: err})
@@ -120,7 +122,7 @@ module.exports = {
 };
 
 function parseVdvFile(file, cb) {
-    let table = "";
+    let table = null;
     let columns = [];
     let records = [];
 
@@ -139,12 +141,10 @@ function parseVdvFile(file, cb) {
             case "rec": // record
                 records.push(csv);
                 break;
-            case "end":
-            case "eof": // end of file
-                cb(table, columns, records);
-                return;
             default: // other lines are ignored
                 break;
         }
-    });
+    }).on('close', function () {
+        cb(table, columns, records);
+    })
 }

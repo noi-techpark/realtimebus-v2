@@ -3,6 +3,8 @@
 RealtimeServer is the backend code of [http://realtime.opensasa.info](). 
 It provides real time positions of the public transport vehicles managed by SASA SpA-AG in South Tyrol. 
 
+<br>
+
 ### Architecture
 
 The Server is written in [NodeJs](https://nodejs.org/) and is backed by a [PostgreSQL](https://www.postgresql.org) database.
@@ -14,11 +16,12 @@ It uses Open Data provided by SASA. The documentation about it can be found [her
 
 If you want to install this project, please refer to our [installation instructions](INSTALL.md)
 
-### Build With
+### Built With
 
 - [NodeJs](https://nodejs.org/) - The web framework used
 - [Express.js](https://expressjs.com) - RESTful interface
 - [PostgreSQL](https://www.postgresql.org) - Database
+- [PostGIS](http://postgis.net) - Spatial database extender for PostgreSQL
 
 ### Contributing
 

@@ -59,18 +59,24 @@ module.exports = {
                 resolve()
             })
         }).then(() => {
-            fs.writeFile('vdv/' + new Date().toISOString() + '.zip', req.body, function (err) {
-                return new Promise(function (resolve, reject) {
+            return new Promise(function (resolve, reject) {
+                fs.writeFile('vdv/' + new Date().toISOString() + '.zip', req.body, function (err) {
                     if (err) {
                         return reject(err);
                     }
 
                     logger.debug("Archived zip file containing VDV data");
+
+                    resolve()
                 })
             })
         }).then(() => {
-            fs.readdir(VDV_FILES, (err, files) => {
-                return new Promise(function (resolve, reject) {
+            return new Promise(function (resolve, reject) {
+                fs.readdir(VDV_FILES, (err, files) => {
+                    if (err) {
+                        return reject(err);
+                    }
+
                     logger.info(`Found ${files.length} files`);
 
                     fileList.forEach(file => {
@@ -79,15 +85,27 @@ module.exports = {
                         }
                     });
 
+                    let chain = Promise.resolve();
+
                     fileList.forEach(file => {
-                        parseVdvFile(VDV_FILES + '/' + file, function (table, columns, records) {
+                        chain = chain.then(() => {
                             return new Promise(function (resolve, reject) {
-                                if (records.length === 0) {
-                                    return reject(new Error(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`));
-                                }
-                            })
+                                parseVdvFile(VDV_FILES + '/' + file, function (table, columns, records) {
+                                    if (records.length === 0) {
+                                        return reject(new Error(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`));
+                                    }
+
+                                    resolve();
+                                })
+                            });
                         })
-                    })
+                    });
+
+                    chain.then(() => {
+                        resolve();
+                    }).catch(error => {
+                        reject(error);
+                    });
                 });
             })
         }).then(() => {

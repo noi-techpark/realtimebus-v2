@@ -80,7 +80,7 @@ function startServer() {
         });
     });
 
-    app.listen(88, function () {
-        logger.warn('Server started on port 80')
+    let listener = app.listen(80, function () {
+        logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

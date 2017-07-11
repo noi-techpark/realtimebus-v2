@@ -38,9 +38,9 @@ module.exports = class Positions {
                         rec_frt.str_li_var,
                         lidname,
                         insert_date,
-                        -- li_r,
-                        -- li_g,
-                        -- li_b,
+                        li_r,
+                        li_g,
+                        li_b,
                         next_rec_ort.ort_nr AS ort_nr,
                         next_rec_ort.onr_typ_nr AS onr_typ_nr,
                         next_rec_ort.ort_name AS ort_name,
@@ -93,13 +93,10 @@ module.exports = class Positions {
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
 
-                    // TODO: Are these colors needed?
-                    // $hex = str_pad(dechex($row['li_r']), 2, "0", STR_PAD_LEFT);
-                    // $hex. = str_pad(dechex($row['li_g']), 2, "0", STR_PAD_LEFT);
-                    // $hex. = str_pad(dechex($row['li_b']), 2, "0", STR_PAD_LEFT);
+                    let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
 
-                    // $row['hexcolor'] = '#'.$hex;
-                    // $row['hexcolor2'] = strtoupper($hex);
+                    row.hexcolor = '#' + hex;
+                    row.hexcolor2 = hex.toUpperCase();
 
                     featureList.add(row, geometry);
                 }

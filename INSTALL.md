@@ -7,12 +7,16 @@
 * [Running the project](#running-the-project)
   * [Troubleshooting](#troubleshooting)
 
+
+
 # Platforms
 
 You should be able to compile RealtimeServer successfully on the following
 platforms:
 
 * Linux with at least 4GB of RAM
+
+
 
 # Get the source code
 
@@ -26,6 +30,7 @@ To update an existing clone you can use the following commands:
     cd realtimebus
     git pull
     git submodule update --init --recursive
+
 
 
 # Dependencies
@@ -50,6 +55,8 @@ Please refer to the [official installation guide](http://www.mapserver.org/insta
 To install all needed NodeJs dependencies run the following command in your project directory:
 
     npm install
+
+
 
 # Running the project
 

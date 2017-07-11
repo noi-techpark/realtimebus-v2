@@ -75,8 +75,8 @@ To fix this error you can either:
         
 - Give Safe User Permission To Use Port 80 (Recommended)
 
-      sudo apt-get install libcap2-bin
-      sudo setcap cap_net_bind_service=+ep `readlink -f \`which node\``
+        sudo apt-get install libcap2-bin
+        sudo setcap cap_net_bind_service=+ep `readlink -f \`which node\``
       
   You can now launch the server using:
   

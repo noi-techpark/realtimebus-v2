@@ -14,3 +14,7 @@ if (!('toJSON' in Error.prototype))
         configurable: true,
         writable: true
     });
+
+Error.prototype.getStatusCode = function () {
+    return statusCode || 500;
+};

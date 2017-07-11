@@ -25,7 +25,7 @@ module.exports = class LineUtils {
                 lines.push(line);
             }
         } else {
-            logger.warn("Line filter is active but no lines requested")
+            logger.error("Line filter is active but no lines requested")
         }
 
         return lines;
@@ -34,6 +34,11 @@ module.exports = class LineUtils {
     static whereLines(field1, field2, lines) {
         let isFirst = true;
         let whereLines = '';
+
+        if (lines.count === 0) {
+            logger.error("Line filter is active but no lines requested");
+            return whereLines;
+        }
 
         for (let lineData of lines) {
             if (isFirst) {

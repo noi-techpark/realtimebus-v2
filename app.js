@@ -11,6 +11,7 @@ const logger = require("./util/logger");
 
 const v1Realtime = require("./endpoint/v1/realtime");
 const v1Receiver = require("./endpoint/v1/receiver");
+const v1Stops = require("./endpoint/v1/stops");
 const v1Vdv = require("./endpoint/v1/vdv");
 
 const ExtrapolatePositions = require("./operations/ExtrapolatePositions");
@@ -39,7 +40,8 @@ connection.connect(function (error) {
 
     logger.warn("Connected to database");
 
-    new ExtrapolatePositions().run();
+    // TODO: Start extrapolation
+    // new ExtrapolatePositions().run();
 
     startServer()
 });
@@ -48,25 +50,15 @@ function startServer() {
     app.group("/v1", (router) => {
 
         router.get("/positions", function (req, res) {
-            v1Realtime.positions(req)
-                .then(positions => {
-                    res.status(200).json(positions);
-                })
-                .catch(error => {
-                    logger.error(error);
-                    res.status(500).json({success: false, error: error})
-                })
+            v1Realtime.positions(req, res)
         });
 
         router.post("/receiver", function (req, res) {
-            v1Receiver.updatePositions(req)
-                .then(() => {
-                    res.status(200).json({success: true});
-                })
-                .catch(error => {
-                    logger.error(error);
-                    res.status(500).json({success: false, error: error})
-                })
+            v1Receiver.updatePositions(req, res)
+        });
+
+        router.get("/stops", function (req, res) {
+            v1Stops.stops(req, res)
         });
 
         router.post("/vdv", function (req, res) {

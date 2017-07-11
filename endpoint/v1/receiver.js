@@ -12,7 +12,7 @@ const ActualPositionUpdater = require("../../model/realtime/writertask/ActualPos
 const config = require("../../config");
 
 module.exports.updatePositions = function (req, res) {
-    return new Promise(function (resolve, reject) {
+    new Promise(function (resolve, reject) {
         // TODO: What do these do and why are they needed?
 
         let databaseFormat = config.database_coordinate_format;
@@ -81,5 +81,12 @@ module.exports.updatePositions = function (req, res) {
             .catch(error => {
                 reject(error)
             })
-    });
+    })
+        .then(() => {
+            res.status(200).json({success: true});
+        })
+        .catch(error => {
+            logger.error(error);
+            res.status(500).json({success: false, error: error})
+        })
 };

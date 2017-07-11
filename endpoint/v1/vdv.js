@@ -3,9 +3,10 @@
 const AdmZip = require("adm-zip");
 const connection = require("../../database/connection.js");
 const fs = require("fs");
-const HttpError = require("../../util/utils");
 const logger = require("../../util/logger");
 const reader = require("readline");
+
+const HttpError = require("../../util/utils");
 
 const LATEST_VDV_ZIP = 'vdv/latest.zip';
 const LATEST_EXTRACTED_VDV_DATA = 'vdv/latest';
@@ -93,7 +94,7 @@ module.exports = {
                             return new Promise(function (resolve, reject) {
                                 parseVdvFile(VDV_FILES + '/' + file, function (table, columns, records) {
                                     if (records.length === 0) {
-                                        return reject(new HttpError(400, `Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`));
+                                        return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
                                     }
 
                                     resolve();
@@ -112,9 +113,9 @@ module.exports = {
         }).then(() => {
             res.status(200).json({success: true});
         }).catch(err => {
-            console.log(err.code);
+            console.log(err.status);
             logger.error(err);
-            res.status(err.code).json({success: false, error: err})
+            res.status(err.status).json({success: false, error: err})
         });
     }
 };

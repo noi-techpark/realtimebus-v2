@@ -18,15 +18,20 @@ if (!('toJSON' in Error.prototype)) {
     });
 }
 
-function HttpError(code, message) {
-    Error.captureStackTrace(this, HttpError);
+module.exports = class HttpError extends Error {
 
-    this.name = HttpError.name;
-    this.code = code;
-    this.message = message;
-}
+    constructor(message, status) {
 
-util.inherits(HttpError, Error);
+        // Calling parent constructor of base Error class.
+        super(message);
 
-module.exports = HttpError;
+        // Capturing stack trace, excluding constructor call from it.
+        Error.captureStackTrace(this, this.constructor);
+
+        // You can use any additional properties you want.
+        // I'm going to use preferred HTTP status for this error types.
+        // `500` is the default value if not specified.
+        this.status = status || 500;
+    }
+};
 

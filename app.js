@@ -21,8 +21,12 @@ function logRequests(req, res, next) {
     next();
 }
 
+process.on('uncaughtException', function(err) {
+    logger.error('Caught exception: ' + err);
+});
+
 process.on('unhandledRejection', (reason, promise) => {
-    console.log('Unhandled Rejection at: Promise', promise, 'reason:', reason);
+    logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
     // application specific logging, throwing an error, or other logic here
 });
 
@@ -72,18 +76,11 @@ function startServer() {
         });
 
         router.post("/vdv", function (req, res) {
-            v1Vdv.upload(req)
-                .then(success => {
-                    res.status(200).json(success);
-                })
-                .catch(error => {
-                    logger.error(error);
-                    res.status(500).json({success: false, error: error})
-                })
+            v1Vdv.upload(req, res)
         });
     });
 
-    app.listen(80, function () {
+    app.listen(88, function () {
         logger.warn('Server started on port 80')
     })
 }

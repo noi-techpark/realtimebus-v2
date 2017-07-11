@@ -53,10 +53,6 @@ connection.connect(function (error) {
 });
 
 function startServer() {
-    router.post("/receiver", function (req, res) {
-        v1Receiver.updatePositions(req, res)
-    });
-
     router.post("/vdv", function (req, res) {
         v1Vdv.upload(req, res)
     });
@@ -66,16 +62,20 @@ function startServer() {
             v1Realtime.positions(req, res)
         });
 
+        router.post("/receiver", function (req, res) {
+            v1Receiver.updatePositions(req, res)
+        });
+
+        router.get("/:stop/buses", function (req, res) {
+            v1Stops.nextBusesAtStop(req, res)
+        });
+
         router.get("/stops", function (req, res) {
             v1Stops.stops(req, res)
         });
 
         router.get("/:tripId/stops", function (req, res) {
             v1Stops.stopsForTrip(req, res)
-        });
-
-        router.get("/:stop/buses", function (req, res) {
-            v1Stops.nextBusesAtStop(req, res)
         });
     });
 

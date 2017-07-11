@@ -61,6 +61,14 @@ function startServer() {
             v1Stops.stops(req, res)
         });
 
+        router.get("/:tripId/stops", function (req, res) {
+            v1Stops.stopsForTrip(req, res)
+        });
+
+        router.get("/:stop/buses", function (req, res) {
+            v1Stops.nextBusesAtStop(req, res)
+        });
+
         router.post("/vdv", function (req, res) {
             v1Vdv.upload(req)
                 .then(success => {

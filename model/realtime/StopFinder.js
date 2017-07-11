@@ -1,6 +1,7 @@
 'use strict';
 
 const connection = require("../../database/connection");
+const logger = require("../../util/logger");
 
 const FeatureList = require("./FeatureList");
 const LineUtils = require("./LineUtils");
@@ -77,20 +78,17 @@ module.exports = class StopFinder {
             FROM  vdv.rec_ort`
         )
             .then(sql => {
-                if (typeof this.lines !== 'undefined') {
-                    // $lines was set explicitely, otherwise everthing is accepted // TODO: What does this even mean?
-                    if (this.lines.count > 0) {
-                        return new FeatureList();
-                    } else {
-                        // some lines where selected, otherwise return empty FeatureCollection
-                        sql +=
-                            `INNER JOIN vdv.lid_verlauf
+                // noinspection EqualityComparisonWithCoercionJS
+                if (this.lines != null) {
+                    logger.debug(`Filter active: lines='${this.lines}'`);
+
+                    sql +=
+                        `INNER JOIN vdv.lid_verlauf
                                 ON lid_verlauf.ort_nr=rec_ort.ort_nr
                                 AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
-                            WHERE `;
+                         WHERE `;
 
-                        sql += LineUtils.whereLines('lid_verlauf.li_nr', 'lid_verlauf.str_li_var', this.lines);
-                    }
+                    sql += LineUtils.whereLines('lid_verlauf.li_nr', 'lid_verlauf.str_li_var', this.lines);
                 }
 
                 return sql;

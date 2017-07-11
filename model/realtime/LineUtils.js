@@ -11,7 +11,7 @@ module.exports = class LineUtils {
             let regex = /^d+:[a-z0-9]+(,d+:[a-z0-9]+)*$/i;
 
             if (!regex.test(lineString)) {
-                throw(`Filter '${lineString}' has invalid format`);
+                throw(`Filter '${lineString}' does not match required filter format '${regex}'`);
             }
 
             let lineFragments = lineString.split(',');

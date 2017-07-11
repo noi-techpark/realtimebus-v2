@@ -17,21 +17,19 @@ const Positions = require("../../model/realtime/Positions");
 module.exports = {
 
     positions: function (req, res) {
-        Promise.resolve(function () {
-            // TODO: What do these do and why are they needed?
+        Promise.resolve()
+            .then(() => {
+                // TODO: What do these do and why are they needed?
 
-            let outputFormat = config.database_coordinate_format;
-            let positions = new Positions(outputFormat);
+                let outputFormat = config.database_coordinate_format;
+                let positions = new Positions(outputFormat);
 
-            let lines = req.query.lines;
+                let lines = req.query.lines;
 
-            if (typeof lines !== 'undefined' && lines.length > 0) {
-                positions.setLines(LineUtils.getLinesFromQuery(lines));
-            }
+                if (typeof lines !== 'undefined' && lines.length > 0) {
+                    positions.setLines(LineUtils.getLinesFromQuery(lines));
+                }
 
-            return positions;
-        })
-            .then(positions => {
                 return positions.getAll();
             })
             .then(positions => {

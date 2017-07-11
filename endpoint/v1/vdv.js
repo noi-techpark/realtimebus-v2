@@ -14,7 +14,7 @@ const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
 
 // SELECT 'DROP TABLE ' || tablename || ';' FROM pg_tables WHERE tablename LIKE 'vdv_%' AND schemaname = 'public';
 
-const VALIDITY = "PERSONAL.X10";
+const VALIDITY = "BASIS_VER_GUELTIGKEIT.X10";
 const CALENDAR = "FIRMENKALENDER.X10";
 const PATHS = "LID_VERLAUF.X10";
 const AREAS = "MENGE_BEREICH.X10";
@@ -97,18 +97,18 @@ module.exports = {
                                         return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
                                     }
 
-                                    resolve();
+                                    resolve()
                                 })
-                            });
+                            })
                         })
                     });
 
-                    chain.then(() => {
-                        resolve();
+                    chain = chain.then(() => {
+                        resolve()
                     }).catch(error => {
-                        reject(error);
-                    });
-                });
+                        reject(error)
+                    })
+                })
             })
         }).then(() => {
             res.status(200).json({success: true});

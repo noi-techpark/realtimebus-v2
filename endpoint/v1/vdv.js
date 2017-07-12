@@ -1,18 +1,22 @@
 'use strict';
 
+require("moment");
+
 const AdmZip = require("adm-zip");
 const connection = require("../../database/database.js");
 const fs = require("fs");
-const logger = require("../../util/logger");
-const reader = require("readline");
-
 const HttpError = require("../../util/utils");
+const logger = require("../../util/logger");
+const moment = require("moment-timezone");
+const reader = require("readline");
+const VdvFile = require("../../model/vdv/VdvFile");
 
 const LATEST_VDV_ZIP = 'vdv/latest.zip';
 const LATEST_EXTRACTED_VDV_DATA = 'vdv/latest';
 const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
 
-// SELECT 'DROP TABLE ' || tablename || ';' FROM pg_tables WHERE tablename LIKE 'vdv_%' AND schemaname = 'public';
+// import vdv data
+// curl --header "Content-Type:application/octet-stream" --data-binary @/Users/David/Desktop/vdv.zip http://10.1.1.162:88/vdv
 
 const VALIDITY = "BASIS_VER_GUELTIGKEIT.X10";
 const CALENDAR = "FIRMENKALENDER.X10";
@@ -28,8 +32,7 @@ const DAY_TYPES = "MENGE_TAGESART.X10";
 const COMPANIES = "MENGE_UNTERNEHMER.X10";
 const BREAKS = "ORT_HZTF.X10";
 const TRIP_INFO_REDUCED = "REC_FRT_BEDIENUNG.X10";
-const TRIP_STOP_TIMES = "REC_FRT_HZT.X10";
-const BUS_STOP_STOP_TIMES = "ORT_HZTF.X10";
+const BUS_STOP_STOP_TIMES = "REC_FRT_HZT.X10";
 const TRIP_INFO_EXTENDED = "REC_FRT.X10";
 const STOP_POINTS = "REC_HP.X10";
 const LINES = "REC_LID.X10";
@@ -40,80 +43,177 @@ const TRAVEL_TIMES = "SEL_FZT_FELD.X10";
 const TEQ_MAPPING = "teqnummern.csv";
 const SERVICE_PROVIDERS = "ZUL_VERKEHRSBETRIEB.X10";
 
+const VALID_FROM = "VER_GUELTIGKEIT";
+
 const vdvFileList = [VALIDITY, CALENDAR, PATHS, AREAS, TRIP_TYPES, TRIP_PEEK_TIMES, VEHICLE_TYPES, LINE_SERVICES,
-    STOP_TYPES, BUS_STOP_TYPES, DAY_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, TRIP_STOP_TIMES, BUS_STOP_STOP_TIMES,
-    TRIP_INFO_EXTENDED, LINES, VARIANTS, BUS_STOPS, BUS_STOP_CONNECTIONS, SERVICE_PROVIDERS];
+    STOP_TYPES, BUS_STOP_TYPES, DAY_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, BUS_STOP_STOP_TIMES,
+    TRIP_INFO_EXTENDED, STOP_POINTS, LINES, VARIANTS, BUS_STOPS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES, SERVICE_PROVIDERS];
+
+let response = {};
+let sqlCreateChain = [];
+let sqlInsertChain = [];
 
 module.exports = {
 
     upload: function (req, res) {
+        let data = [];
+
         return new Promise(function (resolve, reject) {
             fs.writeFile(LATEST_VDV_ZIP, req.body, function (err) {
-                if (err) {
-                    return reject(err);
-                }
-
-                logger.debug("Saved zip file containing VDV data");
-
-                new AdmZip(LATEST_VDV_ZIP).extractAllTo(LATEST_EXTRACTED_VDV_DATA, true);
-                logger.debug("Extracted latest VDV data");
-
-                resolve()
-            })
-        }).then(() => {
-            return new Promise(function (resolve, reject) {
-                fs.writeFile('vdv/' + new Date().toISOString() + '.zip', req.body, function (err) {
+                try {
                     if (err) {
                         return reject(err);
                     }
 
-                    logger.debug("Archived zip file containing VDV data");
+                    logger.debug("Saved zip file containing VDV data");
+
+                    new AdmZip(LATEST_VDV_ZIP).extractAllTo(LATEST_EXTRACTED_VDV_DATA, true);
+                    logger.debug("Extracted latest VDV data");
 
                     resolve()
+                } catch (e) {
+                    reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
+                }
+            })
+        }).then(() => {
+            return new Promise(function (resolve, reject) {
+                fs.writeFile('vdv/' + new Date().toISOString() + '.zip', req.body, function (err) {
+                    try {
+                        if (err) {
+                            return reject(err);
+                        }
+
+                        logger.debug("Archived zip file containing VDV data");
+
+                        resolve()
+                    } catch (e) {
+                        reject(new HttpError("The zip file could not be written to disk. Please try again later."))
+                    }
                 })
             })
         }).then(() => {
             return new Promise(function (resolve, reject) {
                 fs.readdir(VDV_FILES, (err, files) => {
-                    if (err) {
-                        return reject(err);
-                    }
-
-                    logger.debug(`Found ${files.length} files`);
-
-                    vdvFileList.forEach(file => {
-                        if (!files.indexOf(file) === -1) {
-                            return reject(new Error(`The file ${file} is missing. VDV import was aborted. No changes have been applied to the current data.`));
+                    try {
+                        if (err) {
+                            return reject(err);
                         }
-                    });
 
-                    let chain = Promise.resolve();
+                        logger.debug(`Found ${files.length} files`);
 
-                    vdvFileList.forEach(file => {
-                        chain = chain.then(() => {
-                            return new Promise(function (resolve, reject) {
-                                parseVdvFile(VDV_FILES + '/' + file, function (table, columns, records) {
-                                    if (records.length === 0) {
-                                        return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
-                                    }
-
-                                    resolve();
-                                })
-                            })
+                        vdvFileList.forEach(file => {
+                            if (!files.indexOf(file) === -1) {
+                                return reject(new Error(`The file ${file} is missing. VDV import was aborted. No changes have been applied to the current data.`));
+                            }
                         });
-                    });
 
-                    logger.debug(`Successfully validated ${vdvFileList.length} VDV files`);
+                        let chain = Promise.resolve();
 
-                    chain = chain.then(() => {
-                        resolve()
-                    }).catch(error => {
-                        reject(error)
-                    })
+                        vdvFileList.forEach(file => {
+                            chain = chain.then(() => {
+                                return new Promise(function (resolve, reject) {
+                                    parseVdvFile(file, data, function (fileName, table, columns, rows, data) {
+                                        if (rows.length === 0) {
+                                            return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
+                                        }
+
+                                        data.push(new VdvFile(fileName, table, columns, rows));
+
+                                        logger.debug(`Processed table ${table}`);
+
+                                        resolve();
+                                    })
+                                })
+                            });
+                        });
+
+                        logger.debug(`Successfully read ${vdvFileList.length} VDV files`);
+
+                        chain = chain.then(() => {
+                            resolve()
+                        }).catch(error => {
+                            reject(error)
+                        })
+                    } catch (e) {
+                        reject(new HttpError("Failed to read from disk. Please try again later."))
+                    }
                 })
             })
         }).then(() => {
-            res.status(200).json({success: true})
+            return connection.query(`DROP SCHEMA IF EXISTS data CASCADE;`);
+        }).then(() => {
+            return connection.query(`CREATE SCHEMA data;`);
+        }).then(() => {
+            return connection.query(`CREATE TABLE data.config (key text, value text);`);
+        }).then(() => {
+            return new Promise(function (resolve) {
+                data.forEach(function (file) {
+                    //noinspection FallThroughInSwitchStatementJS
+                    switch (file.name) {
+                        case VALIDITY:
+                            response.data_valid_from = moment(file.rows[0][file.columns.indexOf(VALID_FROM)]).tz("Europe/Rome").format();
+                            logger.info(`Data is valid as of ${response.data_valid_from}`);
+                            break;
+                        case CALENDAR:
+                            response.calendar_days_amount = file.rows.length;
+                            response.calendar_days_first = moment(file.rows[0][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
+                            response.calendar_days_last = moment(file.rows[file.rows.length - 1][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
+
+                            logger.debug(`Calendar contains ${file.rows.length} days.`);
+
+                            if (response.data_valid_from !== response.calendar_days_first) {
+                                logger.warn("Validity begin of uploaded data and first day in calendar do not match. Did you mess up the previous upload?");
+                            }
+
+                            if (response.calendar_days_first === response.calendar_days_last) {
+                                logger.warn("The first day in the calendar is equal to the last one. Are you sure you uploaded the correct calendar data?");
+                            }
+                        default:
+                            // create table
+                            let sql = `CREATE TABLE data.${file.table.toLowerCase()} (`;
+
+                            file.columns.forEach(function (column) {
+                                sql += `${column} text, `
+                            });
+
+                            sql = sql.slice(0, -2) + ");";
+
+                            sqlCreateChain.push(sql);
+
+                            // insert into
+                            sql = `INSERT INTO data.${file.table.toLowerCase()} VALUES `;
+
+                            file.rows.forEach(function (row) {
+                                sql += '(';
+
+                                row.forEach(function (cell) {
+                                    sql += `'${cell}', `
+                                });
+
+                                sql = sql.slice(0, -2) + '), ';
+                            });
+
+                            sql = sql.slice(0, -2);
+
+                            sqlInsertChain.push(sql);
+
+                            break;
+                    }
+                });
+
+                resolve()
+            })
+        }).then(() => {
+            return connection.query(`INSERT INTO data.config VALUES
+                ('data_valid_from', '${response.data_valid_from}')
+            `)
+        }).then(() => Promise.all(sqlCreateChain.map(function (sql) {
+            return new Promise(function () {
+                connection.query(sql)
+            })
+        }))).then(() => {
+            response.success = true;
+            res.status(200).json(sortObject(response))
         }).catch(err => {
             logger.error(err);
             res.status(err.status).json({success: false, error: err})
@@ -121,13 +221,13 @@ module.exports = {
     }
 };
 
-function parseVdvFile(file, cb) {
+function parseVdvFile(file, data, cb) {
     let table = null;
     let columns = [];
     let records = [];
 
     reader.createInterface({
-        input: fs.createReadStream(file)
+        input: fs.createReadStream(VDV_FILES + '/' + file)
     }).on('line', function (line) {
         let csv = line.split("; ");
 
@@ -139,12 +239,33 @@ function parseVdvFile(file, cb) {
                 columns = csv;
                 break;
             case "rec": // record
-                records.push(csv);
+                records.push(csv.map(function (val) {
+                    val = val.replace(/\"/g, "").trim();
+                    return val === "" || val === "null" ? null : val;
+                }));
                 break;
             default: // other lines are ignored
                 break;
         }
     }).on('close', function () {
-        cb(table, columns, records);
+        cb(file, table, columns, records, data);
     })
+}
+
+function sortObject(o) {
+    let sorted = {}, key, a = [];
+
+    for (key in o) {
+        if (o.hasOwnProperty(key)) {
+            a.push(key);
+        }
+    }
+
+    a.sort();
+
+    for (key = 0; key < a.length; key++) {
+        sorted[a[key]] = o[a[key]];
+    }
+
+    return sorted;
 }

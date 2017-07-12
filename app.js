@@ -17,6 +17,7 @@ const v1Vdv = require("./endpoint/v1/vdv");
 const v2Realtime = require("./endpoint/v2/realtime");
 
 const ExtrapolatePositions = require("./operations/ExtrapolatePositions");
+const DropOldPositions = require("./operations/DropOldPositions");
 
 function logRequests(req, res, next) {
     logger.warn(`${req.method} ${req.url}`);
@@ -50,6 +51,12 @@ connection.connect(function (error) {
 
     // TODO: Start extrapolation
     // new ExtrapolatePositions().run();
+
+    let dropPositions = new DropOldPositions();
+
+    setInterval(function () {
+        dropPositions.run();
+    }, 1000 * 60);
 
     startServer()
 });

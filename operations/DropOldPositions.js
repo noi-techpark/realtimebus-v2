@@ -10,9 +10,14 @@ module.exports = class DropOldPositions {
     }
 
     run() {
+        logger.warn("Dropping old bus positions");
+
         return Promise.resolve()
             .then(connection.query("SET search_path=vdv,public;"))
-            .then(connection.query(`DELETE FROM vdv.vehicle_track WHERE age(insert_date) > interval '${this.age} seconds'`))
+            .then(() => connection.query(`DELETE FROM vdv.vehicle_position_act WHERE gps_date < NOW() - interval '10 minute' RETURNING *`))
+            .then(result => {
+                logger.warn(`Dropped ${result.rowCount} old bus positions`);
+            })
     }
 
     /*protected function configure() {

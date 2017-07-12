@@ -44,9 +44,16 @@ module.exports = {
                 "timestamp": new Date().getTime() / 1000
             };
 
-            return pb.serialize(obj, "VehiclePosition"); // you get Buffer here, send it via socket.write, etc.
+            let buffer = pb.serialize(obj, "transit_realtime.VehiclePosition");             // you get Buffer here, send it via socket.write, etc.
+            let newObj = pb.parse(buffer, "transit_realtime.VehiclePosition");    // you get Buffer here, send it via socket.write, etc.
+
+            console.log(buffer);
+            console.log(newObj);
+
+            return buffer;
         }).then(buffer => {
-            res.status(200).write(buffer, "application/octet-stream");
+            console.log("Sending response");
+            res.status(200).send(buffer);
         }).catch(error => {
             logger.error(error);
             res.status(500).jsonp({success: false, error: error})

@@ -207,11 +207,15 @@ module.exports = {
             return connection.query(`INSERT INTO data.config VALUES
                 ('data_valid_from', '${response.data_valid_from}')
             `)
-        }).then(() => Promise.all(sqlCreateChain.map(function (sql) {
-            return new Promise(function () {
-                connection.query(sql)
-            })
-        }))).then(() => {
+        }).then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlCreateChain) {
+                chain = chain.then(() => {
+                    return connection.query(sql)
+                })
+            }
+        }).then(() => {
             response.success = true;
             res.status(200).json(sortObject(response))
         }).catch(err => {

@@ -1,6 +1,7 @@
 'use strict';
 
 const connection = require("../../database/connection");
+const config = require("../../config");
 
 const FeatureList = require("../../model/realtime/FeatureList");
 const LineUtils = require("../../model/realtime/LineUtils");
@@ -69,7 +70,7 @@ module.exports = class Positions {
                     LEFT JOIN vdv.line_attributes
                         ON rec_frt.li_nr=line_attributes.li_nr
                         
-                    WHERE gps_date > NOW() - interval '10 minute'
+                    WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
                     -- AND vehicle_position_act.status='r'
                     ${whereLines}
                `

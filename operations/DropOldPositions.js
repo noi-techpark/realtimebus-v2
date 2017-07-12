@@ -2,11 +2,12 @@
 
 const connection = require("../database/connection");
 const logger = require("../util/logger");
+const config = require("../config");
 
 module.exports = class DropOldPositions {
 
-    constructor(age) {
-        this.age = age || 600;
+    constructor() {
+        this.age = config.realtime_bus_timeout_minutes;
     }
 
     run() {
@@ -14,7 +15,7 @@ module.exports = class DropOldPositions {
 
         return Promise.resolve()
             .then(connection.query("SET search_path=vdv,public;"))
-            .then(() => connection.query(`DELETE FROM vdv.vehicle_position_act WHERE gps_date < NOW() - interval '10 minute' RETURNING *`))
+            .then(() => connection.query(`DELETE FROM vdv.vehicle_position_act WHERE gps_date < NOW() - interval '${age} minute' RETURNING *`))
             .then(result => {
                 logger.warn(`Dropped ${result.rowCount} old bus positions`);
             })

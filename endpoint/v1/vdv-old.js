@@ -1,7 +1,7 @@
 'use strict';
 
 const AdmZip = require("adm-zip");
-const connection = require("../../database/connection.js");
+const connection = require("../../database/database.js");
 const fs = require("fs");
 const logger = require("../../util/logger");
 const reader = require("readline");

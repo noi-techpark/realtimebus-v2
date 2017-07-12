@@ -1,11 +1,10 @@
 'use strict';
 
-const connection = require("../../../database/connection");
 const logger = require("../../../util/logger");
 
 module.exports = class ActualPositionLineReference {
 
-    getLineReference(feature) {
+    getLineReference(connection, feature) {
         // TODO: Fix this error (Possibly already fixed?)
         // Error inserting trip NaN: Error: ERROR:  column "nan" does not exist
         // LINE 12: WHERE rec_frt.frt_fid = NaN

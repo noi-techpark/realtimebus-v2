@@ -1,11 +1,10 @@
 'use strict';
 
-const connection = require("../../../database/connection");
 const logger = require("../../../util/logger");
 
 module.exports = class ActualPositionUpdater {
 
-    checkIfInternal(tripId, feature) {
+    checkIfInternal(connection, tripId, feature) {
         logger.log(`checkIfInternal() trip=${tripId}`);
 
         return Promise.resolve(`
@@ -25,7 +24,7 @@ module.exports = class ActualPositionUpdater {
             })
     }
 
-    insertIntoDatabase(tripId, feature) {
+    insertIntoDatabase(connection, tripId, feature) {
         logger.log(`insertIntoDatabase() trip=${tripId}`);
 
         return Promise.resolve(`

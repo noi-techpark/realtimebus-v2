@@ -1,6 +1,6 @@
 'use strict';
 
-const connection = require("../../database/connection");
+const connection = require("../../database/database");
 const logger = require("../../util/logger");
 
 const ActualPositionLineReference = require("./writertask/ActualPositionLineReference");

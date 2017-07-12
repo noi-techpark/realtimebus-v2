@@ -1,6 +1,6 @@
 'use strict';
 
-const connection = require("../../database/connection");
+const connection = require("../../database/database");
 
 module.exports = class CourseFinder {
 

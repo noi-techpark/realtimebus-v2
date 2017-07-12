@@ -18,6 +18,10 @@ pool.on('error', function(error, client) {
     logger.error(`SQL error: ${error}`)
 });
 
+pool.on('connect', client => {
+    logger.warn(`Connected client: ${client}`)
+});
+
 module.exports.connect = function(err, client, done) {
     return pool.connect(err, client, done)
 };

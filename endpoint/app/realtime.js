@@ -1,5 +1,6 @@
 'use strict';
 
+const database = require("../../database/database");
 const logger = require('../../util/logger');
 const config = require("../../config");
 
@@ -9,20 +10,28 @@ const NewPositions = require("../../model/realtime/new/NewPositions");
 module.exports = {
 
     positions: function (req, res) {
-        Promise.resolve().then(() => {
-            let positions = new NewPositions();
+        database.connect().then(client => {
+           return Promise.resolve().then(() => {
+               let positions = new NewPositions(client);
 
-            let lines = req.query.lines;
+               let lines = req.query.lines;
 
-            if (typeof lines !== 'undefined' && lines.length > 0) {
-                positions.setLines(LineUtils.getLinesFromQuery(lines));
-            }
+               if (typeof lines !== 'undefined' && lines.length > 0) {
+                   positions.setLines(LineUtils.getLinesFromQuery(lines));
+               }
 
-            return positions.getAll();
-        }).then(positions => {
-            res.status(200).jsonp(positions);
+               return positions.getAll();
+           }).then(positions => {
+               client.release();
+               res.status(200).jsonp(positions);
+           }).catch(error => {
+               client.release();
+
+               logger.error(error);
+               res.status(500).jsonp({success: false, error: error})
+           })
         }).catch(error => {
-            logger.error(error);
+            logger.error(`Error acquiring client: ${error}`);
             res.status(500).jsonp({success: false, error: error})
         })
     }

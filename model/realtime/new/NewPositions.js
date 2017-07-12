@@ -1,6 +1,5 @@
 'use strict';
 
-const connection = require("../../../database/connection");
 const config = require("../../../config");
 
 const RealtimeModel = require("./RealtimeModel");
@@ -8,7 +7,8 @@ const LineUtils = require("../LineUtils");
 
 module.exports = class NewPositions {
 
-    constructor() {
+    constructor(client) {
+        this.client = client;
         this.outputFormat = config.output_coordinate_format;
     }
 
@@ -73,7 +73,7 @@ module.exports = class NewPositions {
                     ${whereLines}
                `
             })
-            .then(sql => connection.query(sql))
+            .then(sql => this.client.query(sql))
             .then(result => {
                 // console.log(result);
 

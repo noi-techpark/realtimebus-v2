@@ -4,7 +4,7 @@ require('express-group-routes');
 require("./util/utils");
 
 const bodyParser = require('body-parser');
-const connection = require("./database/connection");
+const connection = require("./database/database");
 const express = require('express');
 const fs = require('fs');
 const logger = require("./util/logger");

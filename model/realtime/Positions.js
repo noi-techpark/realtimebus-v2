@@ -1,6 +1,6 @@
 'use strict';
 
-const connection = require("../../database/connection");
+const connection = require("../../database/database");
 const config = require("../../config");
 
 const FeatureList = require("../../model/realtime/FeatureList");

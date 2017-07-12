@@ -79,7 +79,7 @@ function startServer() {
         });
     });
 
-    let listener = app.listen(88, function () {
+    let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

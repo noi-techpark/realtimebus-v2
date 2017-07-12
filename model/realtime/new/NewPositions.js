@@ -3,7 +3,7 @@
 const connection = require("../../../database/connection");
 const config = require("../../../config");
 
-const NewFeatureList = require("../new/NewFeatureList");
+const RealtimeModel = require("./RealtimeModel");
 const LineUtils = require("../LineUtils");
 
 module.exports = class NewPositions {
@@ -77,7 +77,7 @@ module.exports = class NewPositions {
             .then(result => {
                 // console.log(result);
 
-                let featureList = new NewFeatureList();
+                let realtime = new RealtimeModel();
 
                 for (let row of result.rows) {
                     // console.log(row);
@@ -108,10 +108,10 @@ module.exports = class NewPositions {
                         updated: row.gps_date,
                     };
 
-                    featureList.add(feature);
+                    realtime.add(feature);
                 }
 
-                return featureList.getBusCollection();
+                return realtime.getBusCollection();
             });
     }
 };

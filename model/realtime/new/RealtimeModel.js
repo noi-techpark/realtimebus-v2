@@ -1,6 +1,6 @@
 'use strict';
 
-module.exports = class NewFeatureList {
+module.exports = class RealtimeModel {
 
     constructor() {
         this.features = []

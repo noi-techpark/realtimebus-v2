@@ -9,4 +9,3 @@ config.realtime_next_stops_limit = 10;
 config.realtime_bus_timeout_minutes = 10;
 
 module.exports = config;
-

@@ -39,22 +39,22 @@ module.exports = class ActualPositionUpdater {
 
                     return `
                         UPDATE vdv.vehicle_position_act SET
-                        gps_date  = '${feature.properties.gps_date}',
+                            gps_date  = '${feature.properties.gps_date}',
                             delay_sec = ${feature.properties.delay_sec},
                             li_nr = ${feature.properties.li_nr},
                             str_li_var = '${feature.properties.str_li_var}',
                             li_lfd_nr = ${feature.properties.li_lfd_nr},
                             interpolation_distance = ${feature.properties.interpolation_distance},
                             interpolation_linear_ref = ${feature.properties.interpolation_linear_ref},
-                            the_geom  = ${feature.geometry_sql}
+                            the_geom  = ${feature.geometry_sql},
+                            vehiclecode  = '${feature.properties.vehicleCode}'
                         WHERE frt_fid=${tripId}
                     `;
                 } else {
                     logger.debug(`Trip ${tripId} not yet in database, inserting...`);
 
                     return `
-                        INSERT INTO vdv.vehicle_position_act
-                        (
+                        INSERT INTO vdv.vehicle_position_act (
                             gps_date,
                             delay_sec,
                             frt_fid,
@@ -63,7 +63,8 @@ module.exports = class ActualPositionUpdater {
                             li_lfd_nr,
                             interpolation_distance,
                             interpolation_linear_ref,
-                            the_geom
+                            the_geom,
+                            vehiclecode
                         ) VALUES (
                             '${feature.properties.gps_date}',
                             ${feature.properties.delay_sec},
@@ -73,7 +74,8 @@ module.exports = class ActualPositionUpdater {
                             ${feature.properties.li_lfd_nr},
                             ${feature.properties.interpolation_distance},
                             ${feature.properties.interpolation_linear_ref},
-                            ${feature.geometry_sql}
+                            ${feature.geometry_sql},
+                            '${feature.properties.vehicleCode}'
                         )
                    `;
                 }

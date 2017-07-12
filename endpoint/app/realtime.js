@@ -4,14 +4,13 @@ const logger = require('../../util/logger');
 const config = require("../../config");
 
 const LineUtils = require("../../model/realtime/LineUtils");
-const Positions = require("../../model/realtime/Positions");
+const NewPositions = require("../../model/realtime/new/NewPositions");
 
 module.exports = {
 
     positions: function (req, res) {
         Promise.resolve().then(() => {
-            let outputFormat = config.database_coordinate_format;
-            let positions = new Positions(outputFormat);
+            let positions = new NewPositions();
 
             let lines = req.query.lines;
 

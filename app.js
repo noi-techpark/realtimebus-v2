@@ -16,6 +16,8 @@ const v1Vdv = require("./endpoint/v1/vdv");
 
 const v2Realtime = require("./endpoint/v2/realtime");
 
+const appRealtime = require("./endpoint/app/realtime");
+
 const ExtrapolatePositions = require("./operations/ExtrapolatePositions");
 const DropOldPositions = require("./operations/DropOldPositions");
 
@@ -85,6 +87,12 @@ function startServer() {
 
         router.get("/:tripId/stops", function (req, res) {
             v1Stops.stopsForTrip(req, res)
+        });
+    });
+
+    app.group("/app", (router) => {
+        router.get("/positions", function (req, res) {
+            appRealtime.positions(req, res)
         });
     });
 

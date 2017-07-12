@@ -1,15 +1,15 @@
 'use strict';
 
-const connection = require("../../database/connection");
-const config = require("../../config");
+const connection = require("../../../database/connection");
+const config = require("../../../config");
 
-const FeatureList = require("../../model/realtime/FeatureList");
-const LineUtils = require("../../model/realtime/LineUtils");
+const NewFeatureList = require("../new/NewFeatureList");
+const LineUtils = require("../LineUtils");
 
-module.exports = class Positions {
+module.exports = class NewPositions {
 
-    constructor(outputFormat) {
-        this.outputFormat = outputFormat;
+    constructor() {
+        this.outputFormat = config.output_coordinate_format;
     }
 
     setLines(lines) {
@@ -27,8 +27,8 @@ module.exports = class Positions {
                 }
 
                 return `
-                    SELECT
-                    rec_frt.frt_fid,
+                    SELECT DISTINCT (vehicleCode),
+                        rec_frt.frt_fid,
                         gps_date,
                         delay_sec,
                         vehicleCode,
@@ -36,9 +36,6 @@ module.exports = class Positions {
                         rec_frt.str_li_var,
                         lidname,
                         insert_date,
-                        li_r,
-                        li_g,
-                        li_b,
                         next_rec_ort.ort_nr AS ort_nr,
                         next_rec_ort.onr_typ_nr AS onr_typ_nr,
                         next_rec_ort.ort_name AS ort_name,
@@ -69,6 +66,10 @@ module.exports = class Positions {
                         
                     WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
                     -- AND vehicle_position_act.status='r'
+                    
+                    ORDER BY gps_date
+                    
+                    
                     ${whereLines}
                `
             })
@@ -76,9 +77,11 @@ module.exports = class Positions {
             .then(result => {
                 // console.log(result);
 
-                let featureList = new FeatureList();
+                let featureList = new NewFeatureList();
 
                 for (let row of result.rows) {
+                    // console.log(row);
+
                     let geometry;
 
                     // noinspection EqualityComparisonWithCoercionJS
@@ -91,18 +94,24 @@ module.exports = class Positions {
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
 
-                    let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
+                    let feature = {
+                        trip: parseInt(row.frt_fid),
+                        line_id: row.li_nr,
+                        line_name: row.lidname,
+                        variant: parseInt(row.str_li_var),
+                        vehicle: parseInt(row.vehiclecode.split(" ")[0]),
+                        delay_min: Math.round(row.delay_sec / 60),
+                        latitude: Math.round(geometry.coordinates[1] * 1000000) / 1000000,
+                        longitude: Math.round(geometry.coordinates[0] * 1000000) / 1000000,
+                        bus_stop: row.ort_nr,
+                        inserted: row.insert_date,
+                        updated: row.gps_date,
+                    };
 
-                    row.hexcolor = '#' + hex;
-                    row.hexcolor2 = hex.toUpperCase();
-
-                    row.frt_fid = parseInt(row.frt_fid);
-                    row.str_li_var = parseInt(row.str_li_var);
-
-                    featureList.add(row, geometry);
+                    featureList.add(feature);
                 }
 
-                return featureList.getFeatureCollection();
+                return featureList.getBusCollection();
             });
     }
 };

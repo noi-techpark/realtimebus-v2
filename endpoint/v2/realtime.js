@@ -2,16 +2,9 @@
 
 const connection = require("../../database/connection");
 const logger = require('../../util/logger');
-
-const FeatureList = require("../../model/realtime/FeatureList");
-const DataWriter = require("../../model/realtime/DataWriter");
-
-const ActualPositionLineReference = require("../../model/realtime/writertask/ActualPositionLineReference");
-const ActualPositionUpdater = require("../../model/realtime/writertask/ActualPositionUpdater");
-const LineUtils = require("../../model/realtime/LineUtils");
-
 const config = require("../../config");
 
+const LineUtils = require("../../model/realtime/LineUtils");
 const Positions = require("../../model/realtime/Positions");
 
 let fs = require("fs");

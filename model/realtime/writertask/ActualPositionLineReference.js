@@ -6,8 +6,6 @@ const logger = require("../../../util/logger");
 module.exports = class ActualPositionLineReference {
 
     getLineReference(feature) {
-        // TODO: WHERE rec_frt.teq_nummer = ${feature.properties.frt_fid}
-
         // TODO: Fix this error (Possibly already fixed?)
         // Error inserting trip NaN: Error: ERROR:  column "nan" does not exist
         // LINE 12: WHERE rec_frt.frt_fid = NaN
@@ -23,7 +21,7 @@ module.exports = class ActualPositionLineReference {
                 INNER JOIN vdv.lid_verlauf
                     ON rec_frt.li_nr = lid_verlauf.li_nr
                     AND rec_frt.str_li_var = lid_verlauf.str_li_var
-                WHERE rec_frt.frt_fid = ${feature.properties.frt_fid}
+                WHERE rec_frt.teq_nummer = ${feature.properties.frt_fid}
                 ORDER BY ST_Distance(lid_verlauf.the_geom, ${feature.geometry_sql})
                 LIMIT 1
             `)

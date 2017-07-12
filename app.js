@@ -53,7 +53,7 @@ connection.connect(function (error) {
 });
 
 function startServer() {
-    router.post("/vdv", function (req, res) {
+    app.post("/vdv", function (req, res) {
         v1Vdv.upload(req, res)
     });
 

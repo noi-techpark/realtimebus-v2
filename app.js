@@ -12,7 +12,7 @@ const logger = require("./util/logger");
 const v1Realtime = require("./endpoint/v1/realtime");
 const v1Receiver = require("./endpoint/v1/receiver");
 const v1Stops = require("./endpoint/v1/stops");
-const v1Vdv = require("./endpoint/v1/vdv");
+const v1Vdv = require("./endpoint/root/vdv");
 
 const v2Realtime = require("./endpoint/v2/realtime");
 

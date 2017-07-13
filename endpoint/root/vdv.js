@@ -45,13 +45,18 @@ const SERVICE_PROVIDERS = "ZUL_VERKEHRSBETRIEB.X10";
 
 const VALID_FROM = "VER_GUELTIGKEIT";
 
-const vdvFileList = [VALIDITY, CALENDAR, PATHS, AREAS, TRIP_TYPES, TRIP_PEEK_TIMES, VEHICLE_TYPES, LINE_SERVICES,
-    STOP_TYPES, BUS_STOP_TYPES, DAY_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, BUS_STOP_STOP_TIMES,
-    TRIP_INFO_EXTENDED, STOP_POINTS, LINES, VARIANTS, BUS_STOPS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES, SERVICE_PROVIDERS];
+const VDV_COORDINATES_FORMAT = 4326;
+const DB_COORDINATES_FORMAT = 25832;
+
+const vdvFileList = [VALIDITY, DAY_TYPES, CALENDAR, LINES, BUS_STOPS, PATHS, AREAS, TRIP_TYPES, TRIP_PEEK_TIMES,
+    VEHICLE_TYPES, LINE_SERVICES, STOP_TYPES, BUS_STOP_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, TRIP_INFO_EXTENDED,
+    BUS_STOP_STOP_TIMES, STOP_POINTS, VARIANTS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES, SERVICE_PROVIDERS];
 
 let response = {};
+let sqlTruncateChain = [];
 let sqlCreateChain = [];
 let sqlInsertChain = [];
+let sqlTeqChain = [];
 
 module.exports = {
 
@@ -101,6 +106,10 @@ module.exports = {
 
                         logger.debug(`Found ${files.length} files`);
 
+                        if (files.indexOf(TEQ_MAPPING) === -1) {
+                            return reject(new Error(`The file ${TEQ_MAPPING} is missing. VDV import was aborted. No changes have been applied to the current data.`));
+                        }
+
                         vdvFileList.forEach(file => {
                             if (!files.indexOf(file) === -1) {
                                 return reject(new Error(`The file ${file} is missing. VDV import was aborted. No changes have been applied to the current data.`));
@@ -112,12 +121,12 @@ module.exports = {
                         vdvFileList.forEach(file => {
                             chain = chain.then(() => {
                                 return new Promise(function (resolve, reject) {
-                                    parseVdvFile(file, data, function (fileName, table, columns, rows, data) {
+                                    parseVdvFile(file, data, function (fileName, table, formats, columns, rows, data) {
                                         if (rows.length === 0) {
                                             return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
                                         }
 
-                                        data.push(new VdvFile(fileName, table, columns, rows));
+                                        data.push(new VdvFile(fileName, table, formats, columns, rows));
 
                                         logger.debug(`Processed table ${table}`);
 
@@ -140,11 +149,9 @@ module.exports = {
                 })
             })
         }).then(() => {
-            return connection.query(`DROP SCHEMA IF EXISTS data CASCADE;`);
+            return connection.query(`CREATE TABLE IF NOT EXISTS data.config (key text, value text);`);
         }).then(() => {
-            return connection.query(`CREATE SCHEMA data;`);
-        }).then(() => {
-            return connection.query(`CREATE TABLE data.config (key text, value text);`);
+            return connection.query(`TRUNCATE TABLE data.config;`);
         }).then(() => {
             return new Promise(function (resolve) {
                 data.forEach(function (file) {
@@ -159,7 +166,7 @@ module.exports = {
                             response.calendar_days_first = moment(file.rows[0][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
                             response.calendar_days_last = moment(file.rows[file.rows.length - 1][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
 
-                            logger.debug(`Calendar contains ${file.rows.length} days.`);
+                            logger.info(`Calendar contains ${file.rows.length} days.`);
 
                             if (response.data_valid_from !== response.calendar_days_first) {
                                 logger.warn("Validity begin of uploaded data and first day in calendar do not match. Did you mess up the previous upload?");
@@ -169,28 +176,33 @@ module.exports = {
                                 logger.warn("The first day in the calendar is equal to the last one. Are you sure you uploaded the correct calendar data?");
                             }
                         default:
-                            // create table
-                            let sql1 = `CREATE TABLE data.${file.table.toLowerCase()} (`;
+                            // CREATE
+                            let sql1 = `CREATE TABLE IF NOT EXISTS data.${file.table.toLowerCase()} (`;
 
                             file.columns.forEach(function (column) {
-                                sql1 += `${column} text, `
+                                sql1 += `${column} ${file.formats[file.columns.indexOf(column)]}, `
                             });
 
                             sql1 = sql1.slice(0, -2) + ");";
 
                             sqlCreateChain.push(sql1);
 
-                            // insert into
+                            // TRUNCATE
+                            sqlTruncateChain.push(`TRUNCATE TABLE data.${file.table.toLowerCase()} CASCADE;`);
+
+                            // INSERT
                             let sql2 = `INSERT INTO data.${file.table.toLowerCase()} VALUES `;
 
                             file.rows.forEach(function (row) {
                                 sql2 += '(';
 
                                 row.forEach(function (cell) {
-                                    if (cell !== null) {
-                                        cell = cell.replace(/'/g, "''");
+                                    if (cell === null) {
+                                        sql2 += `null, `;
+                                        return
                                     }
 
+                                    cell = cell.replace(/'/g, "''");
                                     sql2 += `'${cell}', `
                                 });
 
@@ -222,7 +234,19 @@ module.exports = {
 
             return chain
         }).then(() => {
-            logger.info("Created tables");
+            logger.debug("Created tables");
+        }).then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlTruncateChain) {
+                chain = chain.then(() => {
+                    return connection.query(sql)
+                })
+            }
+
+            return chain
+        }).then(() => {
+            logger.debug("Truncated tables");
         }).then(() => {
             let chain = Promise.resolve();
 
@@ -234,7 +258,147 @@ module.exports = {
 
             return chain
         }).then(() => {
-            logger.info("Filled tables");
+            logger.debug("Filled tables");
+        }).then(() => {
+            return connection.query(`INSERT INTO data.menge_fgr
+    (basis_version, fgr_nr, fgr_text)
+(
+SELECT 1, rec_frt.fgr_nr, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+FROM data.rec_frt
+LEFT JOIN data.menge_fgr
+    ON rec_frt.fgr_nr=menge_fgr.fgr_nr
+WHERE menge_fgr.fgr_nr IS NULL
+GROUP BY rec_frt.fgr_nr
+ORDER BY rec_frt.fgr_nr
+);`);
+        }).then(() => {
+            return connection.query(`INSERT INTO data.rec_lid
+    (basis_version, li_nr, str_li_var, lidname)
+(
+SELECT 1, rec_frt.li_nr, rec_frt.str_li_var, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+FROM data.rec_frt
+LEFT JOIN data.rec_lid
+    ON rec_frt.li_nr=rec_lid.li_nr
+    AND rec_frt.str_li_var=rec_lid.str_li_var
+WHERE rec_lid.li_nr IS NULL
+GROUP BY rec_frt.li_nr, rec_frt.str_li_var
+ORDER BY rec_frt.li_nr, rec_frt.str_li_var
+);`)
+        }).then(() => {
+            return connection.query(`INSERT INTO data.rec_lid
+    (basis_version, li_nr, str_li_var, lidname)
+(
+SELECT 1, rec_frt.li_nr, rec_frt.str_li_var, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+FROM data.rec_frt
+LEFT JOIN data.rec_lid
+    ON rec_frt.li_nr=rec_lid.li_nr
+    AND rec_frt.str_li_var=rec_lid.str_li_var
+WHERE rec_lid.li_nr IS NULL
+GROUP BY rec_frt.li_nr, rec_frt.str_li_var
+ORDER BY rec_frt.li_nr, rec_frt.str_li_var
+);`)
+        }).then(() => {
+            return new Promise(function (resolve) {
+                let firstLine = true;
+
+                reader.createInterface({
+                    input: fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING)
+                }).on('line', function (line) {
+                    if (!firstLine) {
+                        let numbers = line.split("\t");
+                        sqlTeqChain.push(`UPDATE data.rec_frt SET teq_nummer=${numbers[1]} WHERE frt_fid=${numbers[0]}`);
+                    }
+
+                    firstLine = false;
+                }).on('close', function () {
+                    resolve()
+                });
+            })
+        }).then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlTeqChain) {
+                chain = chain.then(() => {
+                    return connection.query(sql)
+                })
+            }
+
+            return chain
+        }).then(() => {
+            return connection.query(`DELETE FROM data.travel_times;`)
+        }).then(() => {
+            return connection.query(`SELECT data.data_fill_travel_times();`)
+        }).then(() => {
+            return connection.query(`DELETE FROM data.frt_ort_last;`)
+        }).then(() => {
+            return connection.query(`INSERT INTO data.frt_ort_last (frt_fid, onr_typ_nr, ort_nr)
+(
+SELECT DISTINCT ON (frt_fid) frt_fid, onr_typ_nr, ort_nr
+FROM data.rec_frt
+LEFT JOIN data.lid_verlauf
+    ON rec_frt.li_nr=lid_verlauf.li_nr
+    AND rec_frt.str_li_var=lid_verlauf.str_li_var
+ORDER BY frt_fid, li_lfd_nr DESC
+);`);
+        }).then(() => {
+            return connection.query(`UPDATE data.rec_ort
+SET the_geom =
+    ST_Transform(
+        ST_SetSRID(
+	        ST_MakePoint(
+                data.data_bigint_2_degree(ort_pos_laenge),
+		        data.data_bigint_2_degree(ort_pos_breite)
+	        ), ${VDV_COORDINATES_FORMAT}
+        ), ${DB_COORDINATES_FORMAT}
+    );`);
+        }).then(() => {
+            return connection.query(`UPDATE data.lid_verlauf
+SET the_geom=ort_edges.the_geom
+FROM data.lid_verlauf verlauf_next,
+ data.ort_edges
+    WHERE lid_verlauf.li_nr=verlauf_next.li_nr
+    AND lid_verlauf.str_li_var=verlauf_next.str_li_var
+    AND lid_verlauf.li_lfd_nr+1=verlauf_next.li_lfd_nr
+    AND lid_verlauf.ort_nr=ort_edges.start_ort_nr
+    AND lid_verlauf.onr_typ_nr=ort_edges.start_onr_typ_nr
+    AND verlauf_next.ort_nr=ort_edges.end_ort_nr
+    AND verlauf_next.onr_typ_nr=ort_edges.end_onr_typ_nr;`);
+        }).then(() => {
+            return connection.query(`UPDATE data.lid_verlauf
+SET the_geom = 
+(
+SELECT
+ST_Force_2D(ST_MakeLine(rec_ort_start.the_geom, rec_ort_end.the_geom))
+FROM data.rec_lid
+INNER JOIN data.lid_verlauf lid_verlauf_start
+    ON lid_verlauf_start.li_nr=rec_lid.li_nr
+    AND lid_verlauf_start.str_li_var=rec_lid.str_li_var
+INNER JOIN data.lid_verlauf lid_verlauf_end
+    ON lid_verlauf_start.li_nr=lid_verlauf_end.li_nr
+    AND lid_verlauf_start.str_li_var=lid_verlauf_end.str_li_var
+    AND lid_verlauf_start.li_lfd_nr + 1 = lid_verlauf_end.li_lfd_nr
+INNER JOIN data.rec_ort rec_ort_start
+    ON lid_verlauf_start.onr_typ_nr =  rec_ort_start.onr_typ_nr
+    AND lid_verlauf_start.ort_nr = rec_ort_start.ort_nr
+INNER JOIN data.rec_ort rec_ort_end
+    ON lid_verlauf_end.onr_typ_nr =  rec_ort_end.onr_typ_nr
+    AND lid_verlauf_end.ort_nr = rec_ort_end.ort_nr
+WHERE lid_verlauf.li_nr=lid_verlauf_start.li_nr
+    AND lid_verlauf.str_li_var=lid_verlauf_start.str_li_var
+    AND lid_verlauf.li_lfd_nr=lid_verlauf_start.li_lfd_nr
+)
+WHERE lid_verlauf.the_geom IS NULL;`)
+        }).then(() => {
+            return connection.query(`UPDATE data.rec_lid
+SET the_geom = 
+(SELECT
+ST_MakeLine(ST_Force_2D(rec_ort.the_geom) ORDER BY li_lfd_nr)
+FROM data.lid_verlauf
+INNER JOIN data.rec_ort ON lid_verlauf.ort_nr=rec_ort.ort_nr
+    AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
+WHERE lid_verlauf.li_nr=rec_lid.li_nr
+    AND lid_verlauf.str_li_var=rec_lid.str_li_var
+);`)
         }).then(() => {
             response.success = true;
             res.status(200).json(sortObject(response))
@@ -248,6 +412,7 @@ module.exports = {
 function parseVdvFile(file, data, cb) {
     let table = null;
     let columns = [];
+    let formats = [];
     let records = [];
 
     reader.createInterface({
@@ -262,17 +427,54 @@ function parseVdvFile(file, data, cb) {
             case "atr": // attributes (columns in database)
                 columns = csv;
                 break;
+            case "frm": // record
+                formats = csv.map(function (format) {
+                    format = format.slice(0, -1);
+
+                    let split = format.split('[');
+                    let dataType = split[0];
+
+                    switch (dataType) {
+                        case 'char':
+                            return `VARCHAR(${split[1]})`;
+                            break;
+                        case 'num':
+                            let numbers = split[1].split('.');
+                            let width = numbers[0];
+                            let scale = numbers[1];
+
+                            if (scale === 0) {
+                                if (width <= 4) {
+                                    return "SMALLINT";
+                                }
+                                if (width <= 9) {
+                                    return "INT";
+                                }
+                                if (width <= 18) {
+                                    return "SMALLINT";
+                                }
+
+                                return `DECIMAL(${width})`;
+                            }
+
+                            return `DECIMAL(${width}, ${scale})`;
+                            break;
+                        default:
+                            throw new Error(`Table ${table} is malformed. VDV import was aborted. No changes have been applied to the current data.`);
+                    }
+                });
+                break;
             case "rec": // record
-                records.push(csv.map(function (val) {
-                    val = val.replace(/\"/g, "").trim();
-                    return val === "" || val === "null" ? null : val;
+                records.push(csv.map(function (cell) {
+                    cell = cell.replace(/\"/g, "").trim();
+                    return cell === "" || cell === "null" ? null : cell;
                 }));
                 break;
             default: // other lines are ignored
                 break;
         }
     }).on('close', function () {
-        cb(file, table, columns, records, data);
+        cb(file, table, formats, columns, records, data);
     })
 }
 

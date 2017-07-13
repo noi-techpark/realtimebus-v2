@@ -9,13 +9,13 @@ module.exports = class ActualPositionUpdater {
 
         return Promise.resolve(`
                 SELECT str_li_var
-                FROM vdv.rec_frt
+                FROM data.rec_frt
                 WHERE frt_fid = ${feature.properties.frt_fid}
             `)
             .then(sql => connection.query(sql))
             .then(result => {
                 if (result.rowCount === 0) {
-                    throw(`Trip '${feature.properties.frt_fid}' not found in 'vdv.rec_frt'`);
+                    throw(`Trip '${feature.properties.frt_fid}' not found in 'data.rec_frt'`);
                 }
 
                 if (result.rows[0].str_li_var >= 990) {
@@ -28,7 +28,7 @@ module.exports = class ActualPositionUpdater {
         logger.log(`insertIntoDatabase() trip=${tripId}`);
 
         return Promise.resolve(`
-                SELECT COUNT(*)  AS cnt FROM vdv.vehicle_position_act
+                SELECT COUNT(*)  AS cnt FROM data.vehicle_position_act
                 WHERE frt_fid=${feature.properties.frt_fid}
             `)
             .then(sql => connection.query(sql))
@@ -37,7 +37,7 @@ module.exports = class ActualPositionUpdater {
                     logger.log(`Trip ${tripId} already in database, updating...`);
 
                     return `
-                        UPDATE vdv.vehicle_position_act SET
+                        UPDATE data.vehicle_position_act SET
                             gps_date  = '${feature.properties.gps_date}',
                             delay_sec = ${feature.properties.delay_sec},
                             li_nr = ${feature.properties.li_nr},
@@ -53,7 +53,7 @@ module.exports = class ActualPositionUpdater {
                     logger.debug(`Trip ${tripId} not yet in database, inserting...`);
 
                     return `
-                        INSERT INTO vdv.vehicle_position_act (
+                        INSERT INTO data.vehicle_position_act (
                             gps_date,
                             delay_sec,
                             frt_fid,
@@ -86,7 +86,7 @@ module.exports = class ActualPositionUpdater {
     }
 
     insertTravelTimes(frtFid) {
-        let deleteOldSql = `DELETE FROM vdv.travel_times WHERE frt_fid = ${frtFid}`;
+        let deleteOldSql = `DELETE FROM data.travel_times WHERE frt_fid = ${frtFid}`;
         connection.query(deleteOldSql);
 
         let timeTableUtils = new TimeTableUtils();

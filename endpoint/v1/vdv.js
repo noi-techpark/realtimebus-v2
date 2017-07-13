@@ -170,32 +170,36 @@ module.exports = {
                             }
                         default:
                             // create table
-                            let sql = `CREATE TABLE data.${file.table.toLowerCase()} (`;
+                            let sql1 = `CREATE TABLE data.${file.table.toLowerCase()} (`;
 
                             file.columns.forEach(function (column) {
-                                sql += `${column} text, `
+                                sql1 += `${column} text, `
                             });
 
-                            sql = sql.slice(0, -2) + ");";
+                            sql1 = sql1.slice(0, -2) + ");";
 
-                            sqlCreateChain.push(sql);
+                            sqlCreateChain.push(sql1);
 
                             // insert into
-                            sql = `INSERT INTO data.${file.table.toLowerCase()} VALUES `;
+                            let sql2 = `INSERT INTO data.${file.table.toLowerCase()} VALUES `;
 
                             file.rows.forEach(function (row) {
-                                sql += '(';
+                                sql2 += '(';
 
                                 row.forEach(function (cell) {
-                                    sql += `'${cell}', `
+                                    if (cell !== null) {
+                                        cell = cell.replace(/'/g, "''");
+                                    }
+
+                                    sql2 += `'${cell}', `
                                 });
 
-                                sql = sql.slice(0, -2) + '), ';
+                                sql2 = sql2.slice(0, -2) + '), ';
                             });
 
-                            sql = sql.slice(0, -2);
+                            sql2 = sql2.slice(0, -2);
 
-                            sqlInsertChain.push(sql);
+                            sqlInsertChain.push(sql2);
 
                             break;
                     }
@@ -215,6 +219,22 @@ module.exports = {
                     return connection.query(sql)
                 })
             }
+
+            return chain
+        }).then(() => {
+            logger.info("Created tables");
+        }).then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlInsertChain) {
+                chain = chain.then(() => {
+                    return connection.query(sql)
+                })
+            }
+
+            return chain
+        }).then(() => {
+            logger.info("Filled tables");
         }).then(() => {
             response.success = true;
             res.status(200).json(sortObject(response))

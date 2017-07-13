@@ -17,7 +17,7 @@ module.exports = class CourseFinder {
                 SELECT
                 rec_lid.lidname,
                     rec_frt.frt_fid,
-                    vdv.vdv_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS bus_passes_at,
+                    data.vdv_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS bus_passes_at,
                 COALESCE(delay_sec, 0)/60 AS delay_minutes,
                     mta.tagesart_text,
                     fahrtart_nr,
@@ -25,31 +25,31 @@ module.exports = class CourseFinder {
                     li_g,
                     li_b
                     
-                FROM vdv.lid_verlauf
+                FROM data.lid_verlauf
                 
-                INNER JOIN vdv.rec_lid
+                INNER JOIN data.rec_lid
                     ON lid_verlauf.li_nr = rec_lid.li_nr
                     AND lid_verlauf.str_li_var = rec_lid.str_li_var
                     
-                INNER JOIN vdv.rec_frt
+                INNER JOIN data.rec_frt
                     ON rec_lid.li_nr = rec_frt.li_nr
                     AND rec_lid.str_li_var = rec_frt.str_li_var
                     
-                LEFT JOIN vdv.travel_times
+                LEFT JOIN data.travel_times
                     ON travel_times.frt_fid=rec_frt.frt_fid
                     AND travel_times.li_lfd_nr_start=1
                     AND travel_times.li_lfd_nr_end=lid_verlauf.li_lfd_nr
                     
-                LEFT JOIN vdv.vehicle_position_act
+                LEFT JOIN data.vehicle_position_act
                     ON vehicle_position_act.frt_fid=rec_frt.teq_nummer
                     
-                LEFT JOIN vdv.menge_tagesart mta
+                LEFT JOIN data.menge_tagesart mta
                     ON rec_frt.tagesart_nr=mta.tagesart_nr
                     
-                LEFT JOIN vdv.firmenkalender fkal
+                LEFT JOIN data.firmenkalender fkal
                     ON rec_frt.tagesart_nr=fkal.tagesart_nr
                     
-                LEFT JOIN vdv.line_attributes
+                LEFT JOIN data.line_attributes
                     ON rec_frt.li_nr=line_attributes.li_nr
                     
                 WHERE ort_nr=${stopId.ort_nr}

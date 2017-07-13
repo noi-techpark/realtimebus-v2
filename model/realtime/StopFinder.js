@@ -24,29 +24,29 @@ module.exports = class StopFinder {
                 rec_ort.ort_name,
                 rec_ort.ort_ref_ort_name,
                 COALESCE(vpa.delay_sec, 0) delay_sec,
-                vdv.vdv_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS time_est,
+                data.vdv_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS time_est,
                 li_ri_nr,
                 ST_AsGeoJSON(rec_ort.the_geom) as json_geom
                 
-            FROM vdv.vehicle_position_act vpa
+            FROM data.vehicle_position_act vpa
             
-            INNER JOIN vdv.rec_frt
+            INNER JOIN data.rec_frt
                 ON rec_frt.teq_nummer=vpa.frt_fid
                 
-            INNER JOIN vdv.rec_lid
+            INNER JOIN data.rec_lid
                 ON rec_frt.li_nr=rec_lid.li_nr
                 AND rec_frt.str_li_var=rec_lid.str_li_var
                 
-            INNER JOIN vdv.lid_verlauf
+            INNER JOIN data.lid_verlauf
                 ON rec_frt.li_nr=lid_verlauf.li_nr
                 AND rec_frt.str_li_var=lid_verlauf.str_li_var
                 AND vpa.li_lfd_nr < lid_verlauf.li_lfd_nr
                 
-            LEFT JOIN vdv.travel_times
+            LEFT JOIN data.travel_times
                 ON lid_verlauf.li_lfd_nr = li_lfd_nr_end
                 AND travel_times.frt_fid=rec_frt.frt_fid
                 
-            LEFT JOIN vdv.rec_ort
+            LEFT JOIN data.rec_ort
                 ON lid_verlauf.onr_typ_nr =  rec_ort.onr_typ_nr
                 AND lid_verlauf.ort_nr = rec_ort.ort_nr
                 
@@ -75,7 +75,7 @@ module.exports = class StopFinder {
                 rec_ort.ort_name,
                 rec_ort.ort_ref_ort_name,
                 ST_AsGeoJSON(rec_ort.the_geom) as json_geom
-            FROM  vdv.rec_ort `
+            FROM  data.rec_ort `
         )
             .then(sql => {
                 // noinspection EqualityComparisonWithCoercionJS
@@ -83,7 +83,7 @@ module.exports = class StopFinder {
                     logger.debug(`Filter active: lines='${this.lines}'`);
 
                     sql +=
-                        `INNER JOIN vdv.lid_verlauf
+                        `INNER JOIN data.lid_verlauf
                                 ON lid_verlauf.ort_nr=rec_ort.ort_nr
                                 AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
                          WHERE `;

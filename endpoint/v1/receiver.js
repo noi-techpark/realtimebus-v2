@@ -65,6 +65,7 @@ module.exports.updatePositions = function (req, res) {
                 }).then(() => {
                     return positionUpdater.insertIntoDatabase(client, tripId, feature)
                 }).catch(error => {
+                    console.log(error);
                     logger.error(`Error inserting trip ${tripId}: ${error}`);
                 });
             }

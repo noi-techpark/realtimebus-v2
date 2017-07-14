@@ -5,21 +5,17 @@ const logger = require("../../../util/logger");
 module.exports = class ActualPositionLineReference {
 
     getLineReference(connection, feature) {
-        // TODO: Fix this error (Possibly already fixed?)
-        // Error inserting trip NaN: Error: ERROR:  column "nan" does not exist
-        // LINE 12: WHERE rec_frt.frt_fid = NaN
-
         return Promise.resolve(`
                 SELECT
-                    lid_verlauf.li_nr,
-                    lid_verlauf.str_li_var,
+                    lid_verlauf.line,
+                    lid_verlauf.variant,
                     lid_verlauf.li_lfd_nr,
                     ST_Distance(lid_verlauf.the_geom, ${feature.geometry_sql} ) as interpolation_distance,
                     ST_LineLocatePoint(lid_verlauf.the_geom, ${feature.geometry_sql}) as interpolation_linear_ref
                 FROM data.rec_frt
                 INNER JOIN data.lid_verlauf
-                    ON rec_frt.li_nr = lid_verlauf.li_nr
-                    AND rec_frt.str_li_var = lid_verlauf.str_li_var
+                    ON rec_frt.line = lid_verlauf.line
+                    AND rec_frt.variant = lid_verlauf.variant
                 WHERE rec_frt.teq_nummer = ${feature.properties.frt_fid}
                 ORDER BY ST_Distance(lid_verlauf.the_geom, ${feature.geometry_sql})
                 LIMIT 1
@@ -27,11 +23,11 @@ module.exports = class ActualPositionLineReference {
             .then(sql => connection.query(sql))
             .then(result => {
                 if (result.rowCount === 0) {
-                    logger.debug(`Trip ${feature.properties.frt_fid} does not yet exist in database`);
+                    logger.warn(`Trip ${feature.properties.frt_fid} does not exist in database`);
 
                     return {
-                        li_nr: 'null',
-                        str_li_var: null,
+                        line: 'null',
+                        variant: null,
                         li_lfd_nr: 'null',
                         interpolation_distance: 'null',
                         interpolation_linear_ref: 'null',

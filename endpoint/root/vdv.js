@@ -217,30 +217,30 @@ module.exports = {
                     `);
             })
             .then(() => {
-                return client.query(`INSERT INTO data.rec_lid (basis_version, li_nr, str_li_var, lidname)
+                return client.query(`INSERT INTO data.rec_lid (basis_version, line, variant, line_name)
                         (
-                        SELECT 1, rec_frt.li_nr, rec_frt.str_li_var, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+                        SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
                         LEFT JOIN data.rec_lid
-                            ON rec_frt.li_nr=rec_lid.li_nr
-                            AND rec_frt.str_li_var=rec_lid.str_li_var
-                        WHERE rec_lid.li_nr IS NULL
-                        GROUP BY rec_frt.li_nr, rec_frt.str_li_var
-                        ORDER BY rec_frt.li_nr, rec_frt.str_li_var
+                            ON rec_frt.line=rec_lid.line
+                            AND rec_frt.variant=rec_lid.variant
+                        WHERE rec_lid.line IS NULL
+                        GROUP BY rec_frt.line, rec_frt.variant
+                        ORDER BY rec_frt.line, rec_frt.variant
                         );
                     `)
             })
             .then(() => {
-                return client.query(`INSERT INTO data.rec_lid (basis_version, li_nr, str_li_var, lidname)
+                return client.query(`INSERT INTO data.rec_lid (basis_version, line, variant, line_name)
                         (
-                        SELECT 1, rec_frt.li_nr, rec_frt.str_li_var, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+                        SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
                         LEFT JOIN data.rec_lid
-                            ON rec_frt.li_nr=rec_lid.li_nr
-                            AND rec_frt.str_li_var=rec_lid.str_li_var
-                        WHERE rec_lid.li_nr IS NULL
-                        GROUP BY rec_frt.li_nr, rec_frt.str_li_var
-                        ORDER BY rec_frt.li_nr, rec_frt.str_li_var
+                            ON rec_frt.line=rec_lid.line
+                            AND rec_frt.variant=rec_lid.variant
+                        WHERE rec_lid.line IS NULL
+                        GROUP BY rec_frt.line, rec_frt.variant
+                        ORDER BY rec_frt.line, rec_frt.variant
                         );
                     `)
             })
@@ -257,7 +257,7 @@ module.exports = {
                     }).on('line', function (line) {
                         if (!firstLine) {
                             let numbers = line.split("\t");
-                            sqlTeqChain.push(`UPDATE data.rec_frt SET teq_nummer=${numbers[1]} WHERE frt_fid=${numbers[0]}`);
+                            sqlTeqChain.push(`UPDATE data.rec_frt SET teq_nummer=${numbers[1]} WHERE trip=${numbers[0]}`);
                         }
 
                         firstLine = false;
@@ -405,14 +405,14 @@ module.exports = {
                     })
                     .then(() => {
                         return client.query(`
-                            INSERT INTO data.frt_ort_last (frt_fid, onr_typ_nr, ort_nr)
+                            INSERT INTO data.frt_ort_last (trip, onr_typ_nr, ort_nr)
                                 (
-                                SELECT DISTINCT ON (frt_fid) frt_fid, onr_typ_nr, ort_nr
+                                SELECT DISTINCT ON (trip) trip, onr_typ_nr, ort_nr
                                 FROM data.rec_frt
                                 LEFT JOIN data.lid_verlauf
-                                    ON rec_frt.li_nr=lid_verlauf.li_nr
-                                    AND rec_frt.str_li_var=lid_verlauf.str_li_var
-                                ORDER BY frt_fid, li_lfd_nr DESC
+                                    ON rec_frt.line=lid_verlauf.line
+                                    AND rec_frt.variant=lid_verlauf.variant
+                                ORDER BY trip, li_lfd_nr DESC
                                 );
                         `);
                     })
@@ -435,8 +435,8 @@ module.exports = {
                             UPDATE data.lid_verlauf
                             SET the_geom=ort_edges.the_geom
                             FROM data.lid_verlauf verlauf_next, data.ort_edges
-                                WHERE lid_verlauf.li_nr=verlauf_next.li_nr
-                                    AND lid_verlauf.str_li_var=verlauf_next.str_li_var
+                                WHERE lid_verlauf.line=verlauf_next.line
+                                    AND lid_verlauf.variant=verlauf_next.variant
                                     AND lid_verlauf.li_lfd_nr+1=verlauf_next.li_lfd_nr
                                     AND lid_verlauf.ort_nr=ort_edges.start_ort_nr
                                     AND lid_verlauf.onr_typ_nr=ort_edges.start_onr_typ_nr
@@ -453,11 +453,11 @@ module.exports = {
                                 ST_Force2D(ST_MakeLine(rec_ort_start.the_geom, rec_ort_end.the_geom))
                                 FROM data.rec_lid
                                 INNER JOIN data.lid_verlauf lid_verlauf_start
-                                    ON lid_verlauf_start.li_nr=rec_lid.li_nr
-                                    AND lid_verlauf_start.str_li_var=rec_lid.str_li_var
+                                    ON lid_verlauf_start.line=rec_lid.line
+                                    AND lid_verlauf_start.variant=rec_lid.variant
                                 INNER JOIN data.lid_verlauf lid_verlauf_end
-                                    ON lid_verlauf_start.li_nr=lid_verlauf_end.li_nr
-                                    AND lid_verlauf_start.str_li_var=lid_verlauf_end.str_li_var
+                                    ON lid_verlauf_start.line=lid_verlauf_end.line
+                                    AND lid_verlauf_start.variant=lid_verlauf_end.variant
                                     AND lid_verlauf_start.li_lfd_nr + 1 = lid_verlauf_end.li_lfd_nr
                                 INNER JOIN data.rec_ort rec_ort_start
                                     ON lid_verlauf_start.onr_typ_nr =  rec_ort_start.onr_typ_nr
@@ -465,8 +465,8 @@ module.exports = {
                                 INNER JOIN data.rec_ort rec_ort_end
                                     ON lid_verlauf_end.onr_typ_nr =  rec_ort_end.onr_typ_nr
                                     AND lid_verlauf_end.ort_nr = rec_ort_end.ort_nr
-                                WHERE lid_verlauf.li_nr=lid_verlauf_start.li_nr
-                                    AND lid_verlauf.str_li_var=lid_verlauf_start.str_li_var
+                                WHERE lid_verlauf.line=lid_verlauf_start.line
+                                    AND lid_verlauf.variant=lid_verlauf_start.variant
                                     AND lid_verlauf.li_lfd_nr=lid_verlauf_start.li_lfd_nr
                                 )
                             WHERE lid_verlauf.the_geom IS NULL;
@@ -481,8 +481,8 @@ module.exports = {
                                 FROM data.lid_verlauf
                                 INNER JOIN data.rec_ort ON lid_verlauf.ort_nr=rec_ort.ort_nr
                                     AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
-                                WHERE lid_verlauf.li_nr=rec_lid.li_nr
-                                    AND lid_verlauf.str_li_var=rec_lid.str_li_var
+                                WHERE lid_verlauf.line=rec_lid.line
+                                    AND lid_verlauf.variant=rec_lid.variant
                                 );
                         `)
                     })
@@ -528,7 +528,17 @@ function parseVdvFile(file, data, cb) {
                 table = csv.shift();
                 break;
             case "atr": // attributes (columns in database)
-                columns = csv;
+                let col = [];
+
+                for (let c of csv) {
+                    c = c.replace("FRT_FID", "trip");
+                    c = c.replace("LI_NR", "line");
+                    c = c.replace("LIDNAME", "line_name");
+                    c = c.replace("STR_LI_VAR", "variant");
+                    col.push(c);
+                }
+
+                columns = col;
                 break;
             case "frm": // record
                 formats = csv.map(function (format) {

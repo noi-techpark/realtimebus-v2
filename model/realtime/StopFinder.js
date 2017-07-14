@@ -31,26 +31,26 @@ module.exports = class StopFinder {
             FROM data.vehicle_position_act vpa
             
             INNER JOIN data.rec_frt
-                ON rec_frt.teq_nummer=vpa.frt_fid
+                ON rec_frt.teq_nummer=vpa.trip
                 
             INNER JOIN data.rec_lid
-                ON rec_frt.li_nr=rec_lid.li_nr
-                AND rec_frt.str_li_var=rec_lid.str_li_var
+                ON rec_frt.line=rec_lid.line
+                AND rec_frt.variant=rec_lid.variant
                 
             INNER JOIN data.lid_verlauf
-                ON rec_frt.li_nr=lid_verlauf.li_nr
-                AND rec_frt.str_li_var=lid_verlauf.str_li_var
+                ON rec_frt.line=lid_verlauf.line
+                AND rec_frt.variant=lid_verlauf.variant
                 AND vpa.li_lfd_nr < lid_verlauf.li_lfd_nr
                 
             LEFT JOIN data.travel_times
                 ON lid_verlauf.li_lfd_nr = li_lfd_nr_end
-                AND travel_times.frt_fid=rec_frt.frt_fid
+                AND travel_times.trip=rec_frt.trip
                 
             LEFT JOIN data.rec_ort
                 ON lid_verlauf.onr_typ_nr =  rec_ort.onr_typ_nr
                 AND lid_verlauf.ort_nr = rec_ort.ort_nr
                 
-            WHERE rec_frt.frt_fid = ${tripId}
+            WHERE rec_frt.trip = ${tripId}
             ORDER BY time_est
         `)
             .then(sql => connection.query(sql))
@@ -88,7 +88,7 @@ module.exports = class StopFinder {
                                 AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
                          WHERE `;
 
-                    sql += LineUtils.whereLines('lid_verlauf.li_nr', 'lid_verlauf.str_li_var', this.lines);
+                    sql += LineUtils.whereLines('lid_verlauf.line', 'lid_verlauf.variant', this.lines);
                 }
 
                 return sql;

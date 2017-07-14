@@ -8,9 +8,9 @@ module.exports = class ActualPositionUpdater {
         logger.log(`checkIfInternal() trip=${tripId}`);
 
         return Promise.resolve(`
-                SELECT str_li_var
+                SELECT variant
                 FROM data.rec_frt
-                WHERE frt_fid = ${feature.properties.frt_fid}
+                WHERE trip = ${feature.properties.frt_fid}
             `)
             .then(sql => connection.query(sql))
             .then(result => {
@@ -18,8 +18,8 @@ module.exports = class ActualPositionUpdater {
                     throw(`Trip '${feature.properties.frt_fid}' not found in 'data.rec_frt'`);
                 }
 
-                if (result.rows[0].str_li_var >= 990) {
-                    throw(`Internal trip: ${result.rows[0].str_li_var}`);
+                if (result.rows[0].variant >= 990) {
+                    throw(`Internal trip: ${result.rows[0].variant}`);
                 }
             })
     }
@@ -29,7 +29,7 @@ module.exports = class ActualPositionUpdater {
 
         return Promise.resolve(`
                 SELECT COUNT(*)  AS cnt FROM data.vehicle_position_act
-                WHERE frt_fid=${feature.properties.frt_fid}
+                WHERE trip=${feature.properties.frt_fid}
             `)
             .then(sql => connection.query(sql))
             .then(result => {
@@ -40,14 +40,14 @@ module.exports = class ActualPositionUpdater {
                         UPDATE data.vehicle_position_act SET
                             gps_date  = '${feature.properties.gps_date}',
                             delay_sec = ${feature.properties.delay_sec},
-                            li_nr = ${feature.properties.li_nr},
-                            str_li_var = '${feature.properties.str_li_var}',
+                            line = ${feature.properties.line},
+                            variant = '${feature.properties.variant}',
                             li_lfd_nr = ${feature.properties.li_lfd_nr},
                             interpolation_distance = ${feature.properties.interpolation_distance},
                             interpolation_linear_ref = ${feature.properties.interpolation_linear_ref},
                             the_geom  = ${feature.geometry_sql},
-                            vehiclecode  = '${feature.properties.vehicleCode}'
-                        WHERE frt_fid=${tripId}
+                            vehicle  = '${feature.properties.vehicleCode}'
+                        WHERE trip=${tripId}
                     `;
                 } else {
                     logger.debug(`Trip ${tripId} not yet in database, inserting...`);
@@ -56,20 +56,20 @@ module.exports = class ActualPositionUpdater {
                         INSERT INTO data.vehicle_position_act (
                             gps_date,
                             delay_sec,
-                            frt_fid,
-                            li_nr,
-                            str_li_var,
+                            trip,
+                            line,
+                            variant,
                             li_lfd_nr,
                             interpolation_distance,
                             interpolation_linear_ref,
                             the_geom,
-                            vehiclecode
+                            vehicle
                         ) VALUES (
                             '${feature.properties.gps_date}',
                             ${feature.properties.delay_sec},
                             ${feature.properties.frt_fid},
-                            ${feature.properties.li_nr},
-                            '${feature.properties.str_li_var}',
+                            ${feature.properties.line},
+                            '${feature.properties.variant}',
                             ${feature.properties.li_lfd_nr},
                             ${feature.properties.interpolation_distance},
                             ${feature.properties.interpolation_linear_ref},
@@ -85,11 +85,11 @@ module.exports = class ActualPositionUpdater {
             })
     }
 
-    insertTravelTimes(frtFid) {
-        let deleteOldSql = `DELETE FROM data.travel_times WHERE frt_fid = ${frtFid}`;
+    /*insertTravelTimes(frtFid) {
+        let deleteOldSql = `DELETE FROM data.travel_times WHERE trip = ${frtFid}`;
         connection.query(deleteOldSql);
 
         let timeTableUtils = new TimeTableUtils();
         timeTableUtils.insertTravelTimes(frtFid);
-    }
+    }*/
 };

@@ -4,7 +4,7 @@ require('express-group-routes');
 require("./util/utils");
 
 const bodyParser = require('body-parser');
-const connection = require("./database/database");
+const database = require("./database/database");
 const express = require('express');
 const fs = require('fs');
 const logger = require("./util/logger");
@@ -59,22 +59,21 @@ app.use(bodyParser.raw({
 
 app.set('jsonp callback name', 'jsonp');
 
-connection.connect(function (error) {
-    if (error) throw error;
+database.connect()
+    .then(client => {
+        logger.warn("Connected to database");
 
-    logger.warn("Connected to database");
+        // TODO: Start extrapolation
+        // new ExtrapolatePositions().run();
 
-    // TODO: Start extrapolation
-    // new ExtrapolatePositions().run();
+        let dropPositions = new DropOldPositions();
 
-    let dropPositions = new DropOldPositions();
+        setInterval(function () {
+            dropPositions.run();
+        }, 1000 * 60);
 
-    setInterval(function () {
-        dropPositions.run();
-    }, 1000 * 60);
-
-    startServer()
-});
+        startServer()
+    });
 
 function startServer() {
     app.post("/vdv", function (req, res) {

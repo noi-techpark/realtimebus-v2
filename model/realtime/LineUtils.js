@@ -18,8 +18,8 @@ module.exports = class LineUtils {
             for (let lineFragment of lineFragments) {
                 let exploded = lineFragment.split(":");
                 let line = {
-                    li_nr: exploded[0],
-                    str_li_var: exploded[1]
+                    line: exploded[0],
+                    variant: exploded[1]
                 };
 
                 lines.push(line);
@@ -47,7 +47,7 @@ module.exports = class LineUtils {
                 whereLines += " OR\n    ";
             }
 
-            whereLines += `(${field1}=${lineData.li_nr} AND ${field2}='${lineData.str_li_var}')`;
+            whereLines += `(${field1}=${lineData.line} AND ${field2}='${lineData.variant}')`;
         }
 
         return whereLines;

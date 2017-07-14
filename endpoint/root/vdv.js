@@ -20,7 +20,7 @@ const LATEST_EXTRACTED_VDV_DATA = 'vdv/latest';
 const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
 
 // import vdv data
-// curl --header "Content-Type:application/octet-stream" --data-binary @/Users/David/Desktop/vdv.zip http://10.1.1.162:88/vdv
+// curl --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://HOST/vdv
 
 const VALIDITY = "BASIS_VER_GUELTIGKEIT.X10";
 const CALENDAR = "FIRMENKALENDER.X10";

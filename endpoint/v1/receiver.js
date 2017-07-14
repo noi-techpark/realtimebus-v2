@@ -15,7 +15,7 @@ module.exports.updatePositions = function (req, res) {
     database.connect().then(client => {
         return new Promise(function (resolve, reject) {
             let databaseFormat = config.database_coordinate_format;
-            let inputFormat = config.output_coordinate_format;
+            let inputFormat = config.coordinate_wgs84;
 
             let featureList = FeatureList.createFromGeoJson(req.body);
             let positionUpdater = new ActualPositionUpdater();

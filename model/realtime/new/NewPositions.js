@@ -9,7 +9,7 @@ module.exports = class NewPositions {
 
     constructor(client) {
         this.client = client;
-        this.outputFormat = config.output_coordinate_format;
+        this.outputFormat = config.coordinate_wgs84;
     }
 
     setLines(lines) {

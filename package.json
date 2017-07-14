@@ -24,6 +24,7 @@
     "pg-pool": "latest",
     "time": "^0.12.0",
     "tracer": "^0.8.9",
-    "unzip": "^0.1.11"
+    "unzip": "^0.1.11",
+    "fs-promise": "latest"
   }
 }

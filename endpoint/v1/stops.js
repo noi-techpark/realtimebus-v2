@@ -12,7 +12,7 @@ module.exports = {
     stops: function (req, res) {
         return Promise.resolve()
             .then(() => {
-                let outputFormat = config.output_coordinate_format;
+                let outputFormat = config.coordinate_wgs84;
                 let stopFinder = new StopFinder(outputFormat);
 
                 // noinspection EqualityComparisonWithCoercionJS
@@ -39,7 +39,7 @@ module.exports = {
             .then(() => {
                 let tripId = req.params.tripId;
 
-                let outputFormat = config.output_coordinate_format;
+                let outputFormat = config.coordinate_wgs84;
                 let stopFinder = new StopFinder(outputFormat);
 
                 return stopFinder.getNextStops(tripId);

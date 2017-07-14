@@ -8,6 +8,7 @@ const connection = require("./database/database");
 const express = require('express');
 const fs = require('fs');
 const logger = require("./util/logger");
+const config = require("./config");
 
 const v1Realtime = require("./endpoint/v1/realtime");
 const v1Receiver = require("./endpoint/v1/receiver");
@@ -26,18 +27,30 @@ function logRequests(req, res, next) {
     next();
 }
 
-process.on('uncaughtException', function(err) {
-    logger.error('Caught exception: ' + err);
+function checkForRunningImport(req, res, next) {
+    if (config.vdv_import_running) {
+        logger.info(`Import is running, skipping request '${req.url}'`);
+        res.status(503).json({success: false, error: "VDV import is running. Please wait for it to complete."});
+
+        return;
+    }
+
+    next();
+}
+
+process.on('uncaughtException', function (err) {
+    logger.error('Caught exception: ');
+    console.log(err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
-    // application specific logging, throwing an error, or other logic here
 });
 
 const app = express();
 
 app.use(logRequests);
+app.use(checkForRunningImport);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.raw({
@@ -102,7 +115,7 @@ function startServer() {
         });
     });
 
-    let listener = app.listen(88, function () {
+    let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

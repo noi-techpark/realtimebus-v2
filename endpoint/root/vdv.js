@@ -4,6 +4,7 @@ require("moment");
 
 const AdmZip = require("adm-zip");
 const fs = require("fs");
+const http = require("http");
 const moment = require("moment-timezone");
 const reader = require("readline");
 
@@ -485,6 +486,17 @@ module.exports = {
                                     AND lid_verlauf.variant=rec_lid.variant
                                 );
                         `)
+                    })
+                    .then(() => {
+                        return new Promise(function (resolve) {
+                            http.get({
+                                host: 'https://mail-pool.appspot.com',
+                                port: 80,
+                                path: '/sasa/vdv/import/success'
+                            });
+
+                            resolve()
+                        });
                     })
                     .then(() => {
                         logger.warn("Import finished!");

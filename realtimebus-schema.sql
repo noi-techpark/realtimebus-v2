@@ -1,0 +1,1345 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 9.1.7
+-- Dumped by pg_dump version 9.1.7
+-- Started on 2014-03-09 22:38:21 CET
+
+SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- TOC entry 7 (class 2615 OID 591656)
+-- Name: data; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA data;
+
+
+SET search_path = data, public, pg_catalog;
+
+--
+-- TOC entry 989 (class 1255 OID 591657)
+-- Dependencies: 7 1412
+-- Name: data_bigint_2_degree(bigint); Type: FUNCTION; Schema: data; Owner: -
+--
+
+CREATE FUNCTION data_bigint_2_degree(data_bigint bigint) RETURNS double precision
+    LANGUAGE plpgsql IMMUTABLE COST 10
+    AS $$
+        BEGIN
+		RETURN 
+		data_bigint/10000000::bigint + --degrees
+		((data_bigint % 10000000::bigint) /  100000) * (1::float / 60::float) +  -- minutes
+		((data_bigint % 100000::bigint) /  1000)  * (1::float / 3600::float) + -- seconds
+		(data_bigint % 1000::bigint)  * (1::float / 3600::float/1000::float); -- fraction of seconds
+        END;
+$$;
+
+
+--
+-- TOC entry 3809 (class 0 OID 0)
+-- Dependencies: 989
+-- Name: FUNCTION data_bigint_2_degree(data_bigint bigint); Type: COMMENT; Schema: data; Owner: -
+--
+
+COMMENT ON FUNCTION data_bigint_2_degree(data_bigint bigint) IS 'Convert bigints formatted as DDMMSSNNN into decimal degrees
+Beware, works only for positive arguments';
+
+
+--
+-- TOC entry 993 (class 1255 OID 986654)
+-- Dependencies: 1412 7
+-- Name: data_extrapolate_frt_position(bigint); Type: FUNCTION; Schema: data; Owner: -
+--
+
+CREATE FUNCTION data_extrapolate_frt_position(teq_nummer_arg bigint) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    pos_record RECORD;
+    elapsed_time FLOAT;
+    var_sel_fzt INTEGER;
+    rec_sel_fzt RECORD;
+    cnt_lfd INTEGER DEFAULT 0;
+    underrelaxation DOUBLE PRECISION DEFAULT 0.8;
+    time_to_complete_travel DOUBLE PRECISION DEFAULT 0;
+    extrapolated_completion DOUBLE PRECISION DEFAULT 0;
+    extrapolated_linear_ref_var DOUBLE PRECISION DEFAULT 0;
+    extrapolated_position_var geometry;
+    max_li_lfd_nr INTEGER;
+    distance_to_end DOUBLE PRECISION;
+    frt RECORD;
+    complete_travel_time INTEGER;
+BEGIN
+
+    -- Get all known data
+    SELECT vehicle_position_act.*,
+        ST_X(vehicle_position_act.the_geom) x_act,
+        ST_Y(vehicle_position_act.the_geom) y_act,
+        lid_verlauf.ort_nr ort_nr,
+        next_verlauf.ort_nr next_ort_nr,
+        ort_edges.id ort_edge_id,
+        ST_X(vehicle_position_act.the_geom) - ST_X(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dx,
+        ST_Y(vehicle_position_act.the_geom) - ST_Y(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dy
+    INTO pos_record
+    FROM data.vehicle_position_act
+    LEFT JOIN data.lid_verlauf
+        ON lid_verlauf.line=vehicle_position_act.line
+        AND lid_verlauf.variant=vehicle_position_act.variant
+        AND lid_verlauf.li_lfd_nr = vehicle_position_act.li_lfd_nr
+    LEFT JOIN data.lid_verlauf AS next_verlauf
+        ON next_verlauf.line=lid_verlauf.line
+        AND next_verlauf.variant=lid_verlauf.variant
+        AND next_verlauf.li_lfd_nr = lid_verlauf.li_lfd_nr + 1
+    LEFT JOIN data.ort_edges
+        ON lid_verlauf.ort_nr=ort_edges.start_ort_nr
+        AND lid_verlauf.onr_typ_nr=ort_edges.start_onr_typ_nr
+        AND next_verlauf.ort_nr=ort_edges.end_ort_nr
+        AND next_verlauf.onr_typ_nr=ort_edges.end_onr_typ_nr
+    WHERE trip=teq_nummer_arg;
+
+    -- Calc elapsed time
+    elapsed_time = EXTRACT('epoch' FROM current_timestamp-pos_record.gps_date);
+
+    SELECT trip, frt_start INTO frt
+    FROM data.rec_frt
+    WHERE teq_nummer=teq_nummer_arg;
+  
+    IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) < frt.frt_start - 10
+       AND pos_record.delay_sec = 0 THEN
+
+        -- Bus is waiting at departure
+       UPDATE data.vehicle_position_act
+       SET status = 'w'
+       WHERE trip=teq_nummer_arg;
+       RETURN 0;
+    END IF;
+
+
+    SELECT MAX(travel_time) INTO complete_travel_time
+    FROM data.travel_times
+    WHERE trip=frt.trip;
+
+    IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) > frt.frt_start +
+                                                                complete_travel_time +
+                                                                pos_record.delay_sec + 120
+       THEN
+       RAISE DEBUG 'now: %, start: %, travel_time: %, delay: %, sum: %',
+         EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)),
+           frt.frt_start,
+           complete_travel_time,
+           pos_record.delay_sec,
+           frt.frt_start + complete_travel_time + pos_record.delay_sec + 120;
+
+        -- Bus is waiting at departure
+       UPDATE data.vehicle_position_act
+       SET status = 'f'
+       WHERE trip=teq_nummer_arg;
+       RETURN 0;
+    END IF;
+
+-- -- > EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE))
+--     -- get departure and arrival time
+--     
+--     RAISE INFO 'Already at segment end';
+--     SELECT MAX(li_lfd_nr) INTO max_li_lfd_nr
+--     FROM data.lid_verlauf
+--     WHERE lid_verlauf.line=pos_record.line
+--     AND lid_verlauf.variant=pos_record.variant;
+-- 
+--     RAISE INFO 'li_lfd_nr=%, MAX(li_lfd_nr)=%', pos_record.li_lfd_nr, max_li_lfd_nr;
+-- 
+--     SELECT St_Distance(pos_record.the_geom, rec_ort.the_geom) INTO distance_to_end
+--     FROM data.lid_verlauf
+--     INNER JOIN data.rec_ort
+--         ON lid_verlauf.ort_nr=rec_ort.ort_nr
+--         AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
+--     WHERE data.lid_verlauf.line=pos_record.line
+--     AND lid_verlauf.variant=pos_record.variant
+--     AND lid_verlauf.li_lfd_nr=max_li_lfd_nr;
+-- 
+--     RAISE INFO 'Distance to end is %', distance_to_end;
+-- 
+--     IF distance_to_end < 30 AND pos_record.arrival_time IS NULL THEN
+--         UPDATE data.vehicle_position_act
+--         SET arrival_time=pos_record.gps_date,
+--             status='f'
+--         WHERE trip=teq_nummer_arg;
+--         RETURN 0;
+--     END IF;
+
+    RAISE DEBUG 'x_act: %, y_act: %, ort_nr: %, next_ort_nr: %, ort_edge_id: %, dx: %, dy: %',
+    pos_record.x_act, pos_record.y_act,
+    pos_record.ort_nr, pos_record.next_ort_nr, pos_record.ort_edge_id,
+    pos_record.dx, pos_record.dy;
+    
+    IF pos_record.trip IS NULL THEN
+        RAISE WARNING 'No record found with trip: %', pos_record.trip;
+        UPDATE data.vehicle_position_act
+        SET extrapolation_linear_ref=NULL,
+            extrapolation_geom=NULL,
+            status='e'
+        WHERE trip=teq_nummer_arg;
+        RETURN NULL;
+    END IF;
+    
+    SELECT COUNT(*) INTO cnt_lfd
+    FROM data.rec_frt
+    INNER JOIN data.lid_verlauf
+        ON lid_verlauf.line=rec_frt.line
+        AND lid_verlauf.variant=rec_frt.variant
+    WHERE teq_nummer=teq_nummer_arg;
+    
+    IF cnt_lfd=0 THEN
+        RAISE WARNING 'teq_nummer % has no entries in lid_verlauf', pos_record.trip;
+        UPDATE data.vehicle_position_act
+        SET extrapolation_linear_ref=NULL,
+            extrapolation_geom=NULL,
+            status='e'
+        WHERE trip=teq_nummer_arg;
+        RETURN NULL;
+    END IF;
+
+    -- Get travel time
+    SELECT verlauf_start.li_lfd_nr lfd_start,
+        verlauf_end.li_lfd_nr lfd_end,
+        ort_start.ort_nr ort_start,
+        ort_end.ort_nr ort_end,
+        sel_fzt,
+        ort_end.ort_nr ort_end
+        INTO rec_sel_fzt
+    FROM data.lid_verlauf verlauf_start
+    LEFT JOIN data.lid_verlauf verlauf_end
+        ON verlauf_start.line=verlauf_end.line
+        AND verlauf_start.variant=verlauf_end.variant
+        AND verlauf_start.li_lfd_nr + 1 = verlauf_end.li_lfd_nr
+    LEFT JOIN data.rec_ort ort_start
+        ON verlauf_start.onr_typ_nr=ort_start.onr_typ_nr
+        AND verlauf_start.ort_nr=ort_start.ort_nr
+    LEFT JOIN data.rec_ort ort_end
+        ON verlauf_end.onr_typ_nr=ort_end.onr_typ_nr
+        AND verlauf_end.ort_nr=ort_end.ort_nr
+    LEFT JOIN data.sel_fzt_feld
+        ON ort_start.onr_typ_nr=sel_fzt_feld.onr_typ_nr
+        AND ort_start.ort_nr=sel_fzt_feld.ort_nr
+        AND ort_end.onr_typ_nr=sel_fzt_feld.sel_ziel_typ
+        AND ort_end.ort_nr=sel_fzt_feld.sel_ziel
+    WHERE verlauf_start.line=pos_record.line
+        AND verlauf_start.variant=pos_record.variant
+        AND verlauf_start.li_lfd_nr=pos_record.li_lfd_nr;
+        
+    RAISE DEBUG 'lfd_start: %, lfd_end: % s, ort_start %, ort_end: %, sel_fzt: %', rec_sel_fzt.lfd_start, rec_sel_fzt.lfd_end, rec_sel_fzt.ort_start, rec_sel_fzt.ort_end, rec_sel_fzt.sel_fzt;
+
+    IF rec_sel_fzt.sel_fzt IS NULL THEN
+        RAISE WARNING 'Could not find any travel time information in data.sel_fzt_feld for teq_nummer=%', pos_record.trip;
+        UPDATE data.vehicle_position_act
+        SET extrapolation_linear_ref=NULL,
+            extrapolation_geom=NULL,
+            status='e'
+        WHERE trip=teq_nummer_arg;
+        RETURN NULL;
+    END IF;
+        
+    
+    IF elapsed_time <= 0 THEN
+        IF pos_record.status <> 'e' THEN
+            UPDATE data.vehicle_position_act
+            SET status='e'
+            WHERE trip=teq_nummer_arg;
+        END IF;
+        RETURN 0;
+    END IF;
+
+    -- Extrapolate only, if the bus has not already arrived
+    -- at the end position
+    IF pos_record.interpolation_linear_ref >= 1 THEN
+        IF pos_record.status <> 'e' THEN
+            UPDATE data.vehicle_position_act
+            SET status='e'
+            WHERE trip=teq_nummer_arg;
+        END IF;
+        RETURN 0;
+    END IF;
+
+    -- estimated plan time to complete the travel
+    time_to_complete_travel = (1 - pos_record.interpolation_linear_ref) * rec_sel_fzt.sel_fzt;
+    RAISE DEBUG 'elapsed_time: %, time needed to complete travel: %', elapsed_time, time_to_complete_travel;
+    if time_to_complete_travel > 0 THEN
+        extrapolated_completion = underrelaxation * elapsed_time/time_to_complete_travel;
+    ELSE
+        extrapolated_completion = 1;
+    END IF;
+
+    extrapolated_linear_ref_var = LEAST(1, pos_record.interpolation_linear_ref +
+                                         (1 - pos_record.interpolation_linear_ref) * extrapolated_completion);
+
+    RAISE DEBUG 'completed: %, interpolation_linear_ref: %, extrapolation_linear_ref: %, weighting factor: %, weighted dx: %, weighted dy: %',
+            extrapolated_completion,
+            pos_record.interpolation_linear_ref,
+            extrapolated_linear_ref_var, (1 - extrapolated_completion), 
+            (1 - extrapolated_completion) * pos_record.dx,
+            (1 - extrapolated_completion) * pos_record.dy;
+
+    SELECT ST_Line_Interpolate_Point(the_geom, extrapolated_linear_ref_var) INTO extrapolated_position_var
+    FROM data.lid_verlauf
+    WHERE lid_verlauf.line=pos_record.line
+        AND lid_verlauf.variant=pos_record.variant
+        AND lid_verlauf.li_lfd_nr = pos_record.li_lfd_nr;
+
+
+    RAISE DEBUG 'extra_pos: %, distance to last extra_pos is % and last GPS value is %',
+                ST_AsText(extrapolated_position_var),
+               ST_Distance(extrapolated_position_var, pos_record.extrapolation_geom),
+               ST_Distance(extrapolated_position_var, pos_record.the_geom);
+
+     -- write to database
+    UPDATE data.vehicle_position_act
+    SET extrapolation_linear_ref=extrapolated_linear_ref_var,
+        extrapolation_geom=extrapolated_position_var,
+        status='r'
+    WHERE trip=teq_nummer_arg;
+
+    RETURN 1;
+END;
+$$;
+
+
+--
+-- TOC entry 994 (class 1255 OID 992818)
+-- Dependencies: 7 1412
+-- Name: data_extrapolate_positions(); Type: FUNCTION; Schema: data; Owner: -
+--
+
+CREATE FUNCTION data_extrapolate_positions() RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    --
+    -- Create a subblock
+    --
+    DECLARE
+        frt_cur CURSOR FOR
+            SELECT vehicle_position_act.trip
+            FROM data.vehicle_position_act
+            LEFT JOIN data.rec_frt ON vehicle_position_act.trip=rec_frt.teq_nummer
+            WHERE rec_frt.trip IS NULL   -- not found in rec_frt
+                OR frt_start < EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) -- should have already started
+                OR delay_sec < 0   -- anticipated start 
+            ORDER BY trip;
+        num_frts INTEGER;
+        num_insert INTEGER DEFAULT 0;
+        num_extrapolations INTEGER DEFAULT 0;
+        
+    BEGIN
+    num_frts := 0;
+
+    DELETE FROM data.vehicle_position_act
+        WHERE gps_date < NOW() - interval '10 minute';
+
+    FOR recordvar IN frt_cur LOOP
+        SELECT data.data_extrapolate_frt_position(recordvar.trip) INTO num_insert;
+        num_frts := num_frts+1;
+        IF num_insert IS NOT NULL THEN
+            num_extrapolations = num_extrapolations + 1;
+        END IF;
+    END LOOP;
+    RAISE INFO 'inserted % records processed, extrapolated % new positions',
+            num_frts, num_extrapolations;
+    
+    RETURN num_frts;
+END;
+$$;
+
+
+--
+-- TOC entry 992 (class 1255 OID 771507)
+-- Dependencies: 1412 7
+-- Name: data_fill_frt_travel_times(bigint); Type: FUNCTION; Schema: data; Owner: -
+--
+
+CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+        this_line integer;
+        this_variant varchar(6);
+        this_fgr_nr integer;
+        
+        outer_lfd_cursor refcursor;
+        from_to_stop record;
+        from_stop INTEGER;
+        to_stop INTEGER;
+        
+        num_inserts INTEGER;
+
+        frt_start_lfd INTEGER;
+        frt_max_lfd INTEGER;
+        frt_cnt INTEGER;
+        
+        travel_time_seconds INTEGER;
+        
+        inner_lfd_cursor CURSOR (this_line integer, this_variant varchar(6), this_fgr_nr integer, from_stop integer, to_stop integer) FOR
+            SELECT SUM(COALESCE(sel_fzt))
+            FROM data.lid_verlauf lid_verlauf_start
+            INNER JOIN data.lid_verlauf lid_verlauf_end
+                ON lid_verlauf_end.line=this_line
+                AND lid_verlauf_end.variant=this_variant
+                AND lid_verlauf_start.li_lfd_nr+1=lid_verlauf_end.li_lfd_nr
+                AND lid_verlauf_end.li_lfd_nr <= to_stop
+            LEFT JOIN data.sel_fzt_feld sff
+                ON lid_verlauf_start.ort_nr=sff.ort_nr
+                AND lid_verlauf_start.onr_typ_nr=sff.onr_typ_nr
+                AND lid_verlauf_end.ort_nr=sff.sel_ziel
+                AND lid_verlauf_end.onr_typ_nr=sff.sel_ziel_typ
+                AND sff.fgr_nr=this_fgr_nr
+            WHERE lid_verlauf_start.line=this_line
+                AND lid_verlauf_start.variant=this_variant
+                AND lid_verlauf_start.li_lfd_nr >= from_stop;
+        
+    BEGIN
+    num_inserts := 0;
+    
+    DELETE FROM data.travel_times WHERE trip=trip_arg;
+
+    SELECT COUNT(*), MAX(li_lfd_nr) INTO frt_cnt, frt_max_lfd
+    FROM data.rec_frt
+    LEFT JOIN data.lid_verlauf
+        ON rec_frt.line=lid_verlauf.line
+        AND rec_frt.variant=lid_verlauf.variant
+    WHERE
+        trip=trip_arg;
+
+    IF frt_cnt = 0 THEN
+        RAISE NOTICE 'trip % has no lid_verlauf', trip_arg;
+        RETURN 0;
+    END IF;
+    
+    -- get line attributes
+    SELECT rec_lid.line, rec_lid.variant, rec_frt.fgr_nr
+        INTO this_line, this_variant, this_fgr_nr
+    FROM data.rec_frt
+    INNER JOIN data.rec_lid
+        ON rec_lid.line=rec_frt.line
+        AND rec_lid.variant=rec_frt.variant
+    WHERE rec_frt.trip=trip_arg;
+
+    frt_start_lfd = 1;
+
+    OPEN outer_lfd_cursor FOR
+        SELECT
+            lvsp.li_lfd_nr AS start_lfd,
+            lvep.li_lfd_nr AS stop_lfd
+        FROM data.rec_frt
+        INNER JOIN data.rec_lid
+            ON rec_lid.line=rec_frt.line
+            AND rec_lid.variant=rec_frt.variant
+        INNER JOIN data.lid_verlauf lvsp
+            ON rec_frt.line=lvsp.line
+            AND rec_frt.variant=lvsp.variant
+            AND li_lfd_nr=frt_start_lfd
+        INNER JOIN data.lid_verlauf lvep
+            ON rec_frt.line=lvep.line
+            AND rec_frt.variant=lvep.variant
+            AND lvsp.li_lfd_nr < lvep.li_lfd_nr
+        WHERE rec_frt.trip=trip_arg
+        ORDER BY lvsp.li_lfd_nr, lvep.li_lfd_nr;
+    
+    RAISE INFO 'line %, variant %', this_line, this_variant;
+        
+    LOOP
+        FETCH outer_lfd_cursor INTO from_stop, to_stop;
+        
+        IF from_stop IS NULL THEN
+            -- exit loop
+            EXIT;
+        END IF;
+        
+        -- RAISE INFO 'line % variant % fgr_nr % from % to %', this_line, this_variant, this_fgr_nr, from_stop, to_stop;
+        OPEN inner_lfd_cursor(this_line, this_variant, this_fgr_nr, from_stop, to_stop);
+        LOOP
+            FETCH inner_lfd_cursor INTO travel_time_seconds;
+            
+            -- RAISE INFO 'seconds %', travel_time_seconds;
+            IF travel_time_seconds IS NULL THEN
+                EXIT;
+            END IF;
+            -- RAISE NOTICE 'seconds %', travel_time_seconds;
+            
+            -- write into the table with the travel times
+            INSERT INTO data.travel_times (trip, li_lfd_nr_start, li_lfd_nr_end, travel_time)
+            VALUES (trip_arg, from_stop, to_stop, travel_time_seconds);
+            
+        END LOOP;
+        
+        CLOSE inner_lfd_cursor;
+        num_inserts := num_inserts+1;
+
+    END LOOP;
+    
+    RETURN num_inserts;
+END;
+$$;
+
+
+--
+-- TOC entry 990 (class 1255 OID 771540)
+-- Dependencies: 1412 7
+-- Name: data_fill_travel_times(); Type: FUNCTION; Schema: data; Owner: -
+--
+
+CREATE FUNCTION data_fill_travel_times() RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+        frt_cur CURSOR FOR
+            SELECT trip
+            FROM data.rec_frt
+            ORDER BY trip;
+        num_frts INTEGER DEFAULT 0; -- processed frts
+        tot_frts INTEGER DEFAULT 0; -- total number of frts 
+        num_insert INTEGER DEFAULT 0;
+        
+    BEGIN
+
+    SELECT COUNT(*) INTO tot_frts FROM data.rec_frt;
+    FOR recordvar IN frt_cur LOOP
+
+        SELECT data.data_fill_frt_travel_times(recordvar.trip::bigint) INTO num_insert;
+        num_frts := num_frts+1;
+	    RAISE NOTICE 'inserted % records for trip %, %/% records processed',
+            num_insert, recordvar.trip, num_frts, tot_frts;
+    END LOOP;
+    
+    RETURN num_frts;
+END;
+$$;
+
+
+--
+-- TOC entry 991 (class 1255 OID 732680)
+-- Dependencies: 1412 7
+-- Name: data_seconds_to_hhmm(integer); Type: FUNCTION; Schema: data; Owner: -
+--
+
+CREATE FUNCTION data_seconds_to_hhmm(seconds integer) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE COST 10
+    AS $$
+DECLARE
+    time_text TEXT;
+    minutes INTEGER;
+    hours INTEGER;
+BEGIN
+    minutes = round(seconds/60::float)::INTEGER;
+    hours = floor(minutes/60::float)::INTEGER;
+    time_text = to_char(hours, 'FM09') || ':' || to_char(minutes % 60, 'FM09');
+    RETURN time_text;
+END;
+$$;
+
+
+--
+-- TOC entry 3810 (class 0 OID 0)
+-- Dependencies: 991
+-- Name: FUNCTION data_seconds_to_hhmm(seconds integer); Type: COMMENT; Schema: data; Owner: -
+--
+
+COMMENT ON FUNCTION data_seconds_to_hhmm(seconds integer) IS 'Convert seconds from midnight to time formatted as HH:MM';
+
+
+SET default_with_oids = false;
+
+--
+-- TOC entry 167 (class 1259 OID 591690)
+-- Dependencies: 7
+-- Name: firmenkalender; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE firmenkalender (
+    basis_version integer NOT NULL,
+    betriebstag integer NOT NULL,
+    betriebstag_text character varying(40),
+    tagesart_nr integer
+);
+
+
+--
+-- TOC entry 177 (class 1259 OID 768010)
+-- Dependencies: 7
+-- Name: frt_ort_last; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE frt_ort_last (
+    trip bigint NOT NULL,
+    onr_typ_nr smallint,
+    ort_nr integer
+);
+
+
+--
+-- TOC entry 180 (class 1259 OID 919788)
+-- Dependencies: 7
+-- Name: frt_teq_mapping; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE frt_teq_mapping (
+    teq_trip bigint NOT NULL,
+    trip bigint
+);
+
+
+--
+-- TOC entry 168 (class 1259 OID 591693)
+-- Dependencies: 3706 3707 3708 1306 7
+-- Name: lid_verlauf; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE lid_verlauf (
+    basis_version integer NOT NULL,
+    li_lfd_nr smallint NOT NULL,
+    line integer NOT NULL,
+    variant character varying(4) NOT NULL,
+    onr_typ_nr smallint,
+    ort_nr integer,
+    znr_nr integer,
+    anr_nr integer,
+    einfangbereich smallint,
+    li_knoten smallint,
+    einsteigeverbot smallint,
+    aussteigeverbot smallint,
+    zone_wabe_nr smallint,
+    kurzstrecke smallint,
+    halte_typ smallint
+);
+
+SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING', 2); 
+
+--
+-- TOC entry 169 (class 1259 OID 591702)
+-- Dependencies: 7
+-- Name: line_attributes; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE line_attributes (
+    line integer NOT NULL,
+    li_r smallint,
+    li_g smallint,
+    li_b smallint
+);
+
+
+--
+-- TOC entry 170 (class 1259 OID 591705)
+-- Dependencies: 7
+-- Name: menge_fgr; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE menge_fgr (
+    basis_version integer NOT NULL,
+    fgr_nr integer NOT NULL,
+    fgr_text character varying(40)
+);
+
+
+--
+-- TOC entry 171 (class 1259 OID 591708)
+-- Dependencies: 7
+-- Name: menge_tagesart; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE menge_tagesart (
+    basis_version integer NOT NULL,
+    tagesart_nr integer NOT NULL,
+    tagesart_text character varying(40)
+);
+
+
+--
+-- TOC entry 181 (class 1259 OID 985330)
+-- Dependencies: 3716 3717 3718 1306 7
+-- Name: ort_edges; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE ort_edges (
+    id integer NOT NULL,
+    start_onr_typ_nr integer,
+    start_ort_nr integer,
+    end_onr_typ_nr integer,
+    end_ort_nr integer
+);
+
+SELECT AddGeometryColumn('data', 'ort_edges', 'the_geom', 25832, 'LINESTRING', 2); 
+--
+-- TOC entry 182 (class 1259 OID 985339)
+-- Dependencies: 7 181
+-- Name: ort_edges_id_seq; Type: SEQUENCE; Schema: data; Owner: -
+--
+
+CREATE SEQUENCE ort_edges_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3811 (class 0 OID 0)
+-- Dependencies: 182
+-- Name: ort_edges_id_seq; Type: SEQUENCE OWNED BY; Schema: data; Owner: -
+--
+
+ALTER SEQUENCE ort_edges_id_seq OWNED BY ort_edges.id;
+
+
+--
+-- TOC entry 172 (class 1259 OID 591711)
+-- Dependencies: 7
+-- Name: rec_frt; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE rec_frt (
+    basis_version integer NOT NULL,
+    trip bigint NOT NULL,
+    frt_start integer,
+    line integer,
+    tagesart_nr integer,
+    li_ku_nr integer,
+    fahrtart_nr smallint,
+    fgr_nr integer,
+    variant character varying(4),
+    um_uid integer,
+    leistungsart_nr integer,
+    frt_ext_nr integer,
+    znr_nr integer,
+    konzessionsinhaber_nr integer,
+    auftraggeber_nr integer,
+    fremdunternehmer_nr integer,
+    fzg_typ_nr smallint,
+    bemerkung character varying(1000),
+    zugnr character varying(10),
+    fahrtart_nummer integer,
+    teq_nummer bigint
+);
+
+
+--
+-- TOC entry 179 (class 1259 OID 916616)
+-- Dependencies: 7
+-- Name: rec_frt_fzt; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE rec_frt_fzt (
+    basis_version integer,
+    trip bigint NOT NULL,
+    onr_typ_nr smallint NOT NULL,
+    ort_nr integer NOT NULL,
+    frt_fzt_zeit integer
+);
+
+
+--
+-- TOC entry 178 (class 1259 OID 916613)
+-- Dependencies: 7
+-- Name: rec_frt_hzt; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE rec_frt_hzt (
+    basis_version integer,
+    trip bigint NOT NULL,
+    onr_typ_nr smallint NOT NULL,
+    ort_nr integer NOT NULL,
+    frt_hzt_zeit integer
+);
+
+
+--
+-- TOC entry 173 (class 1259 OID 591717)
+-- Dependencies: 3709 3710 3711 7 1306
+-- Name: rec_lid; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE rec_lid (
+    basis_version integer NOT NULL,
+    line integer NOT NULL,
+    variant character varying(4) NOT NULL,
+    routen_nr smallint,
+    li_ri_nr smallint,
+    bereich_nr smallint,
+    li_kuerzel character varying(6),
+    line_name character varying(40),
+    routen_art smallint,
+    linien_code smallint,
+    konzessionsinhaber_nr integer,
+    auftraggeber_nr integer,
+    fremdunternehmer_nr integer
+);
+
+SELECT AddGeometryColumn('data', 'rec_lid', 'the_geom', 25832, 'LINESTRING', 2); 
+
+--
+-- TOC entry 174 (class 1259 OID 591726)
+-- Dependencies: 3712 3713 3714 7 1306
+-- Name: rec_ort; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE rec_ort (
+    basis_version integer NOT NULL,
+    onr_typ_nr smallint NOT NULL,
+    ort_nr integer NOT NULL,
+    ort_name character varying(40),
+    ort_ref_ort integer,
+    ort_ref_ort_typ smallint,
+    ort_ref_ort_langnr integer,
+    ort_ref_ort_kuerzel character varying(8),
+    ort_ref_ort_name character varying(40),
+    zone_wabe_nr smallint,
+    ort_pos_laenge bigint,
+    ort_pos_breite bigint,
+    ort_pos_hoehe bigint,
+    ort_richtung smallint,
+    ort_druckname character varying(40),
+    richtungswechsel smallint
+);
+
+SELECT AddGeometryColumn('data', 'rec_ort', 'the_geom', 25832, 'POINT', 2); 
+
+--
+-- TOC entry 175 (class 1259 OID 591735)
+-- Dependencies: 7
+-- Name: sel_fzt_feld; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE sel_fzt_feld (
+    basis_version integer NOT NULL,
+    bereich_nr smallint NOT NULL,
+    fgr_nr integer NOT NULL,
+    onr_typ_nr smallint NOT NULL,
+    ort_nr integer NOT NULL,
+    sel_ziel integer NOT NULL,
+    sel_ziel_typ smallint NOT NULL,
+    sel_fzt integer
+);
+
+
+--
+-- TOC entry 176 (class 1259 OID 712987)
+-- Dependencies: 7
+-- Name: travel_times; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE TABLE travel_times (
+    trip bigint NOT NULL,
+    li_lfd_nr_start smallint NOT NULL,
+    li_lfd_nr_end smallint NOT NULL,
+    travel_time integer
+);
+
+
+--
+-- TOC entry 183 (class 1259 OID 1091561)
+-- Dependencies: 3719 3720 3721 3722 3723 3724 3725 1306 7 1306
+-- Name: vehicle_position_act; Type: TABLE; Schema: data; Owner: -
+--
+
+CREATE UNLOGGED TABLE vehicle_position_act (
+    gps_date timestamp(0) with time zone NOT NULL,
+    delay_sec integer NOT NULL,
+    insert_date timestamp(0) without time zone DEFAULT now() NOT NULL,
+    trip bigint NOT NULL,
+    li_lfd_nr smallint,
+    line integer,
+    variant character varying(4),
+    interpolation_linear_ref double precision,
+    interpolation_distance double precision,
+    extrapolation_linear_ref double precision,
+    arrival_time timestamp without time zone,
+    status character(1),
+    vehicle character varying(8)
+);
+
+
+SELECT AddGeometryColumn('data', 'vehicle_position_act', 'the_geom', 25832, 'POINT', 2); 
+SELECT AddGeometryColumn('data', 'vehicle_position_act', 'extrapolation_geom', 25832, 'POINT', 2); 
+--
+-- TOC entry 3812 (class 0 OID 0)
+-- Dependencies: 183
+-- Name: COLUMN vehicle_position_act.status; Type: COMMENT; Schema: data; Owner: -
+--
+
+COMMENT ON COLUMN vehicle_position_act.status IS 'r=run, w=waiting, t=terminated';
+
+
+--
+-- TOC entry 3715 (class 2604 OID 985341)
+-- Dependencies: 182 181
+-- Name: id; Type: DEFAULT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY ort_edges ALTER COLUMN id SET DEFAULT nextval('ort_edges_id_seq'::regclass);
+
+
+--
+-- TOC entry 3736 (class 2606 OID 591774)
+-- Dependencies: 167 167 3806
+-- Name: firmenkalender_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY firmenkalender
+    ADD CONSTRAINT firmenkalender_pkey PRIMARY KEY (betriebstag);
+
+
+--
+-- TOC entry 3767 (class 2606 OID 768014)
+-- Dependencies: 177 177 3806
+-- Name: frt_ort_last_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY frt_ort_last
+    ADD CONSTRAINT frt_ort_last_pkey PRIMARY KEY (trip);
+
+
+--
+-- TOC entry 3773 (class 2606 OID 919794)
+-- Dependencies: 180 180 3806
+-- Name: frt_teq_mapping_trip_key; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY frt_teq_mapping
+    ADD CONSTRAINT frt_teq_mapping_trip_key UNIQUE (trip);
+
+
+--
+-- TOC entry 3775 (class 2606 OID 919792)
+-- Dependencies: 180 180 3806
+-- Name: frt_teq_mapping_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY frt_teq_mapping
+    ADD CONSTRAINT frt_teq_mapping_pkey PRIMARY KEY (teq_trip);
+
+
+--
+-- TOC entry 3741 (class 2606 OID 1124261)
+-- Dependencies: 168 168 168 168 3806
+-- Name: lid_verlauf_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY lid_verlauf
+    ADD CONSTRAINT lid_verlauf_pkey PRIMARY KEY (li_lfd_nr, line, variant);
+
+
+--
+-- TOC entry 3743 (class 2606 OID 591778)
+-- Dependencies: 169 169 3806
+-- Name: line_attributes_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY line_attributes
+    ADD CONSTRAINT line_attributes_pkey PRIMARY KEY (line);
+
+
+--
+-- TOC entry 3745 (class 2606 OID 591780)
+-- Dependencies: 170 170 3806
+-- Name: menge_fgr_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY menge_fgr
+    ADD CONSTRAINT menge_fgr_pkey PRIMARY KEY (fgr_nr);
+
+
+--
+-- TOC entry 3747 (class 2606 OID 591782)
+-- Dependencies: 171 171 3806
+-- Name: menge_tagesart_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY menge_tagesart
+    ADD CONSTRAINT menge_tagesart_pkey PRIMARY KEY (tagesart_nr);
+
+
+
+--
+-- TOC entry 3778 (class 2606 OID 985348)
+-- Dependencies: 181 181 181 181 181 3806
+-- Name: ort_edges_start_ort_nr_start_onr_typ_nr_end_ort_nr_end_onr__key; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY ort_edges
+    ADD CONSTRAINT ort_edges_start_ort_nr_start_onr_typ_nr_end_ort_nr_end_onr__key UNIQUE (start_ort_nr, start_onr_typ_nr, end_ort_nr, end_onr_typ_nr);
+
+
+--
+-- TOC entry 3781 (class 2606 OID 985343)
+-- Dependencies: 181 181 3806
+-- Name: ort_segments_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY ort_edges
+    ADD CONSTRAINT ort_segments_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3771 (class 2606 OID 916684)
+-- Dependencies: 179 179 179 179 3806
+-- Name: rec_frt_fzt_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt_fzt
+    ADD CONSTRAINT rec_frt_fzt_pkey PRIMARY KEY (trip, onr_typ_nr, ort_nr);
+
+
+--
+-- TOC entry 3769 (class 2606 OID 916682)
+-- Dependencies: 178 178 178 178 3806
+-- Name: rec_frt_hzt_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt_hzt
+    ADD CONSTRAINT rec_frt_hzt_pkey PRIMARY KEY (trip, onr_typ_nr, ort_nr);
+
+
+--
+-- TOC entry 3751 (class 2606 OID 591784)
+-- Dependencies: 172 172 3806
+-- Name: rec_frt_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt
+    ADD CONSTRAINT rec_frt_pkey PRIMARY KEY (trip);
+
+
+--
+-- TOC entry 3756 (class 2606 OID 1124278)
+-- Dependencies: 173 173 173 3806
+-- Name: rec_lid_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_lid
+    ADD CONSTRAINT rec_lid_pkey PRIMARY KEY (line, variant);
+
+
+--
+-- TOC entry 3758 (class 2606 OID 591788)
+-- Dependencies: 174 174 174 3806
+-- Name: rec_ort_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_ort
+    ADD CONSTRAINT rec_ort_pkey PRIMARY KEY (onr_typ_nr, ort_nr);
+
+
+--
+-- TOC entry 3762 (class 2606 OID 591790)
+-- Dependencies: 175 175 175 175 175 175 175 3806
+-- Name: sel_fzt_feld_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY sel_fzt_feld
+    ADD CONSTRAINT sel_fzt_feld_pkey PRIMARY KEY (bereich_nr, fgr_nr, onr_typ_nr, ort_nr, sel_ziel_typ, sel_ziel);
+
+
+--
+-- TOC entry 3765 (class 2606 OID 712991)
+-- Dependencies: 176 176 176 176 3806
+-- Name: travel_times_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY travel_times
+    ADD CONSTRAINT travel_times_pkey PRIMARY KEY (trip, li_lfd_nr_start, li_lfd_nr_end);
+
+
+--
+-- TOC entry 3783 (class 2606 OID 1125697)
+-- Dependencies: 183 183 3806
+-- Name: vehicle_position_act_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY vehicle_position_act
+    ADD CONSTRAINT vehicle_position_act_pkey PRIMARY KEY (trip);
+
+
+
+
+--
+-- TOC entry 3737 (class 1259 OID 768025)
+-- Dependencies: 168 3806
+-- Name: lid_verlauf_li_lfd_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX lid_verlauf_li_lfd_nr_idx ON lid_verlauf USING btree (li_lfd_nr);
+
+
+--
+-- TOC entry 3738 (class 1259 OID 1124259)
+-- Dependencies: 168 168 3806
+-- Name: lid_verlauf_line_variant_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX lid_verlauf_line_variant_idx ON lid_verlauf USING btree (line, variant);
+
+
+--
+-- TOC entry 3739 (class 1259 OID 591815)
+-- Dependencies: 168 168 3806
+-- Name: lid_verlauf_onr_typ_nr_ort_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX lid_verlauf_onr_typ_nr_ort_nr_idx ON lid_verlauf USING btree (onr_typ_nr, ort_nr);
+
+
+--
+-- TOC entry 3776 (class 1259 OID 985346)
+-- Dependencies: 181 181 3806
+-- Name: ort_edges_end_ort_nr_end_onr_typ_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX ort_edges_end_ort_nr_end_onr_typ_nr_idx ON ort_edges USING btree (end_ort_nr, end_onr_typ_nr);
+
+
+--
+-- TOC entry 3779 (class 1259 OID 985345)
+-- Dependencies: 181 181 3806
+-- Name: ort_edges_start_ort_nr_start_onr_typ_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX ort_edges_start_ort_nr_start_onr_typ_nr_idx ON ort_edges USING btree (start_ort_nr, start_onr_typ_nr);
+
+
+--
+-- TOC entry 3748 (class 1259 OID 591817)
+-- Dependencies: 172 3806
+-- Name: rec_frt_fgr_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX rec_frt_fgr_nr_idx ON rec_frt USING btree (fgr_nr);
+
+
+--
+-- TOC entry 3749 (class 1259 OID 1124297)
+-- Dependencies: 172 172 3806
+-- Name: rec_frt_line_variant_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX rec_frt_line_variant_idx ON rec_frt USING btree (line, variant);
+
+
+--
+-- TOC entry 3752 (class 1259 OID 591819)
+-- Dependencies: 172 3806
+-- Name: rec_frt_tagesart_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX rec_frt_tagesart_nr_idx ON rec_frt USING btree (tagesart_nr);
+
+
+--
+-- TOC entry 3753 (class 1259 OID 768004)
+-- Dependencies: 172 172 172 3806
+-- Name: rec_frt_tagesart_nr_um_uid_frt_start_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE UNIQUE INDEX rec_frt_tagesart_nr_um_uid_frt_start_idx ON rec_frt USING btree (tagesart_nr, um_uid, frt_start);
+
+
+--
+-- TOC entry 3754 (class 1259 OID 591820)
+-- Dependencies: 173 173 173 3806
+-- Name: rec_lid_basis_version_line_routen_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE UNIQUE INDEX rec_lid_basis_version_line_routen_nr_idx ON rec_lid USING btree (basis_version, line, routen_nr);
+
+
+--
+-- TOC entry 3759 (class 1259 OID 591821)
+-- Dependencies: 175 3806
+-- Name: sel_fzt_feld_fgr_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX sel_fzt_feld_fgr_nr_idx ON sel_fzt_feld USING btree (fgr_nr);
+
+
+--
+-- TOC entry 3760 (class 1259 OID 591822)
+-- Dependencies: 175 175 3806
+-- Name: sel_fzt_feld_onr_typ_nr_ort_nr_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX sel_fzt_feld_onr_typ_nr_ort_nr_idx ON sel_fzt_feld USING btree (onr_typ_nr, ort_nr);
+
+
+--
+-- TOC entry 3763 (class 1259 OID 591823)
+-- Dependencies: 175 175 3806
+-- Name: sel_fzt_feld_sel_ziel_typ_sel_ziel_idx; Type: INDEX; Schema: data; Owner: -
+--
+
+CREATE INDEX sel_fzt_feld_sel_ziel_typ_sel_ziel_idx ON sel_fzt_feld USING btree (sel_ziel_typ, sel_ziel);
+
+
+--
+-- TOC entry 3790 (class 2606 OID 591829)
+-- Dependencies: 171 167 3746 3806
+-- Name: firmenkalender_tagesart_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY firmenkalender
+    ADD CONSTRAINT firmenkalender_tagesart_nr_fkey FOREIGN KEY (tagesart_nr) REFERENCES menge_tagesart(tagesart_nr) DEFERRABLE;
+
+
+--
+-- TOC entry 3799 (class 2606 OID 768015)
+-- Dependencies: 3750 172 177 3806
+-- Name: frt_ort_last_trip_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY frt_ort_last
+    ADD CONSTRAINT frt_ort_last_trip_fkey FOREIGN KEY (trip) REFERENCES rec_frt(trip) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3800 (class 2606 OID 768020)
+-- Dependencies: 177 177 174 174 3757 3806
+-- Name: frt_ort_last_onr_typ_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY frt_ort_last
+    ADD CONSTRAINT frt_ort_last_onr_typ_nr_fkey FOREIGN KEY (onr_typ_nr, ort_nr) REFERENCES rec_ort(onr_typ_nr, ort_nr) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3792 (class 2606 OID 1124284)
+-- Dependencies: 168 168 3755 173 173 3806
+-- Name: lid_verlauf_line_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY lid_verlauf
+    ADD CONSTRAINT lid_verlauf_line_fkey FOREIGN KEY (line, variant) REFERENCES rec_lid(line, variant) DEFERRABLE;
+
+
+--
+-- TOC entry 3791 (class 2606 OID 591839)
+-- Dependencies: 3757 174 174 168 168 3806
+-- Name: lid_verlauf_onr_typ_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY lid_verlauf
+    ADD CONSTRAINT lid_verlauf_onr_typ_nr_fkey FOREIGN KEY (onr_typ_nr, ort_nr) REFERENCES rec_ort(onr_typ_nr, ort_nr) DEFERRABLE;
+
+
+--
+-- TOC entry 3794 (class 2606 OID 767994)
+-- Dependencies: 170 3744 172 3806
+-- Name: rec_frt_fgr_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt
+    ADD CONSTRAINT rec_frt_fgr_nr_fkey FOREIGN KEY (fgr_nr) REFERENCES menge_fgr(fgr_nr) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3803 (class 2606 OID 916671)
+-- Dependencies: 172 3750 179 3806
+-- Name: rec_frt_fzt_trip_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt_fzt
+    ADD CONSTRAINT rec_frt_fzt_trip_fkey FOREIGN KEY (trip) REFERENCES rec_frt(trip) DEFERRABLE;
+
+
+--
+-- TOC entry 3804 (class 2606 OID 916676)
+-- Dependencies: 174 3757 174 179 179 3806
+-- Name: rec_frt_fzt_ort_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt_fzt
+    ADD CONSTRAINT rec_frt_fzt_ort_nr_fkey FOREIGN KEY (ort_nr, onr_typ_nr) REFERENCES rec_ort(ort_nr, onr_typ_nr) DEFERRABLE;
+
+
+--
+-- TOC entry 3801 (class 2606 OID 916661)
+-- Dependencies: 3750 172 178 3806
+-- Name: rec_frt_hzt_trip_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt_hzt
+    ADD CONSTRAINT rec_frt_hzt_trip_fkey FOREIGN KEY (trip) REFERENCES rec_frt(trip) DEFERRABLE;
+
+
+--
+-- TOC entry 3802 (class 2606 OID 916666)
+-- Dependencies: 174 3757 174 178 178 3806
+-- Name: rec_frt_hzt_ort_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt_hzt
+    ADD CONSTRAINT rec_frt_hzt_ort_nr_fkey FOREIGN KEY (ort_nr, onr_typ_nr) REFERENCES rec_ort(ort_nr, onr_typ_nr) DEFERRABLE;
+
+
+--
+-- TOC entry 3795 (class 2606 OID 1124298)
+-- Dependencies: 172 172 173 173 3755 3806
+-- Name: rec_frt_line_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt
+    ADD CONSTRAINT rec_frt_line_fkey FOREIGN KEY (line, variant) REFERENCES rec_lid(line, variant) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3793 (class 2606 OID 591854)
+-- Dependencies: 172 3746 171 3806
+-- Name: rec_frt_tagesart_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY rec_frt
+    ADD CONSTRAINT rec_frt_tagesart_nr_fkey FOREIGN KEY (tagesart_nr) REFERENCES menge_tagesart(tagesart_nr) DEFERRABLE;
+
+
+--
+-- TOC entry 3796 (class 2606 OID 591859)
+-- Dependencies: 175 3744 170 3806
+-- Name: sel_fzt_feld_fgr_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY sel_fzt_feld
+    ADD CONSTRAINT sel_fzt_feld_fgr_nr_fkey FOREIGN KEY (fgr_nr) REFERENCES menge_fgr(fgr_nr) DEFERRABLE;
+
+
+--
+-- TOC entry 3797 (class 2606 OID 591864)
+-- Dependencies: 175 175 174 3757 174 3806
+-- Name: sel_fzt_feld_onr_typ_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY sel_fzt_feld
+    ADD CONSTRAINT sel_fzt_feld_onr_typ_nr_fkey FOREIGN KEY (onr_typ_nr, ort_nr) REFERENCES rec_ort(onr_typ_nr, ort_nr) DEFERRABLE;
+
+
+--
+-- TOC entry 3798 (class 2606 OID 591869)
+-- Dependencies: 175 175 3757 174 174 3806
+-- Name: sel_fzt_feld_sel_ziel_typ_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+--
+
+ALTER TABLE ONLY sel_fzt_feld
+    ADD CONSTRAINT sel_fzt_feld_sel_ziel_typ_fkey FOREIGN KEY (sel_ziel_typ, sel_ziel) REFERENCES rec_ort(onr_typ_nr, ort_nr) DEFERRABLE;
+
+
+-- Completed on 2014-03-09 22:38:22 CET
+
+--
+-- PostgreSQL database dump complete
+--
+
+CREATE INDEX ON data.ort_edges USING GIST(the_geom);
+CREATE INDEX ON data.lid_verlauf USING GIST(the_geom);
+CREATE INDEX ON data.ort_edges USING GIST(the_geom);
+CREATE INDEX ON data.rec_lid USING GIST(the_geom);
+CREATE INDEX ON data.rec_ort USING GIST(the_geom);

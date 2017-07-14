@@ -26,20 +26,28 @@ module.exports = class NewPositions {
                     whereLines = " AND (" + LineUtils.whereLines('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
                 }
 
+                // TODO: Check if 'updated_min_ago' and 'inserted_min_ago' are correct
+
                 return `
                     SELECT DISTINCT (vehicle),
                         rec_frt.trip,
-                        gps_date,
-                        delay_sec,
-                        vehicle,
                         rec_frt.line,
                         rec_frt.variant,
                         line_name,
+                        vehicle,
+                        
+                        hex AS color_hex,
+                        hue AS color_hue,
+                        
+                        ROUND(extract(epoch FROM (NOW() - gps_date))::int / 60) as updated_min_ago,
+                        ROUND(extract(epoch FROM (NOW() - insert_date))::int / 60) as inserted_min_ago,
+                        
+                        delay_sec,
+
+                        gps_date,
                         insert_date,
-                        next_rec_ort.ort_nr AS ort_nr,
-                        next_rec_ort.onr_typ_nr AS onr_typ_nr,
-                        next_rec_ort.ort_name AS ort_name,
-                        next_rec_ort.ort_ref_ort_name AS ort_ref_ort_name,
+                        next_rec_ort.ort_nr AS bus_stop,
+                        
                         ST_AsGeoJSON(ST_Transform(vehicle_position_act.the_geom, ${this.outputFormat})) AS json_geom,
                         ST_AsGeoJSON(ST_Transform(vehicle_position_act.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom
                         
@@ -69,7 +77,6 @@ module.exports = class NewPositions {
                     
                     ORDER BY gps_date
                     
-                    
                     ${whereLines}
                `
             })
@@ -94,18 +101,35 @@ module.exports = class NewPositions {
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
 
+                    let zone =  [
+                        1001, 1003, 1005, 1006, 1071, 1072, 1008, 1009, 1101, 1102, 1011,
+                        1012, 1014, 110, 111, 112, 116, 117, 1153, 183, 201, 202
+                    ].includes(row.line) ? 'BZ' : 'ME';
+
                     let feature = {
                         trip: parseInt(row.trip),
+
                         line_id: row.line,
                         line_name: row.line_name,
+                        bus_stop: row.bus_stop,
+
                         variant: parseInt(row.variant),
                         vehicle: parseInt(row.vehicle.split(" ")[0]),
+
                         delay_min: Math.round(row.delay_sec / 60),
                         latitude: Math.round(geometry.coordinates[1] * 1000000) / 1000000,
                         longitude: Math.round(geometry.coordinates[0] * 1000000) / 1000000,
-                        bus_stop: row.ort_nr,
+
                         inserted: row.insert_date,
                         updated: row.gps_date,
+
+                        color_hex: row.color_hex,
+                        color_hue: row.color_hue,
+
+                        zone: zone,
+
+                        updated_min_ago: row.updated_min_ago,
+                        inserted_min_ago: row.inserted_min_ago
                     };
 
                     realtime.add(feature);

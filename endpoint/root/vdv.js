@@ -490,7 +490,7 @@ module.exports = {
                     .then(() => {
                         return new Promise(function (resolve) {
                             http.get({
-                                host: 'https://mail-pool.appspot.com',
+                                host: 'mail-pool.appspot.com',
                                 port: 80,
                                 path: '/sasa/vdv/import/success'
                             });

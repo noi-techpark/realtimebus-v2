@@ -20,7 +20,7 @@ module.exports = class Positions {
         this.vehicle = vehicle;
     }
 
-    getAll() {
+    getBuses() {
         return Promise.resolve()
             .then(() => {
                 let lineFilter = '';

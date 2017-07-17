@@ -5,7 +5,30 @@ const config = require("../../config");
 const RealtimeModel = require("./RealtimeModel");
 const LineUtils = require("../line/LineUtils");
 
-module.exports = class NewPositions {
+// TODO: Add missing properties:
+
+/*
+{
+    "departure": -412,
+    "destination": 5115,
+    "origin": 5120,
+    "path": [
+        5120,
+        5106,
+        5029,
+        5027,
+        5025,
+        5032,
+        5108,
+        5110,
+        5112,
+        5114,
+        5115
+    ]
+}
+*/
+
+module.exports = class PositionsApp {
 
     constructor(client) {
         this.client = client;
@@ -20,7 +43,7 @@ module.exports = class NewPositions {
         this.vehicle = vehicle;
     }
 
-    getAll() {
+    getBuses() {
         return Promise.resolve()
             .then(() => {
                 let lineFilter = '';

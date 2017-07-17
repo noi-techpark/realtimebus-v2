@@ -15,7 +15,6 @@ module.exports = class ExtrapolatePositions {
 
         // TODO: Quiet logging (maybe fix deprecation warnings)
 
-
         return database.connect()
             .then(client => {
                 return Promise.resolve()

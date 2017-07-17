@@ -63,14 +63,7 @@ database.connect()
     .then(client => {
         logger.warn("Connected to database");
 
-        // TODO: Start extrapolation
-        // new ExtrapolatePositions().run();
-
-        let dropPositions = new DropOldPositions();
-
-        setInterval(function () {
-            dropPositions.run();
-        }, 1000 * 60);
+        new ExtrapolatePositions().run();
 
         startServer()
     });

@@ -5,7 +5,7 @@ const logger = require('../../util/logger');
 const config = require("../../config");
 
 const LineUtils = require("../../model/line/LineUtils");
-const NewPositions = require("../../model/realtime/NewPositions");
+const NewPositions = require("../../model/realtime/PositionsApp");
 
 module.exports = {
 

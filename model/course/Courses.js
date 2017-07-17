@@ -19,7 +19,7 @@ module.exports = class Courses {
                         rec_lid.line_name AS lidname,
                         rec_frt.trip AS frt_fid,
                         data.data_seconds_to_hhmm(departure + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS bus_passes_at,
-                    COALESCE(delay_sec, 0)/60 AS delay_minutes,
+                        COALESCE(delay_sec, 0) / 60 AS delay_minutes,
                         mta.tagesart_text,
                         trip_type,
                         red,

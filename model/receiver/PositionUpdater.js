@@ -29,7 +29,7 @@ module.exports = class PositionUpdater {
         logger.log(`insertIntoDatabase() trip=${tripId}`);
 
         return Promise.resolve(`
-                SELECT COUNT(*)  AS cnt FROM data.vehicle_positions
+                SELECT COUNT(*) AS cnt FROM data.vehicle_positions
                 WHERE trip=${feature.properties.frt_fid}
             `)
             .then(sql => connection.query(sql))
@@ -39,15 +39,15 @@ module.exports = class PositionUpdater {
 
                     return `
                         UPDATE data.vehicle_positions SET
-                            gps_date  = '${feature.properties.gps_date}',
+                            gps_date = '${feature.properties.gps_date}',
                             delay_sec = ${feature.properties.delay_sec},
                             line = ${feature.properties.line},
                             variant = '${feature.properties.variant}',
                             li_lfd_nr = ${feature.properties.li_lfd_nr},
                             interpolation_distance = ${feature.properties.interpolation_distance},
                             interpolation_linear_ref = ${feature.properties.interpolation_linear_ref},
-                            the_geom  = ${feature.geometry_sql},
-                            vehicle  = '${feature.properties.vehicleCode}'
+                            the_geom = ${feature.geometry_sql},
+                            vehicle = '${feature.properties.vehicleCode}'
                         WHERE trip=${tripId}
                     `;
                 } else {
@@ -75,8 +75,9 @@ module.exports = class PositionUpdater {
                             ${feature.properties.li_lfd_nr},
                             ${feature.properties.interpolation_distance},
                             ${feature.properties.interpolation_linear_ref},
-                            SPLIT_PART(${feature.geometry_sql}, ' ', 1)::int,
-                            SPLIT_PART(${feature.properties.vehicleCode}, ' ', 2)'
+                            ${feature.geometry_sql},
+                            SPLIT_PART('${feature.properties.vehicleCode}', ' ', 1)::int,
+                            SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)'
                         )
                    `;
                 }

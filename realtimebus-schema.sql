@@ -78,20 +78,20 @@ DECLARE
 BEGIN
 
     -- Get all known data
-    SELECT vehicle_position_act.*,
-        ST_X(vehicle_position_act.the_geom) x_act,
-        ST_Y(vehicle_position_act.the_geom) y_act,
+    SELECT vehicle_positions.*,
+        ST_X(vehicle_positions.the_geom) x_act,
+        ST_Y(vehicle_positions.the_geom) y_act,
         lid_verlauf.ort_nr ort_nr,
         next_verlauf.ort_nr next_ort_nr,
         ort_edges.id ort_edge_id,
-        ST_X(vehicle_position_act.the_geom) - ST_X(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dx,
-        ST_Y(vehicle_position_act.the_geom) - ST_Y(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dy
+        ST_X(vehicle_positions.the_geom) - ST_X(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dx,
+        ST_Y(vehicle_positions.the_geom) - ST_Y(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dy
     INTO pos_record
-    FROM data.vehicle_position_act
+    FROM data.vehicle_positions
     LEFT JOIN data.lid_verlauf
-        ON lid_verlauf.line=vehicle_position_act.line
-        AND lid_verlauf.variant=vehicle_position_act.variant
-        AND lid_verlauf.li_lfd_nr = vehicle_position_act.li_lfd_nr
+        ON lid_verlauf.line=vehicle_positions.line
+        AND lid_verlauf.variant=vehicle_positions.variant
+        AND lid_verlauf.li_lfd_nr = vehicle_positions.li_lfd_nr
     LEFT JOIN data.lid_verlauf AS next_verlauf
         ON next_verlauf.line=lid_verlauf.line
         AND next_verlauf.variant=lid_verlauf.variant
@@ -114,7 +114,7 @@ BEGIN
        AND pos_record.delay_sec = 0 THEN
 
         -- Bus is waiting at departure
-       UPDATE data.vehicle_position_act
+       UPDATE data.vehicle_positions
        SET status = 'w'
        WHERE trip=teq_nummer_arg;
        RETURN 0;
@@ -137,7 +137,7 @@ BEGIN
            frt.frt_start + complete_travel_time + pos_record.delay_sec + 120;
 
         -- Bus is waiting at departure
-       UPDATE data.vehicle_position_act
+       UPDATE data.vehicle_positions
        SET status = 'f'
        WHERE trip=teq_nummer_arg;
        RETURN 0;
@@ -166,7 +166,7 @@ BEGIN
 --     RAISE INFO 'Distance to end is %', distance_to_end;
 -- 
 --     IF distance_to_end < 30 AND pos_record.arrival_time IS NULL THEN
---         UPDATE data.vehicle_position_act
+--         UPDATE data.vehicle_positions
 --         SET arrival_time=pos_record.gps_date,
 --             status='f'
 --         WHERE trip=teq_nummer_arg;
@@ -180,7 +180,7 @@ BEGIN
     
     IF pos_record.trip IS NULL THEN
         RAISE WARNING 'No record found with trip: %', pos_record.trip;
-        UPDATE data.vehicle_position_act
+        UPDATE data.vehicle_positions
         SET extrapolation_linear_ref=NULL,
             extrapolation_geom=NULL,
             status='e'
@@ -197,7 +197,7 @@ BEGIN
     
     IF cnt_lfd=0 THEN
         RAISE WARNING 'teq_nummer % has no entries in lid_verlauf', pos_record.trip;
-        UPDATE data.vehicle_position_act
+        UPDATE data.vehicle_positions
         SET extrapolation_linear_ref=NULL,
             extrapolation_geom=NULL,
             status='e'
@@ -237,7 +237,7 @@ BEGIN
 
     IF rec_sel_fzt.sel_fzt IS NULL THEN
         RAISE WARNING 'Could not find any travel time information in data.sel_fzt_feld for teq_nummer=%', pos_record.trip;
-        UPDATE data.vehicle_position_act
+        UPDATE data.vehicle_positions
         SET extrapolation_linear_ref=NULL,
             extrapolation_geom=NULL,
             status='e'
@@ -248,7 +248,7 @@ BEGIN
     
     IF elapsed_time <= 0 THEN
         IF pos_record.status <> 'e' THEN
-            UPDATE data.vehicle_position_act
+            UPDATE data.vehicle_positions
             SET status='e'
             WHERE trip=teq_nummer_arg;
         END IF;
@@ -259,7 +259,7 @@ BEGIN
     -- at the end position
     IF pos_record.interpolation_linear_ref >= 1 THEN
         IF pos_record.status <> 'e' THEN
-            UPDATE data.vehicle_position_act
+            UPDATE data.vehicle_positions
             SET status='e'
             WHERE trip=teq_nummer_arg;
         END IF;
@@ -298,7 +298,7 @@ BEGIN
                ST_Distance(extrapolated_position_var, pos_record.the_geom);
 
      -- write to database
-    UPDATE data.vehicle_position_act
+    UPDATE data.vehicle_positions
     SET extrapolation_linear_ref=extrapolated_linear_ref_var,
         extrapolation_geom=extrapolated_position_var,
         status='r'
@@ -323,9 +323,9 @@ CREATE FUNCTION data_extrapolate_positions() RETURNS integer
     --
     DECLARE
         frt_cur CURSOR FOR
-            SELECT vehicle_position_act.trip
-            FROM data.vehicle_position_act
-            LEFT JOIN data.rec_frt ON vehicle_position_act.trip=rec_frt.teq_nummer
+            SELECT vehicle_positions.trip
+            FROM data.vehicle_positions
+            LEFT JOIN data.rec_frt ON vehicle_positions.trip=rec_frt.teq_nummer
             WHERE rec_frt.trip IS NULL   -- not found in rec_frt
                 OR frt_start < EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) -- should have already started
                 OR delay_sec < 0   -- anticipated start 
@@ -337,7 +337,7 @@ CREATE FUNCTION data_extrapolate_positions() RETURNS integer
     BEGIN
     num_frts := 0;
 
-    DELETE FROM data.vehicle_position_act
+    DELETE FROM data.vehicle_positions
         WHERE gps_date < NOW() - interval '10 minute';
 
     FOR recordvar IN frt_cur LOOP
@@ -561,7 +561,7 @@ SET default_with_oids = false;
 CREATE TABLE firmenkalender (
     basis_version integer NOT NULL,
     betriebstag integer NOT NULL,
-    betriebstag_text character varying(40),
+    betriebstag_text varchar(40),
     tagesart_nr integer
 );
 
@@ -601,7 +601,7 @@ CREATE TABLE lid_verlauf (
     basis_version integer NOT NULL,
     li_lfd_nr smallint NOT NULL,
     line integer NOT NULL,
-    variant character varying(4) NOT NULL,
+    variant varchar(4) NOT NULL,
     onr_typ_nr smallint,
     ort_nr integer,
     znr_nr integer,
@@ -620,10 +620,10 @@ SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING',
 --
 -- TOC entry 169 (class 1259 OID 591702)
 -- Dependencies: 7
--- Name: line_attributes; Type: TABLE; Schema: data; Owner: -
+-- Name: line_colors; Type: TABLE; Schema: data; Owner: -
 --
 
-CREATE TABLE line_attributes (
+CREATE TABLE line_colors (
     line integer NOT NULL,
     li_r smallint,
     li_g smallint,
@@ -640,7 +640,7 @@ CREATE TABLE line_attributes (
 CREATE TABLE menge_fgr (
     basis_version integer NOT NULL,
     fgr_nr integer NOT NULL,
-    fgr_text character varying(40)
+    fgr_text varchar(40)
 );
 
 
@@ -653,7 +653,7 @@ CREATE TABLE menge_fgr (
 CREATE TABLE menge_tagesart (
     basis_version integer NOT NULL,
     tagesart_nr integer NOT NULL,
-    tagesart_text character varying(40)
+    tagesart_text varchar(40)
 );
 
 
@@ -710,7 +710,7 @@ CREATE TABLE rec_frt (
     li_ku_nr integer,
     fahrtart_nr smallint,
     fgr_nr integer,
-    variant character varying(4),
+    variant varchar(4),
     um_uid integer,
     leistungsart_nr integer,
     frt_ext_nr integer,
@@ -719,8 +719,8 @@ CREATE TABLE rec_frt (
     auftraggeber_nr integer,
     fremdunternehmer_nr integer,
     fzg_typ_nr smallint,
-    bemerkung character varying(1000),
-    zugnr character varying(10),
+    bemerkung varchar(1000),
+    zugnr varchar(10),
     fahrtart_nummer integer,
     teq_nummer bigint
 );
@@ -765,12 +765,12 @@ CREATE TABLE rec_frt_hzt (
 CREATE TABLE rec_lid (
     basis_version integer NOT NULL,
     line integer NOT NULL,
-    variant character varying(4) NOT NULL,
+    variant varchar(4) NOT NULL,
     routen_nr smallint,
     li_ri_nr smallint,
     bereich_nr smallint,
-    li_kuerzel character varying(6),
-    line_name character varying(40),
+    li_kuerzel varchar(6),
+    line_name varchar(40),
     routen_art smallint,
     linien_code smallint,
     konzessionsinhaber_nr integer,
@@ -790,18 +790,18 @@ CREATE TABLE rec_ort (
     basis_version integer NOT NULL,
     onr_typ_nr smallint NOT NULL,
     ort_nr integer NOT NULL,
-    ort_name character varying(40),
+    ort_name varchar(40),
     ort_ref_ort integer,
     ort_ref_ort_typ smallint,
     ort_ref_ort_langnr integer,
-    ort_ref_ort_kuerzel character varying(8),
-    ort_ref_ort_name character varying(40),
+    ort_ref_ort_kuerzel varchar(8),
+    ort_ref_ort_name varchar(40),
     zone_wabe_nr smallint,
     ort_pos_laenge bigint,
     ort_pos_breite bigint,
     ort_pos_hoehe bigint,
     ort_richtung smallint,
-    ort_druckname character varying(40),
+    ort_druckname varchar(40),
     richtungswechsel smallint
 );
 
@@ -842,35 +842,36 @@ CREATE TABLE travel_times (
 --
 -- TOC entry 183 (class 1259 OID 1091561)
 -- Dependencies: 3719 3720 3721 3722 3723 3724 3725 1306 7 1306
--- Name: vehicle_position_act; Type: TABLE; Schema: data; Owner: -
+-- Name: vehicle_positions; Type: TABLE; Schema: data; Owner: -
 --
 
-CREATE UNLOGGED TABLE vehicle_position_act (
+CREATE UNLOGGED TABLE vehicle_positions (
     gps_date timestamp(0) with time zone NOT NULL,
     delay_sec integer NOT NULL,
     insert_date timestamp(0) without time zone DEFAULT now() NOT NULL,
     trip bigint NOT NULL,
     li_lfd_nr smallint,
     line integer,
-    variant character varying(4),
+    variant varchar(4),
     interpolation_linear_ref double precision,
     interpolation_distance double precision,
     extrapolation_linear_ref double precision,
     arrival_time timestamp without time zone,
     status character(1),
-    vehicle character varying(8)
+    vehicle smallint NOT NULL,
+    depot varchar(2)
 );
 
 
-SELECT AddGeometryColumn('data', 'vehicle_position_act', 'the_geom', 25832, 'POINT', 2); 
-SELECT AddGeometryColumn('data', 'vehicle_position_act', 'extrapolation_geom', 25832, 'POINT', 2); 
+SELECT AddGeometryColumn('data', 'vehicle_positions', 'the_geom', 25832, 'POINT', 2); 
+SELECT AddGeometryColumn('data', 'vehicle_positions', 'extrapolation_geom', 25832, 'POINT', 2); 
 --
 -- TOC entry 3812 (class 0 OID 0)
 -- Dependencies: 183
--- Name: COLUMN vehicle_position_act.status; Type: COMMENT; Schema: data; Owner: -
+-- Name: COLUMN vehicle_positions.status; Type: COMMENT; Schema: data; Owner: -
 --
 
-COMMENT ON COLUMN vehicle_position_act.status IS 'r=run, w=waiting, t=terminated';
+COMMENT ON COLUMN vehicle_positions.status IS 'r=run, w=waiting, t=terminated';
 
 
 --
@@ -935,11 +936,11 @@ ALTER TABLE ONLY lid_verlauf
 --
 -- TOC entry 3743 (class 2606 OID 591778)
 -- Dependencies: 169 169 3806
--- Name: line_attributes_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+-- Name: line_colors_pkey; Type: CONSTRAINT; Schema: data; Owner: -
 --
 
-ALTER TABLE ONLY line_attributes
-    ADD CONSTRAINT line_attributes_pkey PRIMARY KEY (line);
+ALTER TABLE ONLY line_colors
+    ADD CONSTRAINT line_colors_pkey PRIMARY KEY (line);
 
 
 --
@@ -1056,11 +1057,11 @@ ALTER TABLE ONLY travel_times
 --
 -- TOC entry 3783 (class 2606 OID 1125697)
 -- Dependencies: 183 183 3806
--- Name: vehicle_position_act_pkey; Type: CONSTRAINT; Schema: data; Owner: -
+-- Name: vehicle_positions_pkey; Type: CONSTRAINT; Schema: data; Owner: -
 --
 
-ALTER TABLE ONLY vehicle_position_act
-    ADD CONSTRAINT vehicle_position_act_pkey PRIMARY KEY (trip);
+ALTER TABLE ONLY vehicle_positions
+    ADD CONSTRAINT vehicle_positions_pkey PRIMARY KEY (trip);
 
 
 
@@ -1346,10 +1347,10 @@ CREATE INDEX ON data.rec_ort USING GIST(the_geom);
 
 
 --
--- Name: line_attributes; Type: TABLE; Schema: data; Owner: postgres
+-- Name: line_colors; Type: TABLE; Schema: data; Owner: postgres
 --
 
-CREATE TABLE line_attributes (
+CREATE TABLE line_colors (
     line integer NOT NULL,
     li_r smallint,
     li_g smallint,
@@ -1359,13 +1360,13 @@ CREATE TABLE line_attributes (
 );
 
 
-ALTER TABLE line_attributes OWNER TO postgres;
+ALTER TABLE line_colors OWNER TO postgres;
 
 --
--- Data for Name: line_attributes; Type: TABLE DATA; Schema: data; Owner: postgres
+-- Data for Name: line_colors; Type: TABLE DATA; Schema: data; Owner: postgres
 --
 
-COPY line_attributes (line, li_r, li_g, li_b, hex, hue) FROM stdin;
+COPY line_colors (line, li_r, li_g, li_b, hex, hue) FROM stdin;
 116     0       73      107     3f51b5  240
 117     0       73      107     3f51b5  240
 1       231     120     23      ff9800  35
@@ -1409,8 +1410,8 @@ COPY line_attributes (line, li_r, li_g, li_b, hex, hue) FROM stdin;
 \.
 
 --
--- Name: line_attributes_pkey; Type: CONSTRAINT; Schema: data; Owner: postgres
+-- Name: line_colors_pkey; Type: CONSTRAINT; Schema: data; Owner: postgres
 --
 
-ALTER TABLE ONLY line_attributes
-    ADD CONSTRAINT line_attributes_pkey PRIMARY KEY (line);
+ALTER TABLE ONLY line_colors
+    ADD CONSTRAINT line_colors_pkey PRIMARY KEY (line);

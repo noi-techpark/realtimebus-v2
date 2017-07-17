@@ -28,7 +28,7 @@ module.exports = class BusStops {
                 li_ri_nr,
                 ST_AsGeoJSON(rec_ort.the_geom) as json_geom
                 
-            FROM data.vehicle_position_act vpa
+            FROM data.vehicle_positions vpa
             
             INNER JOIN data.rec_frt
                 ON rec_frt.teq_nummer=vpa.trip

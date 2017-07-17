@@ -16,7 +16,7 @@ module.exports = class DropOldPositions {
         return database.connect()
             .then(client => {
                 return Promise.resolve()
-                    .then(() => client.query(`DELETE FROM data.vehicle_position_act WHERE gps_date < NOW() - interval '${this.age} minute' RETURNING *`))
+                    .then(() => client.query(`DELETE FROM data.vehicle_positions WHERE gps_date < NOW() - interval '${this.age} minute' RETURNING *`))
                     .then(result => {
                         logger.warn(`Dropped ${result.rowCount} old bus positions`);
                     })

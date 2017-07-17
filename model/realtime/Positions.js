@@ -43,7 +43,8 @@ module.exports = class Positions {
                         rec_frt.trip,
                         gps_date,
                         delay_sec,
-                        SPLIT_PART(vehicle, ' ', 1)::int AS vehicle,
+                        depot,
+                        vehicle,
                         rec_frt.line,
                         rec_frt.variant,
                         line_name,
@@ -55,13 +56,13 @@ module.exports = class Positions {
                         next_rec_ort.onr_typ_nr AS onr_typ_nr,
                         next_rec_ort.ort_name AS ort_name,
                         next_rec_ort.ort_ref_ort_name AS ort_ref_ort_name,
-                        ST_AsGeoJSON(ST_Transform(vehicle_position_act.the_geom, ${this.outputFormat})) AS json_geom,
-                        ST_AsGeoJSON(ST_Transform(vehicle_position_act.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom
+                        ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
+                        ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom
                         
-                    FROM data.vehicle_position_act
+                    FROM data.vehicle_positions
                     
                     INNER JOIN data.rec_frt
-                        ON vehicle_position_act.trip=rec_frt.teq_nummer
+                        ON vehicle_positions.trip=rec_frt.teq_nummer
                         
                     INNER JOIN data.rec_lid
                         ON rec_frt.line=rec_lid.line
@@ -70,17 +71,17 @@ module.exports = class Positions {
                     LEFT JOIN data.lid_verlauf lid_verlauf_next
                         ON rec_frt.line=lid_verlauf_next.line
                         AND rec_frt.variant=lid_verlauf_next.variant
-                        AND vehicle_position_act.li_lfd_nr + 1 = lid_verlauf_next.li_lfd_nr
+                        AND vehicle_positions.li_lfd_nr + 1 = lid_verlauf_next.li_lfd_nr
                     
                     LEFT JOIN data.rec_ort next_rec_ort
                         ON lid_verlauf_next.onr_typ_nr=next_rec_ort.onr_typ_nr
                         AND lid_verlauf_next.ort_nr=next_rec_ort.ort_nr
                         
-                    LEFT JOIN data.line_attributes
-                        ON rec_frt.line=line_attributes.line
+                    LEFT JOIN data.line_colors
+                        ON rec_frt.line=line_colors.line
                         
                     WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
-                    -- AND vehicle_position_act.status='r'
+                    -- AND vehicle_positions.status='r'
                     
                     ${lineFilter}
                     ${vehicleFilter}
@@ -90,8 +91,6 @@ module.exports = class Positions {
             })
             .then(sql => connection.query(sql))
             .then(result => {
-                // console.log(result);
-
                 let featureList = new FeatureList();
 
                 for (let row of result.rows) {
@@ -111,11 +110,11 @@ module.exports = class Positions {
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
 
-                    delete row.trip;
+                    /*delete row.trip;
                     delete row.line;
                     delete row.line_name;
                     delete row.variant;
-                    delete row.vehicle;
+                    delete row.vehicle;*/
 
                     featureList.add(row, geometry);
                 }

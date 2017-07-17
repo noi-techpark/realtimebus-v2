@@ -29,7 +29,7 @@ module.exports = class PositionUpdater {
         logger.log(`insertIntoDatabase() trip=${tripId}`);
 
         return Promise.resolve(`
-                SELECT COUNT(*)  AS cnt FROM data.vehicle_position_act
+                SELECT COUNT(*)  AS cnt FROM data.vehicle_positions
                 WHERE trip=${feature.properties.frt_fid}
             `)
             .then(sql => connection.query(sql))
@@ -38,7 +38,7 @@ module.exports = class PositionUpdater {
                     logger.log(`Trip ${tripId} already in database, updating...`);
 
                     return `
-                        UPDATE data.vehicle_position_act SET
+                        UPDATE data.vehicle_positions SET
                             gps_date  = '${feature.properties.gps_date}',
                             delay_sec = ${feature.properties.delay_sec},
                             line = ${feature.properties.line},
@@ -54,7 +54,7 @@ module.exports = class PositionUpdater {
                     logger.debug(`Trip ${tripId} not yet in database, inserting...`);
 
                     return `
-                        INSERT INTO data.vehicle_position_act (
+                        INSERT INTO data.vehicle_positions (
                             gps_date,
                             delay_sec,
                             trip,
@@ -64,7 +64,8 @@ module.exports = class PositionUpdater {
                             interpolation_distance,
                             interpolation_linear_ref,
                             the_geom,
-                            vehicle
+                            vehicle,
+                            depot
                         ) VALUES (
                             '${feature.properties.gps_date}',
                             ${feature.properties.delay_sec},
@@ -74,8 +75,8 @@ module.exports = class PositionUpdater {
                             ${feature.properties.li_lfd_nr},
                             ${feature.properties.interpolation_distance},
                             ${feature.properties.interpolation_linear_ref},
-                            ${feature.geometry_sql},
-                            '${feature.properties.vehicleCode}'
+                            SPLIT_PART(${feature.geometry_sql}, ' ', 1)::int,
+                            SPLIT_PART(${feature.properties.vehicleCode}, ' ', 2)'
                         )
                    `;
                 }

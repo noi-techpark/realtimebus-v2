@@ -41,8 +41,8 @@ module.exports = class Courses {
                     AND travel_times.li_lfd_nr_start=1
                     AND travel_times.li_lfd_nr_end=lid_verlauf.li_lfd_nr
                     
-                LEFT JOIN data.vehicle_position_act
-                    ON vehicle_position_act.trip=rec_frt.teq_nummer
+                LEFT JOIN data.vehicle_positions
+                    ON vehicle_positions.trip=rec_frt.teq_nummer
                     
                 LEFT JOIN data.menge_tagesart mta
                     ON rec_frt.tagesart_nr=mta.tagesart_nr
@@ -50,8 +50,8 @@ module.exports = class Courses {
                 LEFT JOIN data.firmenkalender fkal
                     ON rec_frt.tagesart_nr=fkal.tagesart_nr
                     
-                LEFT JOIN data.line_attributes
-                    ON rec_frt.line=line_attributes.line
+                LEFT JOIN data.line_colors
+                    ON rec_frt.line=line_colors.line
                     
                 WHERE ort_nr=${stopId.ort_nr}
                     AND onr_typ_nr=${stopId.onr_typ_nr}

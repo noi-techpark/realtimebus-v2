@@ -1,5 +1,7 @@
 'use strict';
 
+const Utils = require("../../util/utils");
+
 module.exports = class FeatureList {
 
     constructor() {
@@ -9,8 +11,8 @@ module.exports = class FeatureList {
     add(properties, geometry) {
         let feature = {
             type: "Feature",
-            geometry: geometry,
-            properties: properties
+            geometry: Utils.sortObject(geometry),
+            properties: Utils.sortObject(properties)
         };
 
         this.features.push(feature);

@@ -101,7 +101,7 @@ function startServer() {
     app.use('/gtfs', express.static('static/gtfs'));
 
 
-    app.use(function (req, res, next) {
+    app.use(function (req, res) {
         res.status(404).json({
             error: {
                 code: 404,
@@ -111,7 +111,7 @@ function startServer() {
     });
 
 
-    let listener = app.listen(80, function () {
+    let listener = app.listen(88, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

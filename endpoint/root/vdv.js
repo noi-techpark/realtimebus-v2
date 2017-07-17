@@ -14,6 +14,7 @@ const HttpError = require("../../util/HttpError");
 const logger = require("../../util/logger");
 const config = require("../../config");
 const database = require("../../database/database.js");
+const Utils = require("../../util/utils");
 
 const LATEST_VDV_ZIP = 'vdv/latest.zip';
 const LATEST_EXTRACTED_VDV_DATA = 'vdv/latest';
@@ -499,7 +500,7 @@ module.exports = {
                         config.vdv_import_running = false;
 
                         response.success = true;
-                        res.status(200).json(sortObject(response))
+                        res.status(200).json(Utils.sortObject(response))
                     })
                     .catch(err => {
                         logger.error("Import failed!");
@@ -596,22 +597,4 @@ function parseVdvFile(file, data, cb) {
     }).on('close', function () {
         cb(file, table, formats, columns, records, data);
     })
-}
-
-function sortObject(o) {
-    let sorted = {}, key, a = [];
-
-    for (key in o) {
-        if (o.hasOwnProperty(key)) {
-            a.push(key);
-        }
-    }
-
-    a.sort();
-
-    for (key = 0; key < a.length; key++) {
-        sorted[a[key]] = o[a[key]];
-    }
-
-    return sorted;
 }

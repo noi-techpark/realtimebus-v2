@@ -17,12 +17,12 @@ module.exports = class LinesFinder {
                         ON rec_frt.li_nr=rec_lid.li_nr
                         AND rec_frt.str_li_var=rec_lid.str_li_var
                         
-                    LEFT JOIN vdv.line_attributes
-                        ON rec_frt.li_nr=line_attributes.li_nr
+                    LEFT JOIN vdv.line_colors
+                        ON rec_frt.li_nr=line_colors.li_nr
                         
                     WHERE rec_lid.li_kuerzel LIKE '%${city}%'
                     
-                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_attributes.li_nr, lidname, li_ri_nr
+                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_colors.li_nr, lidname, li_ri_nr
                 `;
             })
             .then(sql => this.client.query(sql))
@@ -46,15 +46,15 @@ module.exports = class LinesFinder {
                     INNER JOIN vdv.firmenkalender
                         ON menge_tagesart.tagesart_nr=firmenkalender.tagesart_nr
                         
-                    LEFT JOIN vdv.line_attributes
-                        ON rec_frt.li_nr=line_attributes.li_nr
+                    LEFT JOIN vdv.line_colors
+                        ON rec_frt.li_nr=line_colors.li_nr
                         
                     WHERE betriebstag=to_char(CURRENT_TIMESTAMP, 'YYYYMMDD')::integer
                         AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + frt_start * interval '1 seconds' > CURRENT_TIMESTAMP - interval '60 minutes'
                         AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + frt_start * interval '1 seconds' < CURRENT_TIMESTAMP + interval '${timeHorizon} seconds'
                         AND rec_lid.li_kuerzel LIKE '%${city}%'
                         
-                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_attributes.li_nr, lidname, li_ri_nr
+                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_colors.li_nr, lidname, li_ri_nr
                 `
             })
             .then(sql => this.client.query(sql))

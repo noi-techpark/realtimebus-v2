@@ -10,9 +10,10 @@ const fs = require('fs');
 const logger = require("./util/logger");
 const config = require("./config");
 
-const v1Realtime = require("./endpoint/v1/realtime");
-const v1Receiver = require("./endpoint/v1/receiver");
-const v1Stops = require("./endpoint/v1/stops");
+const v1Realtime = require("./endpoint/geojson/realtime");
+const v1Lines = require("./endpoint/geojson/lines");
+const v1Receiver = require("./endpoint/geojson/receiver");
+const v1Stops = require("./endpoint/geojson/stops");
 const v1Vdv = require("./endpoint/root/vdv");
 
 const v2Realtime = require("./endpoint/v2/realtime");
@@ -81,6 +82,9 @@ function startServer() {
         router.get("/stops", v1Stops.stops);
         router.get("/:stop/buses", v1Stops.nextBusesAtStop);
         router.get("/:tripId/stops", v1Stops.stopsForTrip);
+
+        router.get("/lines/all", v1Lines.fetchAllLinesAction);
+        router.get("/lines", v1Lines.fetchLinesAction);
     });
 
     app.group("/app", (router) => {

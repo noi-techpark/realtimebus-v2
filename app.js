@@ -92,9 +92,11 @@ function startServer() {
     });
 
     app.group("/gtfs", (router) => {
-
         router.get("/realtime", v2Realtime.positions);
     });
+
+    // TODO: Add better method to server GTFS (and upload)
+    app.use('/gtfs', express.static('static/gtfs'));
 
 
     app.use(function (req, res, next) {

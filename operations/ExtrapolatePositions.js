@@ -10,8 +10,6 @@ module.exports = class ExtrapolatePositions {
     }
 
     run() {
-        // TODO: Quiet logging (maybe fix deprecation warnings)
-
         return database.connect()
             .then(client => {
                 return this.runExtrapolation(client)

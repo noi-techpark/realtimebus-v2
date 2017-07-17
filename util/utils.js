@@ -54,7 +54,7 @@ module.exports.getZoneForLine = function (line) {
 
 module.exports.isEmpty = function (array) {
     // noinspection EqualityComparisonWithCoercionJS
-    return typeof array == null || array.length === 0
+    return array == null || array.length === 0
 };
 
 module.exports.respondWithError = function (res, error) {

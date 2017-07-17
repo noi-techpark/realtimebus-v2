@@ -574,7 +574,7 @@ CREATE TABLE firmenkalender (
 
 CREATE TABLE frt_ort_last (
     trip bigint NOT NULL,
-    onr_typ_nr smallint,
+    onr_typ_nr SMALLINT,
     ort_nr INTEGER
 );
 
@@ -606,13 +606,13 @@ CREATE TABLE lid_verlauf (
     ort_nr INTEGER,
     znr_nr INTEGER,
     anr_nr INTEGER,
-    einfangbereich smallint,
-    li_knoten smallint,
-    einsteigeverbot smallint,
-    aussteigeverbot smallint,
-    zone_wabe_nr smallint,
-    kurzstrecke smallint,
-    halte_typ smallint
+    einfangbereich SMALLINT,
+    li_knoten SMALLINT,
+    einsteigeverbot SMALLINT,
+    aussteigeverbot SMALLINT,
+    zone_wabe_nr SMALLINT,
+    kurzstrecke SMALLINT,
+    halte_typ SMALLINT
 );
 
 SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING', 2);
@@ -694,7 +694,7 @@ CREATE TABLE rec_frt (
     line INTEGER,
     tagesart_nr INTEGER,
     li_ku_nr INTEGER,
-    fahrtart_nr smallint,
+    fahrtart_nr SMALLINT,
     fgr_nr INTEGER,
     variant SMALLINT,
     um_uid INTEGER,
@@ -704,7 +704,7 @@ CREATE TABLE rec_frt (
     konzessionsinhaber_nr INTEGER,
     auftraggeber_nr INTEGER,
     fremdunternehmer_nr INTEGER,
-    fzg_typ_nr smallint,
+    fzg_typ_nr SMALLINT,
     bemerkung VARCHAR(1000),
     zugnr VARCHAR(10),
     fahrtart_nummer INTEGER,
@@ -721,7 +721,7 @@ CREATE TABLE rec_frt (
 CREATE TABLE rec_frt_fzt (
     basis_version INTEGER,
     trip bigint NOT NULL,
-    onr_typ_nr smallint NOT NULL,
+    onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
     frt_fzt_zeit INTEGER
 );
@@ -736,7 +736,7 @@ CREATE TABLE rec_frt_fzt (
 CREATE TABLE rec_frt_hzt (
     basis_version INTEGER,
     trip bigint NOT NULL,
-    onr_typ_nr smallint NOT NULL,
+    onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
     frt_hzt_zeit INTEGER
 );
@@ -752,13 +752,13 @@ CREATE TABLE rec_lid (
     basis_version INTEGER NOT NULL,
     line INTEGER NOT NULL,
     variant SMALLINT NOT NULL,
-    routen_nr smallint,
-    li_ri_nr smallint,
-    bereich_nr smallint,
+    routen_nr SMALLINT,
+    li_ri_nr SMALLINT,
+    bereich_nr SMALLINT,
     li_kuerzel VARCHAR(6),
     line_name VARCHAR(40),
-    routen_art smallint,
-    linien_code smallint,
+    routen_art SMALLINT,
+    linien_code SMALLINT,
     konzessionsinhaber_nr INTEGER,
     auftraggeber_nr INTEGER,
     fremdunternehmer_nr INTEGER
@@ -774,21 +774,21 @@ SELECT AddGeometryColumn('data', 'rec_lid', 'the_geom', 25832, 'LINESTRING', 2);
 
 CREATE TABLE rec_ort (
     basis_version INTEGER NOT NULL,
-    onr_typ_nr smallint NOT NULL,
+    onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
     ort_name VARCHAR(40),
     ort_ref_ort INTEGER,
-    ort_ref_ort_typ smallint,
+    ort_ref_ort_typ SMALLINT,
     ort_ref_ort_langnr INTEGER,
     ort_ref_ort_kuerzel VARCHAR(8),
     ort_ref_ort_name VARCHAR(40),
-    zone_wabe_nr smallint,
+    zone_wabe_nr SMALLINT,
     ort_pos_laenge bigint,
     ort_pos_breite bigint,
     ort_pos_hoehe bigint,
-    ort_richtung smallint,
+    ort_richtung SMALLINT,
     ort_druckname VARCHAR(40),
-    richtungswechsel smallint
+    richtungswechsel SMALLINT
 );
 
 SELECT AddGeometryColumn('data', 'rec_ort', 'the_geom', 25832, 'POINT', 2); 
@@ -801,12 +801,12 @@ SELECT AddGeometryColumn('data', 'rec_ort', 'the_geom', 25832, 'POINT', 2);
 
 CREATE TABLE sel_fzt_feld (
     basis_version INTEGER NOT NULL,
-    bereich_nr smallint NOT NULL,
+    bereich_nr SMALLINT NOT NULL,
     fgr_nr INTEGER NOT NULL,
-    onr_typ_nr smallint NOT NULL,
+    onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
     sel_ziel INTEGER NOT NULL,
-    sel_ziel_typ smallint NOT NULL,
+    sel_ziel_typ SMALLINT NOT NULL,
     sel_fzt INTEGER
 );
 
@@ -819,8 +819,8 @@ CREATE TABLE sel_fzt_feld (
 
 CREATE TABLE travel_times (
     trip bigint NOT NULL,
-    li_lfd_nr_start smallint NOT NULL,
-    li_lfd_nr_end smallint NOT NULL,
+    li_lfd_nr_start SMALLINT NOT NULL,
+    li_lfd_nr_end SMALLINT NOT NULL,
     travel_time INTEGER
 );
 
@@ -836,7 +836,7 @@ CREATE UNLOGGED TABLE vehicle_positions (
     delay_sec INTEGER NOT NULL,
     insert_date timestamp(0) without time zone DEFAULT now() NOT NULL,
     trip bigint NOT NULL,
-    li_lfd_nr smallint,
+    li_lfd_nr SMALLINT,
     line INTEGER,
     variant SMALLINT,
     interpolation_linear_ref double precision,
@@ -844,7 +844,7 @@ CREATE UNLOGGED TABLE vehicle_positions (
     extrapolation_linear_ref double precision,
     arrival_time timestamp without time zone,
     status VARCHAR(1),
-    vehicle smallint NOT NULL,
+    vehicle SMALLINT NOT NULL,
     depot VARCHAR(2)
 );
 

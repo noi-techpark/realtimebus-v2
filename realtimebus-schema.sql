@@ -610,7 +610,9 @@ CREATE TABLE lid_verlauf (
     time_relevant SMALLINT,
     entrance SMALLINT,
     exit SMALLINT,
-    area SMALLINT
+    area SMALLINT,
+    kurzstrecke SMALLINT,
+    halte_typ SMALLINT
 );
 
 SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING', 2);

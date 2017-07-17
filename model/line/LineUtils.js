@@ -4,7 +4,7 @@ const logger = require("../../util/logger");
 
 module.exports = class LineUtils {
 
-    static getLinesFromQuery(lineString) {
+    static fromExpressQuery(lineString) {
         let lines = [];
 
         if (typeof lineString !== 'undefined' && lineString.length > 0) {
@@ -31,7 +31,7 @@ module.exports = class LineUtils {
         return lines;
     }
 
-    static whereLines(field1, field2, lines) {
+    static buildForSql(field1, field2, lines) {
         let isFirst = true;
         let whereLines = '';
 

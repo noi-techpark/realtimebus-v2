@@ -17,7 +17,7 @@ module.exports = {
             let vehicle = req.params.vehicle;
 
             if (typeof lines !== 'undefined' && lines.length > 0) {
-                positions.setLines(LineUtils.getLinesFromQuery(lines));
+                positions.setLines(LineUtils.fromExpressQuery(lines));
             }
 
             // noinspection EqualityComparisonWithCoercionJS

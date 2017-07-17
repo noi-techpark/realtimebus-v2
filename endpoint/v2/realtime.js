@@ -20,7 +20,7 @@ module.exports = {
             let lines = req.query.lines;
 
             if (typeof lines !== 'undefined' && lines.length > 0) {
-                positions.setLines(LineUtils.getLinesFromQuery(lines));
+                positions.setLines(LineUtils.fromExpressQuery(lines));
             }
 
             return positions.getAll();

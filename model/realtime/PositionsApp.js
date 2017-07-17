@@ -51,7 +51,7 @@ module.exports = class PositionsApp {
 
                 if (typeof this.lines !== 'undefined' && this.lines.length > 0) {
                     console.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
-                    lineFilter = " AND (" + LineUtils.whereLines('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
+                    lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
                 }
 
                 // noinspection EqualityComparisonWithCoercionJS

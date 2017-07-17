@@ -88,7 +88,7 @@ module.exports = class BusStops {
                                 AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
                          WHERE `;
 
-                    sql += LineUtils.whereLines('lid_verlauf.line', 'lid_verlauf.variant', this.lines);
+                    sql += LineUtils.buildForSql('lid_verlauf.line', 'lid_verlauf.variant', this.lines);
                 }
 
                 return sql;

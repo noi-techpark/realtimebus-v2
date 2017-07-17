@@ -10,9 +10,9 @@ module.exports = class FeatureList {
 
     add(properties, geometry) {
         let feature = {
-            type: "Feature",
             geometry: Utils.sortObject(geometry),
-            properties: Utils.sortObject(properties)
+            properties: Utils.sortObject(properties),
+            type: "Feature"
         };
 
         this.features.push(feature);

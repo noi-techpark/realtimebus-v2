@@ -423,12 +423,12 @@ function performOtherQueries(client) {
     return Promise.resolve()
         .then(() => {
             return client.query(`
-                    INSERT INTO data.rec_frt (trip_type)
+                    INSERT INTO data.menge_fgr (version, trip_time_group, trip_time_group_text)
                         (
                         SELECT 1, rec_frt.trip_time_group, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
                         LEFT JOIN data.menge_fgr
-                            ON rec_frt.trip_time_group=menge_fgr.trip_time_group
+                            ON rec_frt.trip_time_group = menge_fgr.trip_time_group
                         WHERE menge_fgr.trip_time_group IS NULL
                         GROUP BY rec_frt.trip_time_group
                         ORDER BY rec_frt.trip_time_group
@@ -440,21 +440,8 @@ function performOtherQueries(client) {
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
                         LEFT JOIN data.rec_lid
-                            ON rec_frt.line=rec_lid.line
-                            AND rec_frt.variant=rec_lid.variant
-                        WHERE rec_lid.line IS NULL
-                        GROUP BY rec_frt.line, rec_frt.variant
-                        ORDER BY rec_frt.line, rec_frt.variant
-                        );
-                    `)
-        }).then(() => {
-            return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
-                        (
-                        SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
-                        FROM data.rec_frt
-                        LEFT JOIN data.rec_lid
-                            ON rec_frt.line=rec_lid.line
-                            AND rec_frt.variant=rec_lid.variant
+                            ON rec_frt.line = rec_lid.line
+                            AND rec_frt.variant = rec_lid.variant
                         WHERE rec_lid.line IS NULL
                         GROUP BY rec_frt.line, rec_frt.variant
                         ORDER BY rec_frt.line, rec_frt.variant

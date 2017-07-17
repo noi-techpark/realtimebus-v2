@@ -4,13 +4,13 @@ const NativeClient = require('pg').native.Client;
 const logger = require("../util/logger");
 
 const pool = new Pool({
-    user: 'postgres',           // env var: PGUSER
-    database: 'realtimebus',    // env var: PGDATABASE
-    password: '1234',           // env var: PGPASSWORD
-    host: 'localhost',          // Server hosting the postgres database
-    port: 5432,                 // env var: PGPORT
-    max: 32,                    // max number of clients in the pool
-    idleTimeoutMillis: 10 * 60 * 1000,   // how long a client is allowed to remain idle before being closed
+    user: 'postgres',                       // env var: PGUSER
+    database: 'realtimebus',                // env var: PGDATABASE
+    password: '1234',                       // env var: PGPASSWORD
+    host: 'localhost',                      // Server hosting the postgres database
+    port: 5432,                             // env var: PGPORT
+    max: 32,                                // max number of clients in the pool
+    idleTimeoutMillis: 10 * 60 * 1000,      // how long a client is allowed to remain idle before being closed
     Client: NativeClient
 });
 

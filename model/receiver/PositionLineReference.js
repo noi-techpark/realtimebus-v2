@@ -26,11 +26,11 @@ module.exports = class PositionLineReference {
                     logger.warn(`Trip ${feature.properties.frt_fid} does not exist in database`);
 
                     return {
-                        line: 'null',
+                        line: null,
                         variant: null,
-                        li_lfd_nr: 'null',
-                        interpolation_distance: 'null',
-                        interpolation_linear_ref: 'null',
+                        li_lfd_nr: null,
+                        interpolation_distance: null,
+                        interpolation_linear_ref: null,
                     };
                 }
 

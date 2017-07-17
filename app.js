@@ -61,7 +61,7 @@ app.use(bodyParser.raw({
 app.set('jsonp callback name', 'jsonp');
 
 database.connect()
-    .then(client => {
+    .then(() => {
         logger.warn("Connected to database");
 
         new ExtrapolatePositions().run();

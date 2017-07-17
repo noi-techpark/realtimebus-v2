@@ -72,7 +72,7 @@ module.exports = {
                 let limit = config.realtime_next_stops_limit;
 
                 let coursesFinder = new CourseFinder();
-                return coursesFinder.getCourses(stop, limit);
+                return coursesFinder.getCourses(stopId, limit);
             })
             .then(stops => {
                 res.status(200).jsonp(stops);

@@ -5,19 +5,20 @@ const connection = require("../../database/database");
 module.exports = class Courses {
 
     getCourses(stopId, limit) {
-        return Promise.resolve(function () {
-            let limitSql = '';
+        return Promise.resolve()
+            .then(() => {
+                let limitSql = '';
 
-            // noinspection EqualityComparisonWithCoercionJS
-            if (limit != null) {
-                limitSql = `LIMIT ${limit}`;
-            }
+                // noinspection EqualityComparisonWithCoercionJS
+                if (limit != null) {
+                    limitSql = `LIMIT ${limit}`;
+                }
 
-            return `
+                let sql = `
                 SELECT
-                rec_lid.line_name,
-                    rec_frt.trip,
-                    data.vdv_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS bus_passes_at,
+                    rec_lid.line_name AS lidname,
+                    rec_frt.trip AS frt_fid,
+                    data.data_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS bus_passes_at,
                 COALESCE(delay_sec, 0)/60 AS delay_minutes,
                     mta.tagesart_text,
                     fahrtart_nr,
@@ -61,12 +62,10 @@ module.exports = class Courses {
                 ${limitSql}
             `;
 
-            /*
-                AND frt_start > date_part('hour', CURRENT_TIMESTAMP) * 3600 +
-                date_part('minute', CURRENT_TIMESTAMP) * 60 +
-                date_part('second', CURRENT_TIMESTAMP)
-             */
-        })
+                console.log(sql);
+
+                return sql;
+            })
             .then(sql => connection.query(sql))
             .then(result => {
                 return result.rows

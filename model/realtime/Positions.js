@@ -35,8 +35,7 @@ module.exports = class Positions {
                 if (this.vehicle != null) {
                     console.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
 
-                    // TODO: Find a better way to perform this filter.
-                    vehicleFilter = ` AND (vehicle = '${this.vehicle}' OR vehicle = '${this.vehicle} BZ' OR vehicle = '${this.vehicle} ME')`;
+                    vehicleFilter = ` AND SPLIT_PART(vehicle, ' ', 1) IN (${this.vehicle})`;
                 }
 
                 return `
@@ -44,7 +43,7 @@ module.exports = class Positions {
                         rec_frt.trip,
                         gps_date,
                         delay_sec,
-                        vehicle,
+                        SPLIT_PART(vehicle, ' ', 1)::int AS vehicle,
                         rec_frt.line,
                         rec_frt.variant,
                         line_name,
@@ -86,7 +85,7 @@ module.exports = class Positions {
                     ${lineFilter}
                     ${vehicleFilter}
                     
-                    ORDER BY gps_date
+                    ORDER BY gps_date DESC
                `
             })
             .then(sql => connection.query(sql))
@@ -96,15 +95,8 @@ module.exports = class Positions {
                 let featureList = new FeatureList();
 
                 for (let row of result.rows) {
-                    let geometry;
-
                     // noinspection EqualityComparisonWithCoercionJS
-                    if (row.json_extrapolation_geom != null) {
-                        geometry = JSON.parse(row.json_extrapolation_geom);
-                    } else {
-                        geometry = JSON.parse(row.json_geom);
-                    }
-
+                    let geometry = row.json_extrapolation_geom != null ? JSON.parse(row.json_extrapolation_geom) : JSON.parse(row.json_geom);
                     let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
 
                     row.hexcolor = '#' + hex;
@@ -112,7 +104,7 @@ module.exports = class Positions {
 
                     row.frt_fid = parseInt(row.trip);
                     row.li_nr = parseInt(row.line);
-                    row.lidname = parseInt(row.line_name);
+                    row.lidname = row.line_name;
                     row.str_li_var = parseInt(row.variant);
                     row.vehicleCode = row.vehicle;
 

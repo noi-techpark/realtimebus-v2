@@ -76,9 +76,7 @@ database.connect()
     });
 
 function startServer() {
-    app.post("/vdv", function (req, res) {
-        v1Vdv.upload(req, res)
-    });
+    app.post("/vdv", v1Vdv.upload);
 
     app.group("/v1", (router) => {
 
@@ -86,21 +84,11 @@ function startServer() {
         router.get("/positions/lines/:lines", v1Realtime.positions);
         router.get("/positions/vehicle/:vehicle", v1Realtime.positions);
 
-        router.post("/receiver", function (req, res) {
-            v1Receiver.updatePositions(req, res)
-        });
+        router.post("/receiver", v1Receiver.updatePositions);
 
-        router.get("/:stop/buses", function (req, res) {
-            v1Stops.nextBusesAtStop(req, res)
-        });
-
-        router.get("/stops", function (req, res) {
-            v1Stops.stops(req, res)
-        });
-
-        router.get("/:tripId/stops", function (req, res) {
-            v1Stops.stopsForTrip(req, res)
-        });
+        router.get("/stops", v1Stops.stops);
+        router.get("/:stop/buses", v1Stops.nextBusesAtStop);
+        router.get("/:tripId/stops", v1Stops.stopsForTrip);
     });
 
     app.group("/app", (router) => {
@@ -112,9 +100,7 @@ function startServer() {
 
     app.group("/v2", (router) => {
 
-        router.get("/positions", function (req, res) {
-            v2Realtime.positions(req, res)
-        });
+        router.get("/positions", v2Realtime.positions);
     });
 
     let listener = app.listen(80, function () {

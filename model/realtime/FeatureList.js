@@ -29,7 +29,7 @@ module.exports = class FeatureList {
 
     static createFromArray(array) {
         if (!array.hasOwnProperty("features")) {
-            throw("Supplied JSON does not contain required object 'features'");
+            throw("Supplied JSON does not contain required property 'features'");
         }
 
         let instance = new FeatureList();

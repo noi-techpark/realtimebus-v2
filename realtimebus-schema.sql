@@ -57,7 +57,7 @@ Beware, works only for positive arguments';
 -- Name: data_extrapolate_frt_position(bigint); Type: FUNCTION; Schema: data; Owner: -
 --
 
-CREATE FUNCTION data_extrapolate_frt_position(teq_nummer_arg bigint) RETURNS integer
+CREATE FUNCTION data_extrapolate_frt_position(teq_nummer_arg bigint) RETURNS INTEGER
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -90,7 +90,7 @@ BEGIN
     FROM data.vehicle_positions
     LEFT JOIN data.lid_verlauf
         ON lid_verlauf.line=vehicle_positions.line
-        AND lid_verlauf.variant=vehicle_positions.variant
+        AND lid_verlauf.variant = vehicle_positions.variant
         AND lid_verlauf.li_lfd_nr = vehicle_positions.li_lfd_nr
     LEFT JOIN data.lid_verlauf AS next_verlauf
         ON next_verlauf.line=lid_verlauf.line
@@ -104,11 +104,11 @@ BEGIN
     WHERE trip=teq_nummer_arg;
 
     -- Calc elapsed time
-    elapsed_time = EXTRACT('epoch' FROM current_timestamp-pos_record.gps_date);
+    elapsed_time = EXTRACT('epoch' FROM current_timestamp - pos_record.gps_date);
 
     SELECT trip, frt_start INTO frt
     FROM data.rec_frt
-    WHERE teq_nummer=teq_nummer_arg;
+    WHERE teq_nummer = teq_nummer_arg;
   
     IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) < frt.frt_start - 10
        AND pos_record.delay_sec = 0 THEN
@@ -139,7 +139,7 @@ BEGIN
         -- Bus is waiting at departure
        UPDATE data.vehicle_positions
        SET status = 'f'
-       WHERE trip=teq_nummer_arg;
+       WHERE trip = teq_nummer_arg;
        RETURN 0;
     END IF;
 
@@ -315,7 +315,7 @@ $$;
 -- Name: data_extrapolate_positions(); Type: FUNCTION; Schema: data; Owner: -
 --
 
-CREATE FUNCTION data_extrapolate_positions() RETURNS integer
+CREATE FUNCTION data_extrapolate_positions() RETURNS INTEGER
     LANGUAGE plpgsql
     AS $$
     --
@@ -361,13 +361,13 @@ $$;
 -- Name: data_fill_frt_travel_times(bigint); Type: FUNCTION; Schema: data; Owner: -
 --
 
-CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS integer
+CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS INTEGER
     LANGUAGE plpgsql
     AS $$
     DECLARE
-        this_line integer;
-        this_variant varchar(6);
-        this_fgr_nr integer;
+        this_line INTEGER;
+        this_variant SMALLINT;
+        this_fgr_nr INTEGER;
         
         outer_lfd_cursor refcursor;
         from_to_stop record;
@@ -382,7 +382,7 @@ CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS integer
         
         travel_time_seconds INTEGER;
         
-        inner_lfd_cursor CURSOR (this_line integer, this_variant varchar(6), this_fgr_nr integer, from_stop integer, to_stop integer) FOR
+        inner_lfd_cursor CURSOR (this_line INTEGER, this_variant SMALLINT, this_fgr_nr INTEGER, from_stop INTEGER, to_stop INTEGER) FOR
             SELECT SUM(COALESCE(sel_fzt))
             FROM data.lid_verlauf lid_verlauf_start
             INNER JOIN data.lid_verlauf lid_verlauf_end
@@ -491,7 +491,7 @@ $$;
 -- Name: data_fill_travel_times(); Type: FUNCTION; Schema: data; Owner: -
 --
 
-CREATE FUNCTION data_fill_travel_times() RETURNS integer
+CREATE FUNCTION data_fill_travel_times() RETURNS INTEGER
     LANGUAGE plpgsql
     AS $$
     DECLARE
@@ -522,10 +522,10 @@ $$;
 --
 -- TOC entry 991 (class 1255 OID 732680)
 -- Dependencies: 1412 7
--- Name: data_seconds_to_hhmm(integer); Type: FUNCTION; Schema: data; Owner: -
+-- Name: data_seconds_to_hhmm(INTEGER); Type: FUNCTION; Schema: data; Owner: -
 --
 
-CREATE FUNCTION data_seconds_to_hhmm(seconds integer) RETURNS text
+CREATE FUNCTION data_seconds_to_hhmm(seconds INTEGER) RETURNS text
     LANGUAGE plpgsql IMMUTABLE COST 10
     AS $$
 DECLARE
@@ -544,10 +544,10 @@ $$;
 --
 -- TOC entry 3810 (class 0 OID 0)
 -- Dependencies: 991
--- Name: FUNCTION data_seconds_to_hhmm(seconds integer); Type: COMMENT; Schema: data; Owner: -
+-- Name: FUNCTION data_seconds_to_hhmm(seconds INTEGER); Type: COMMENT; Schema: data; Owner: -
 --
 
-COMMENT ON FUNCTION data_seconds_to_hhmm(seconds integer) IS 'Convert seconds from midnight to time formatted as HH:MM';
+COMMENT ON FUNCTION data_seconds_to_hhmm(seconds INTEGER) IS 'Convert seconds from midnight to time formatted as HH:MM';
 
 
 SET default_with_oids = false;
@@ -559,10 +559,10 @@ SET default_with_oids = false;
 --
 
 CREATE TABLE firmenkalender (
-    basis_version integer NOT NULL,
-    betriebstag integer NOT NULL,
-    betriebstag_text varchar(40),
-    tagesart_nr integer
+    basis_version INTEGER NOT NULL,
+    betriebstag INTEGER NOT NULL,
+    betriebstag_text VARCHAR(40),
+    tagesart_nr INTEGER
 );
 
 
@@ -575,7 +575,7 @@ CREATE TABLE firmenkalender (
 CREATE TABLE frt_ort_last (
     trip bigint NOT NULL,
     onr_typ_nr smallint,
-    ort_nr integer
+    ort_nr INTEGER
 );
 
 
@@ -598,14 +598,14 @@ CREATE TABLE frt_teq_mapping (
 --
 
 CREATE TABLE lid_verlauf (
-    basis_version integer NOT NULL,
-    li_lfd_nr smallint NOT NULL,
-    line integer NOT NULL,
-    variant varchar(4) NOT NULL,
-    onr_typ_nr smallint,
-    ort_nr integer,
-    znr_nr integer,
-    anr_nr integer,
+    basis_version INTEGER NOT NULL,
+    li_lfd_nr SMALLINT NOT NULL,
+    line INTEGER NOT NULL,
+    variant SMALLINT NOT NULL,
+    onr_typ_nr SMALLINT,
+    ort_nr INTEGER,
+    znr_nr INTEGER,
+    anr_nr INTEGER,
     einfangbereich smallint,
     li_knoten smallint,
     einsteigeverbot smallint,
@@ -615,21 +615,7 @@ CREATE TABLE lid_verlauf (
     halte_typ smallint
 );
 
-SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING', 2); 
-
---
--- TOC entry 169 (class 1259 OID 591702)
--- Dependencies: 7
--- Name: line_colors; Type: TABLE; Schema: data; Owner: -
---
-
-CREATE TABLE line_colors (
-    line integer NOT NULL,
-    li_r smallint,
-    li_g smallint,
-    li_b smallint
-);
-
+SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING', 2);
 
 --
 -- TOC entry 170 (class 1259 OID 591705)
@@ -638,9 +624,9 @@ CREATE TABLE line_colors (
 --
 
 CREATE TABLE menge_fgr (
-    basis_version integer NOT NULL,
-    fgr_nr integer NOT NULL,
-    fgr_text varchar(40)
+    basis_version INTEGER NOT NULL,
+    fgr_nr INTEGER NOT NULL,
+    fgr_text VARCHAR(40)
 );
 
 
@@ -651,9 +637,9 @@ CREATE TABLE menge_fgr (
 --
 
 CREATE TABLE menge_tagesart (
-    basis_version integer NOT NULL,
-    tagesart_nr integer NOT NULL,
-    tagesart_text varchar(40)
+    basis_version INTEGER NOT NULL,
+    tagesart_nr INTEGER NOT NULL,
+    tagesart_text VARCHAR(40)
 );
 
 
@@ -664,11 +650,11 @@ CREATE TABLE menge_tagesart (
 --
 
 CREATE TABLE ort_edges (
-    id integer NOT NULL,
-    start_onr_typ_nr integer,
-    start_ort_nr integer,
-    end_onr_typ_nr integer,
-    end_ort_nr integer
+    id INTEGER NOT NULL,
+    start_onr_typ_nr INTEGER,
+    start_ort_nr INTEGER,
+    end_onr_typ_nr INTEGER,
+    end_ort_nr INTEGER
 );
 
 SELECT AddGeometryColumn('data', 'ort_edges', 'the_geom', 25832, 'LINESTRING', 2); 
@@ -702,26 +688,26 @@ ALTER SEQUENCE ort_edges_id_seq OWNED BY ort_edges.id;
 --
 
 CREATE TABLE rec_frt (
-    basis_version integer NOT NULL,
+    basis_version INTEGER NOT NULL,
     trip bigint NOT NULL,
-    frt_start integer,
-    line integer,
-    tagesart_nr integer,
-    li_ku_nr integer,
+    frt_start INTEGER,
+    line INTEGER,
+    tagesart_nr INTEGER,
+    li_ku_nr INTEGER,
     fahrtart_nr smallint,
-    fgr_nr integer,
-    variant varchar(4),
-    um_uid integer,
-    leistungsart_nr integer,
-    frt_ext_nr integer,
-    znr_nr integer,
-    konzessionsinhaber_nr integer,
-    auftraggeber_nr integer,
-    fremdunternehmer_nr integer,
+    fgr_nr INTEGER,
+    variant SMALLINT,
+    um_uid INTEGER,
+    leistungsart_nr INTEGER,
+    frt_ext_nr INTEGER,
+    znr_nr INTEGER,
+    konzessionsinhaber_nr INTEGER,
+    auftraggeber_nr INTEGER,
+    fremdunternehmer_nr INTEGER,
     fzg_typ_nr smallint,
-    bemerkung varchar(1000),
-    zugnr varchar(10),
-    fahrtart_nummer integer,
+    bemerkung VARCHAR(1000),
+    zugnr VARCHAR(10),
+    fahrtart_nummer INTEGER,
     teq_nummer bigint
 );
 
@@ -733,11 +719,11 @@ CREATE TABLE rec_frt (
 --
 
 CREATE TABLE rec_frt_fzt (
-    basis_version integer,
+    basis_version INTEGER,
     trip bigint NOT NULL,
     onr_typ_nr smallint NOT NULL,
-    ort_nr integer NOT NULL,
-    frt_fzt_zeit integer
+    ort_nr INTEGER NOT NULL,
+    frt_fzt_zeit INTEGER
 );
 
 
@@ -748,11 +734,11 @@ CREATE TABLE rec_frt_fzt (
 --
 
 CREATE TABLE rec_frt_hzt (
-    basis_version integer,
+    basis_version INTEGER,
     trip bigint NOT NULL,
     onr_typ_nr smallint NOT NULL,
-    ort_nr integer NOT NULL,
-    frt_hzt_zeit integer
+    ort_nr INTEGER NOT NULL,
+    frt_hzt_zeit INTEGER
 );
 
 
@@ -763,19 +749,19 @@ CREATE TABLE rec_frt_hzt (
 --
 
 CREATE TABLE rec_lid (
-    basis_version integer NOT NULL,
-    line integer NOT NULL,
-    variant varchar(4) NOT NULL,
+    basis_version INTEGER NOT NULL,
+    line INTEGER NOT NULL,
+    variant SMALLINT NOT NULL,
     routen_nr smallint,
     li_ri_nr smallint,
     bereich_nr smallint,
-    li_kuerzel varchar(6),
-    line_name varchar(40),
+    li_kuerzel VARCHAR(6),
+    line_name VARCHAR(40),
     routen_art smallint,
     linien_code smallint,
-    konzessionsinhaber_nr integer,
-    auftraggeber_nr integer,
-    fremdunternehmer_nr integer
+    konzessionsinhaber_nr INTEGER,
+    auftraggeber_nr INTEGER,
+    fremdunternehmer_nr INTEGER
 );
 
 SELECT AddGeometryColumn('data', 'rec_lid', 'the_geom', 25832, 'LINESTRING', 2); 
@@ -787,21 +773,21 @@ SELECT AddGeometryColumn('data', 'rec_lid', 'the_geom', 25832, 'LINESTRING', 2);
 --
 
 CREATE TABLE rec_ort (
-    basis_version integer NOT NULL,
+    basis_version INTEGER NOT NULL,
     onr_typ_nr smallint NOT NULL,
-    ort_nr integer NOT NULL,
-    ort_name varchar(40),
-    ort_ref_ort integer,
+    ort_nr INTEGER NOT NULL,
+    ort_name VARCHAR(40),
+    ort_ref_ort INTEGER,
     ort_ref_ort_typ smallint,
-    ort_ref_ort_langnr integer,
-    ort_ref_ort_kuerzel varchar(8),
-    ort_ref_ort_name varchar(40),
+    ort_ref_ort_langnr INTEGER,
+    ort_ref_ort_kuerzel VARCHAR(8),
+    ort_ref_ort_name VARCHAR(40),
     zone_wabe_nr smallint,
     ort_pos_laenge bigint,
     ort_pos_breite bigint,
     ort_pos_hoehe bigint,
     ort_richtung smallint,
-    ort_druckname varchar(40),
+    ort_druckname VARCHAR(40),
     richtungswechsel smallint
 );
 
@@ -814,14 +800,14 @@ SELECT AddGeometryColumn('data', 'rec_ort', 'the_geom', 25832, 'POINT', 2);
 --
 
 CREATE TABLE sel_fzt_feld (
-    basis_version integer NOT NULL,
+    basis_version INTEGER NOT NULL,
     bereich_nr smallint NOT NULL,
-    fgr_nr integer NOT NULL,
+    fgr_nr INTEGER NOT NULL,
     onr_typ_nr smallint NOT NULL,
-    ort_nr integer NOT NULL,
-    sel_ziel integer NOT NULL,
+    ort_nr INTEGER NOT NULL,
+    sel_ziel INTEGER NOT NULL,
     sel_ziel_typ smallint NOT NULL,
-    sel_fzt integer
+    sel_fzt INTEGER
 );
 
 
@@ -835,7 +821,7 @@ CREATE TABLE travel_times (
     trip bigint NOT NULL,
     li_lfd_nr_start smallint NOT NULL,
     li_lfd_nr_end smallint NOT NULL,
-    travel_time integer
+    travel_time INTEGER
 );
 
 
@@ -847,19 +833,19 @@ CREATE TABLE travel_times (
 
 CREATE UNLOGGED TABLE vehicle_positions (
     gps_date timestamp(0) with time zone NOT NULL,
-    delay_sec integer NOT NULL,
+    delay_sec INTEGER NOT NULL,
     insert_date timestamp(0) without time zone DEFAULT now() NOT NULL,
     trip bigint NOT NULL,
     li_lfd_nr smallint,
-    line integer,
-    variant varchar(4),
+    line INTEGER,
+    variant SMALLINT,
     interpolation_linear_ref double precision,
     interpolation_distance double precision,
     extrapolation_linear_ref double precision,
     arrival_time timestamp without time zone,
-    status character(1),
+    status VARCHAR(1),
     vehicle smallint NOT NULL,
-    depot varchar(2)
+    depot VARCHAR(2)
 );
 
 
@@ -931,16 +917,6 @@ ALTER TABLE ONLY frt_teq_mapping
 
 ALTER TABLE ONLY lid_verlauf
     ADD CONSTRAINT lid_verlauf_pkey PRIMARY KEY (li_lfd_nr, line, variant);
-
-
---
--- TOC entry 3743 (class 2606 OID 591778)
--- Dependencies: 169 169 3806
--- Name: line_colors_pkey; Type: CONSTRAINT; Schema: data; Owner: -
---
-
-ALTER TABLE ONLY line_colors
-    ADD CONSTRAINT line_colors_pkey PRIMARY KEY (line);
 
 
 --
@@ -1351,12 +1327,12 @@ CREATE INDEX ON data.rec_ort USING GIST(the_geom);
 --
 
 CREATE TABLE line_colors (
-    line integer NOT NULL,
-    li_r smallint,
-    li_g smallint,
-    li_b smallint,
-    hex character(6),
-    hue smallint
+    line INTEGER NOT NULL,
+    li_r SMALLINT NOT NULL,
+    li_g SMALLINT NOT NULL,
+    li_b SMALLINT NOT NULL,
+    hex VARCHAR(6),
+    hue SMALLINT NOT NULL
 );
 
 
@@ -1366,48 +1342,47 @@ ALTER TABLE line_colors OWNER TO postgres;
 -- Data for Name: line_colors; Type: TABLE DATA; Schema: data; Owner: postgres
 --
 
-COPY line_colors (line, li_r, li_g, li_b, hex, hue) FROM stdin;
-116     0       73      107     3f51b5  240
-117     0       73      107     3f51b5  240
-1       231     120     23      ff9800  35
-2       68      145     108     4caf50  160
-3       3       163     251     2196f3  205
-4       248     195     0       ffd600  60
-6       153     97      136     e91e63  330
-13      77      72      91      9c27b0  280
-110     3       163     215     2196f3  200
-111     89      93      156     2962ff  215
-211     218     37      29      f44336  0
-212     89      93      156     9c27b0  280
-213     0       116     133     009688  175
-215     231     176     0       ffd600  60
-183     255     162     0       3f51b5  240
-201     0       73      107     3f51b5  240
-214     0       73      107     3f51b5  240
-222     0       73      107     3f51b5  240
-223     0       73      107     3f51b5  240
-224     0       73      107     3f51b5  240
-225     0       73      107     3f51b5  240
-5000    0       73      107     3f51b5  240
-248     0       73      107     3f51b5  240
-221     0       73      107     8bc34a  100
-1001    178     62      62      f44336  0
-1003    142     132     183     e91e63  330
-1005    149     127     102     795548  25
-1006    0       116     133     009688  175
-1008    123     196     160     8bc34a  140
-1009    184     219     124     cddc39  80
-1011    248     195     0       ffd600  60
-1012    105     64      110     9c27b0  280
-1014    0       146     63      4caf50  120
-1071    231     120     23      ff9800  45
-1072    231     120     23      ff9800  45
-1101    218     37      29      f44336  10
-1102    218     37      29      f44336  10
-1153    77      72      91      9c27b0  280
-112     105     64      110     9c27b0  280
-202     0       73      107     3f51b5  240
-\.
+INSERT INTO line_colors (line, li_r, li_g, li_b, hex, hue) VALUES
+    (116, 0, 73, 107, '3f51b5', 240),
+    (117, 0, 73, 107, '3f51b5', 240),
+    (1, 231, 120, 23, 'ff9800', 35),
+    (2, 68, 145, 108, '4caf50', 160),
+    (3, 3, 163, 251, '2196f3', 205),
+    (4, 248, 195, 0, 'ffd600', 60),
+    (6, 153, 97, 136, 'e91e63', 330),
+    (13, 77, 72, 91, '9c27b0', 280),
+    (110, 3, 163, 215, '2196f3', 200),
+    (111, 89, 93, 156, '2962ff', 215),
+    (211, 218, 37, 29, 'f44336', 0),
+    (212, 89, 93, 156, '9c27b0', 280),
+    (213, 0, 116, 133, '009688', 175),
+    (215, 231, 176, 0, 'ffd600', 60),
+    (183, 255, 162, 0, '3f51b5', 240),
+    (201, 0, 73, 107, '3f51b5', 240),
+    (214, 0, 73, 107, '3f51b5', 240),
+    (222, 0, 73, 107, '3f51b5', 240),
+    (223, 0, 73, 107, '3f51b5', 240),
+    (224, 0, 73, 107, '3f51b5', 240),
+    (225, 0, 73, 107, '3f51b5', 240),
+    (5000, 0, 73, 107, '3f51b5', 240),
+    (248, 0, 73, 107, '3f51b5', 240),
+    (221, 0, 73, 107, '8bc34a', 100),
+    (1001, 178, 62, 62, 'f44336', 0),
+    (1003, 142, 132, 183, 'e91e63', 330),
+    (1005, 149, 127, 102, '795548', 25),
+    (1006, 0, 116, 133, '009688', 175),
+    (1008, 123, 196, 160, '8bc34a', 140),
+    (1009, 184, 219, 124, 'cddc39', 80),
+    (1011, 248, 195, 0, 'ffd600', 60),
+    (1012, 105, 64, 110, '9c27b0', 280),
+    (1014, 0, 146, 63, '4caf50', 120),
+    (1071, 231, 120, 23, 'ff9800', 45),
+    (1072, 231, 120, 23, 'ff9800', 45),
+    (1101, 218, 37, 29, 'f44336', 10),
+    (1102, 218, 37, 29, 'f44336', 10),
+    (1153, 77, 72, 91, '9c27b0', 280),
+    (112, 105, 64, 110, '9c27b0', 280),
+    (202, 0, 73, 107, '3f51b5', 240);
 
 --
 -- Name: line_colors_pkey; Type: CONSTRAINT; Schema: data; Owner: postgres

@@ -19,7 +19,7 @@ pool.on('error', function(error, client) {
 });
 
 pool.on('connect', client => {
-    logger.warn(`Connected client: ${client}`)
+    logger.info(`Connected client: ${client}`)
 });
 
 module.exports.connect = function(err, client, done) {

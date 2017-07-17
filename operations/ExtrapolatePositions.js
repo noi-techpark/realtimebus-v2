@@ -29,12 +29,10 @@ module.exports = class ExtrapolatePositions {
                                 let now = new Date().getTime();
                                 let timeLeft = Math.max(1, period - (now - iterationStart));
 
-                                logger.warn(`Loops: ${loops++}, time left: ${timeLeft} (${now - scriptStart}), updated ${result.rowCount} positions`);
+                                logger.log(`Loops: ${loops++}, time left: ${timeLeft} (${now - scriptStart}), updated ${result.rowCount} positions`);
 
                                 setTimeout(function () {
                                     now = new Date().getTime();
-
-                                    logger.warn(`Loops: ${loops++}, time left: ${timeLeft} (${now - scriptStart}), updated ${result.rowCount} positions`);
 
                                     if (now - scriptStart > this.lifeTime) {
                                         console.error("End of script life reached");

@@ -57,7 +57,7 @@ Beware, works only for positive arguments';
 -- Name: data_extrapolate_frt_position(bigint); Type: FUNCTION; Schema: data; Owner: -
 --
 
-CREATE FUNCTION data_extrapolate_frt_position(teq_nummer_arg bigint) RETURNS INTEGER
+CREATE FUNCTION data_extrapolate_frt_position(teq_arg bigint) RETURNS INTEGER
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -101,22 +101,22 @@ BEGIN
         AND lid_verlauf.onr_typ_nr=ort_edges.start_onr_typ_nr
         AND next_verlauf.ort_nr=ort_edges.end_ort_nr
         AND next_verlauf.onr_typ_nr=ort_edges.end_onr_typ_nr
-    WHERE trip=teq_nummer_arg;
+    WHERE trip=teq_arg;
 
     -- Calc elapsed time
     elapsed_time = EXTRACT('epoch' FROM current_timestamp - pos_record.gps_date);
 
-    SELECT trip, frt_start INTO frt
+    SELECT trip, departure INTO frt
     FROM data.rec_frt
-    WHERE teq_nummer = teq_nummer_arg;
+    WHERE teq = teq_arg;
   
-    IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) < frt.frt_start - 10
+    IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) < frt.departure - 10
        AND pos_record.delay_sec = 0 THEN
 
         -- Bus is waiting at departure
        UPDATE data.vehicle_positions
        SET status = 'w'
-       WHERE trip=teq_nummer_arg;
+       WHERE trip=teq_arg;
        RETURN 0;
     END IF;
 
@@ -125,21 +125,21 @@ BEGIN
     FROM data.travel_times
     WHERE trip=frt.trip;
 
-    IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) > frt.frt_start +
+    IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) > frt.departure +
                                                                 complete_travel_time +
                                                                 pos_record.delay_sec + 120
        THEN
        RAISE DEBUG 'now: %, start: %, travel_time: %, delay: %, sum: %',
          EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)),
-           frt.frt_start,
+           frt.departure,
            complete_travel_time,
            pos_record.delay_sec,
-           frt.frt_start + complete_travel_time + pos_record.delay_sec + 120;
+           frt.departure + complete_travel_time + pos_record.delay_sec + 120;
 
         -- Bus is waiting at departure
        UPDATE data.vehicle_positions
        SET status = 'f'
-       WHERE trip = teq_nummer_arg;
+       WHERE trip = teq_arg;
        RETURN 0;
     END IF;
 
@@ -169,7 +169,7 @@ BEGIN
 --         UPDATE data.vehicle_positions
 --         SET arrival_time=pos_record.gps_date,
 --             status='f'
---         WHERE trip=teq_nummer_arg;
+--         WHERE trip=teq_arg;
 --         RETURN 0;
 --     END IF;
 
@@ -184,7 +184,7 @@ BEGIN
         SET extrapolation_linear_ref=NULL,
             extrapolation_geom=NULL,
             status='e'
-        WHERE trip=teq_nummer_arg;
+        WHERE trip=teq_arg;
         RETURN NULL;
     END IF;
     
@@ -193,15 +193,15 @@ BEGIN
     INNER JOIN data.lid_verlauf
         ON lid_verlauf.line=rec_frt.line
         AND lid_verlauf.variant=rec_frt.variant
-    WHERE teq_nummer=teq_nummer_arg;
+    WHERE teq=teq_arg;
     
     IF cnt_lfd=0 THEN
-        RAISE WARNING 'teq_nummer % has no entries in lid_verlauf', pos_record.trip;
+        RAISE WARNING 'teq % has no entries in lid_verlauf', pos_record.trip;
         UPDATE data.vehicle_positions
         SET extrapolation_linear_ref=NULL,
             extrapolation_geom=NULL,
             status='e'
-        WHERE trip=teq_nummer_arg;
+        WHERE trip=teq_arg;
         RETURN NULL;
     END IF;
 
@@ -236,12 +236,12 @@ BEGIN
     RAISE DEBUG 'lfd_start: %, lfd_end: % s, ort_start %, ort_end: %, sel_fzt: %', rec_sel_fzt.lfd_start, rec_sel_fzt.lfd_end, rec_sel_fzt.ort_start, rec_sel_fzt.ort_end, rec_sel_fzt.sel_fzt;
 
     IF rec_sel_fzt.sel_fzt IS NULL THEN
-        RAISE WARNING 'Could not find any travel time information in data.sel_fzt_feld for teq_nummer=%', pos_record.trip;
+        RAISE WARNING 'Could not find any travel time information in data.sel_fzt_feld for teq=%', pos_record.trip;
         UPDATE data.vehicle_positions
         SET extrapolation_linear_ref=NULL,
             extrapolation_geom=NULL,
             status='e'
-        WHERE trip=teq_nummer_arg;
+        WHERE trip=teq_arg;
         RETURN NULL;
     END IF;
         
@@ -250,7 +250,7 @@ BEGIN
         IF pos_record.status <> 'e' THEN
             UPDATE data.vehicle_positions
             SET status='e'
-            WHERE trip=teq_nummer_arg;
+            WHERE trip=teq_arg;
         END IF;
         RETURN 0;
     END IF;
@@ -261,7 +261,7 @@ BEGIN
         IF pos_record.status <> 'e' THEN
             UPDATE data.vehicle_positions
             SET status='e'
-            WHERE trip=teq_nummer_arg;
+            WHERE trip=teq_arg;
         END IF;
         RETURN 0;
     END IF;
@@ -302,7 +302,7 @@ BEGIN
     SET extrapolation_linear_ref=extrapolated_linear_ref_var,
         extrapolation_geom=extrapolated_position_var,
         status='r'
-    WHERE trip=teq_nummer_arg;
+    WHERE trip=teq_arg;
 
     RETURN 1;
 END;
@@ -325,9 +325,9 @@ CREATE FUNCTION data_extrapolate_positions() RETURNS INTEGER
         frt_cur CURSOR FOR
             SELECT vehicle_positions.trip
             FROM data.vehicle_positions
-            LEFT JOIN data.rec_frt ON vehicle_positions.trip=rec_frt.teq_nummer
+            LEFT JOIN data.rec_frt ON vehicle_positions.trip=rec_frt.teq
             WHERE rec_frt.trip IS NULL   -- not found in rec_frt
-                OR frt_start < EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) -- should have already started
+                OR departure < EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) -- should have already started
                 OR delay_sec < 0   -- anticipated start 
             ORDER BY trip;
         num_frts INTEGER;
@@ -367,7 +367,7 @@ CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS INTEGER
     DECLARE
         this_line INTEGER;
         this_variant SMALLINT;
-        this_fgr_nr INTEGER;
+        this_trip_time_group INTEGER;
         
         outer_lfd_cursor refcursor;
         from_to_stop record;
@@ -376,13 +376,13 @@ CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS INTEGER
         
         num_inserts INTEGER;
 
-        frt_start_lfd INTEGER;
+        departure_lfd INTEGER;
         frt_max_lfd INTEGER;
         frt_cnt INTEGER;
         
         travel_time_seconds INTEGER;
         
-        inner_lfd_cursor CURSOR (this_line INTEGER, this_variant SMALLINT, this_fgr_nr INTEGER, from_stop INTEGER, to_stop INTEGER) FOR
+        inner_lfd_cursor CURSOR (this_line INTEGER, this_variant SMALLINT, this_trip_time_group INTEGER, from_stop INTEGER, to_stop INTEGER) FOR
             SELECT SUM(COALESCE(sel_fzt))
             FROM data.lid_verlauf lid_verlauf_start
             INNER JOIN data.lid_verlauf lid_verlauf_end
@@ -395,7 +395,7 @@ CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS INTEGER
                 AND lid_verlauf_start.onr_typ_nr=sff.onr_typ_nr
                 AND lid_verlauf_end.ort_nr=sff.sel_ziel
                 AND lid_verlauf_end.onr_typ_nr=sff.sel_ziel_typ
-                AND sff.fgr_nr=this_fgr_nr
+                AND sff.trip_time_group=this_trip_time_group
             WHERE lid_verlauf_start.line=this_line
                 AND lid_verlauf_start.variant=this_variant
                 AND lid_verlauf_start.li_lfd_nr >= from_stop;
@@ -419,15 +419,15 @@ CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS INTEGER
     END IF;
     
     -- get line attributes
-    SELECT rec_lid.line, rec_lid.variant, rec_frt.fgr_nr
-        INTO this_line, this_variant, this_fgr_nr
+    SELECT rec_lid.line, rec_lid.variant, rec_frt.trip_time_group
+        INTO this_line, this_variant, this_trip_time_group
     FROM data.rec_frt
     INNER JOIN data.rec_lid
         ON rec_lid.line=rec_frt.line
         AND rec_lid.variant=rec_frt.variant
     WHERE rec_frt.trip=trip_arg;
 
-    frt_start_lfd = 1;
+    departure_lfd = 1;
 
     OPEN outer_lfd_cursor FOR
         SELECT
@@ -440,7 +440,7 @@ CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS INTEGER
         INNER JOIN data.lid_verlauf lvsp
             ON rec_frt.line=lvsp.line
             AND rec_frt.variant=lvsp.variant
-            AND li_lfd_nr=frt_start_lfd
+            AND li_lfd_nr=departure_lfd
         INNER JOIN data.lid_verlauf lvep
             ON rec_frt.line=lvep.line
             AND rec_frt.variant=lvep.variant
@@ -458,8 +458,8 @@ CREATE FUNCTION data_fill_frt_travel_times(trip_arg bigint) RETURNS INTEGER
             EXIT;
         END IF;
         
-        -- RAISE INFO 'line % variant % fgr_nr % from % to %', this_line, this_variant, this_fgr_nr, from_stop, to_stop;
-        OPEN inner_lfd_cursor(this_line, this_variant, this_fgr_nr, from_stop, to_stop);
+        -- RAISE INFO 'line % variant % trip_time_group % from % to %', this_line, this_variant, this_trip_time_group, from_stop, to_stop;
+        OPEN inner_lfd_cursor(this_line, this_variant, this_trip_time_group, from_stop, to_stop);
         LOOP
             FETCH inner_lfd_cursor INTO travel_time_seconds;
             
@@ -559,10 +559,10 @@ SET default_with_oids = false;
 --
 
 CREATE TABLE firmenkalender (
-    basis_version INTEGER NOT NULL,
+    version INTEGER NOT NULL,
     betriebstag INTEGER NOT NULL,
     betriebstag_text VARCHAR(40),
-    tagesart_nr INTEGER
+    day_type INTEGER
 );
 
 
@@ -598,21 +598,19 @@ CREATE TABLE frt_teq_mapping (
 --
 
 CREATE TABLE lid_verlauf (
-    basis_version INTEGER NOT NULL,
+    version INTEGER NOT NULL,
     li_lfd_nr SMALLINT NOT NULL,
     line INTEGER NOT NULL,
     variant SMALLINT NOT NULL,
     onr_typ_nr SMALLINT,
     ort_nr INTEGER,
-    znr_nr INTEGER,
-    anr_nr INTEGER,
-    einfangbereich SMALLINT,
-    li_knoten SMALLINT,
-    einsteigeverbot SMALLINT,
-    aussteigeverbot SMALLINT,
-    zone_wabe_nr SMALLINT,
-    kurzstrecke SMALLINT,
-    halte_typ SMALLINT
+    display INTEGER,
+    announcement INTEGER,
+    bus_stop_radius SMALLINT,
+    time_relevant SMALLINT,
+    entrance SMALLINT,
+    exit SMALLINT,
+    area SMALLINT
 );
 
 SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING', 2);
@@ -624,9 +622,9 @@ SELECT AddGeometryColumn('data', 'lid_verlauf', 'the_geom', 25832, 'LINESTRING',
 --
 
 CREATE TABLE menge_fgr (
-    basis_version INTEGER NOT NULL,
-    fgr_nr INTEGER NOT NULL,
-    fgr_text VARCHAR(40)
+    version INTEGER NOT NULL,
+    trip_time_group INTEGER NOT NULL,
+    trip_time_group_text VARCHAR(40)
 );
 
 
@@ -637,8 +635,8 @@ CREATE TABLE menge_fgr (
 --
 
 CREATE TABLE menge_tagesart (
-    basis_version INTEGER NOT NULL,
-    tagesart_nr INTEGER NOT NULL,
+    version INTEGER NOT NULL,
+    day_type INTEGER NOT NULL,
     tagesart_text VARCHAR(40)
 );
 
@@ -688,27 +686,25 @@ ALTER SEQUENCE ort_edges_id_seq OWNED BY ort_edges.id;
 --
 
 CREATE TABLE rec_frt (
-    basis_version INTEGER NOT NULL,
+    version INTEGER NOT NULL,
     trip bigint NOT NULL,
-    frt_start INTEGER,
+    departure INTEGER,
     line INTEGER,
-    tagesart_nr INTEGER,
-    li_ku_nr INTEGER,
-    fahrtart_nr SMALLINT,
-    fgr_nr INTEGER,
+    day_type INTEGER,
+    course INTEGER,
+    trip_type SMALLINT,
+    trip_time_group INTEGER,
     variant SMALLINT,
-    um_uid INTEGER,
-    leistungsart_nr INTEGER,
-    frt_ext_nr INTEGER,
-    znr_nr INTEGER,
-    konzessionsinhaber_nr INTEGER,
-    auftraggeber_nr INTEGER,
-    fremdunternehmer_nr INTEGER,
-    fzg_typ_nr SMALLINT,
-    bemerkung VARCHAR(1000),
-    zugnr VARCHAR(10),
-    fahrtart_nummer INTEGER,
-    teq_nummer bigint
+    journey INTEGER,
+    service INTEGER,
+    trip_external INTEGER,
+    display INTEGER,
+    licensee INTEGER,
+    client INTEGER,
+    foreign_company INTEGER,
+    vehicle_type SMALLINT,
+    remark VARCHAR(1000),
+    teq BIGINT
 );
 
 
@@ -719,7 +715,7 @@ CREATE TABLE rec_frt (
 --
 
 CREATE TABLE rec_frt_fzt (
-    basis_version INTEGER,
+    version INTEGER,
     trip bigint NOT NULL,
     onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
@@ -734,7 +730,7 @@ CREATE TABLE rec_frt_fzt (
 --
 
 CREATE TABLE rec_frt_hzt (
-    basis_version INTEGER,
+    version INTEGER,
     trip bigint NOT NULL,
     onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
@@ -749,19 +745,19 @@ CREATE TABLE rec_frt_hzt (
 --
 
 CREATE TABLE rec_lid (
-    basis_version INTEGER NOT NULL,
+    version INTEGER NOT NULL,
     line INTEGER NOT NULL,
     variant SMALLINT NOT NULL,
     routen_nr SMALLINT,
-    li_ri_nr SMALLINT,
+    direction SMALLINT,
     bereich_nr SMALLINT,
     li_kuerzel VARCHAR(6),
     line_name VARCHAR(40),
     routen_art SMALLINT,
     linien_code SMALLINT,
-    konzessionsinhaber_nr INTEGER,
-    auftraggeber_nr INTEGER,
-    fremdunternehmer_nr INTEGER
+    licensee INTEGER,
+    client INTEGER,
+    foreign_company INTEGER
 );
 
 SELECT AddGeometryColumn('data', 'rec_lid', 'the_geom', 25832, 'LINESTRING', 2); 
@@ -773,7 +769,7 @@ SELECT AddGeometryColumn('data', 'rec_lid', 'the_geom', 25832, 'LINESTRING', 2);
 --
 
 CREATE TABLE rec_ort (
-    basis_version INTEGER NOT NULL,
+    version INTEGER NOT NULL,
     onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
     ort_name VARCHAR(40),
@@ -782,7 +778,7 @@ CREATE TABLE rec_ort (
     ort_ref_ort_langnr INTEGER,
     ort_ref_ort_kuerzel VARCHAR(8),
     ort_ref_ort_name VARCHAR(40),
-    zone_wabe_nr SMALLINT,
+    area SMALLINT,
     ort_pos_laenge bigint,
     ort_pos_breite bigint,
     ort_pos_hoehe bigint,
@@ -800,9 +796,9 @@ SELECT AddGeometryColumn('data', 'rec_ort', 'the_geom', 25832, 'POINT', 2);
 --
 
 CREATE TABLE sel_fzt_feld (
-    basis_version INTEGER NOT NULL,
+    version INTEGER NOT NULL,
     bereich_nr SMALLINT NOT NULL,
-    fgr_nr INTEGER NOT NULL,
+    trip_time_group INTEGER NOT NULL,
     onr_typ_nr SMALLINT NOT NULL,
     ort_nr INTEGER NOT NULL,
     sel_ziel INTEGER NOT NULL,
@@ -926,7 +922,7 @@ ALTER TABLE ONLY lid_verlauf
 --
 
 ALTER TABLE ONLY menge_fgr
-    ADD CONSTRAINT menge_fgr_pkey PRIMARY KEY (fgr_nr);
+    ADD CONSTRAINT menge_fgr_pkey PRIMARY KEY (trip_time_group);
 
 
 --
@@ -936,7 +932,7 @@ ALTER TABLE ONLY menge_fgr
 --
 
 ALTER TABLE ONLY menge_tagesart
-    ADD CONSTRAINT menge_tagesart_pkey PRIMARY KEY (tagesart_nr);
+    ADD CONSTRAINT menge_tagesart_pkey PRIMARY KEY (day_type);
 
 
 
@@ -1017,7 +1013,7 @@ ALTER TABLE ONLY rec_ort
 --
 
 ALTER TABLE ONLY sel_fzt_feld
-    ADD CONSTRAINT sel_fzt_feld_pkey PRIMARY KEY (bereich_nr, fgr_nr, onr_typ_nr, ort_nr, sel_ziel_typ, sel_ziel);
+    ADD CONSTRAINT sel_fzt_feld_pkey PRIMARY KEY (bereich_nr, trip_time_group, onr_typ_nr, ort_nr, sel_ziel_typ, sel_ziel);
 
 
 --
@@ -1090,10 +1086,10 @@ CREATE INDEX ort_edges_start_ort_nr_start_onr_typ_nr_idx ON ort_edges USING btre
 --
 -- TOC entry 3748 (class 1259 OID 591817)
 -- Dependencies: 172 3806
--- Name: rec_frt_fgr_nr_idx; Type: INDEX; Schema: data; Owner: -
+-- Name: rec_frt_trip_time_group_idx; Type: INDEX; Schema: data; Owner: -
 --
 
-CREATE INDEX rec_frt_fgr_nr_idx ON rec_frt USING btree (fgr_nr);
+CREATE INDEX rec_frt_trip_time_group_idx ON rec_frt USING btree (trip_time_group);
 
 
 --
@@ -1108,37 +1104,37 @@ CREATE INDEX rec_frt_line_variant_idx ON rec_frt USING btree (line, variant);
 --
 -- TOC entry 3752 (class 1259 OID 591819)
 -- Dependencies: 172 3806
--- Name: rec_frt_tagesart_nr_idx; Type: INDEX; Schema: data; Owner: -
+-- Name: rec_frt_day_typex; Type: INDEX; Schema: data; Owner: -
 --
 
-CREATE INDEX rec_frt_tagesart_nr_idx ON rec_frt USING btree (tagesart_nr);
+CREATE INDEX rec_frt_day_type_idx ON rec_frt USING btree (day_type);
 
 
 --
 -- TOC entry 3753 (class 1259 OID 768004)
 -- Dependencies: 172 172 172 3806
--- Name: rec_frt_tagesart_nr_um_uid_frt_start_idx; Type: INDEX; Schema: data; Owner: -
+-- Name: rec_frt_day_journey_departure_idx; Type: INDEX; Schema: data; Owner: -
 --
 
-CREATE UNIQUE INDEX rec_frt_tagesart_nr_um_uid_frt_start_idx ON rec_frt USING btree (tagesart_nr, um_uid, frt_start);
+CREATE UNIQUE INDEX rec_frt_day_type_journey_departure_idx ON rec_frt USING btree (day_type, journey, departure);
 
 
 --
 -- TOC entry 3754 (class 1259 OID 591820)
 -- Dependencies: 173 173 173 3806
--- Name: rec_lid_basis_version_line_routen_nr_idx; Type: INDEX; Schema: data; Owner: -
+-- Name: rec_lid_version_line_routen_nr_idx; Type: INDEX; Schema: data; Owner: -
 --
 
-CREATE UNIQUE INDEX rec_lid_basis_version_line_routen_nr_idx ON rec_lid USING btree (basis_version, line, routen_nr);
+CREATE UNIQUE INDEX rec_lid_version_line_routen_nr_idx ON rec_lid USING btree (version, line, routen_nr);
 
 
 --
 -- TOC entry 3759 (class 1259 OID 591821)
 -- Dependencies: 175 3806
--- Name: sel_fzt_feld_fgr_nr_idx; Type: INDEX; Schema: data; Owner: -
+-- Name: sel_fzt_feld_trip_time_group_idx; Type: INDEX; Schema: data; Owner: -
 --
 
-CREATE INDEX sel_fzt_feld_fgr_nr_idx ON sel_fzt_feld USING btree (fgr_nr);
+CREATE INDEX sel_fzt_feld_trip_time_group_idx ON sel_fzt_feld USING btree (trip_time_group);
 
 
 --
@@ -1162,11 +1158,11 @@ CREATE INDEX sel_fzt_feld_sel_ziel_typ_sel_ziel_idx ON sel_fzt_feld USING btree 
 --
 -- TOC entry 3790 (class 2606 OID 591829)
 -- Dependencies: 171 167 3746 3806
--- Name: firmenkalender_tagesart_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+-- Name: firmenkalender_day_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
 --
 
 ALTER TABLE ONLY firmenkalender
-    ADD CONSTRAINT firmenkalender_tagesart_nr_fkey FOREIGN KEY (tagesart_nr) REFERENCES menge_tagesart(tagesart_nr) DEFERRABLE;
+    ADD CONSTRAINT firmenkalender_day_type_fkey FOREIGN KEY (day_type) REFERENCES menge_tagesart(day_type) DEFERRABLE;
 
 
 --
@@ -1212,11 +1208,11 @@ ALTER TABLE ONLY lid_verlauf
 --
 -- TOC entry 3794 (class 2606 OID 767994)
 -- Dependencies: 170 3744 172 3806
--- Name: rec_frt_fgr_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+-- Name: rec_frt_trip_time_group_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
 --
 
 ALTER TABLE ONLY rec_frt
-    ADD CONSTRAINT rec_frt_fgr_nr_fkey FOREIGN KEY (fgr_nr) REFERENCES menge_fgr(fgr_nr) DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT rec_frt_trip_time_group_fkey FOREIGN KEY (trip_time_group) REFERENCES menge_fgr(trip_time_group) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -1272,21 +1268,21 @@ ALTER TABLE ONLY rec_frt
 --
 -- TOC entry 3793 (class 2606 OID 591854)
 -- Dependencies: 172 3746 171 3806
--- Name: rec_frt_tagesart_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+-- Name: rec_frt_day_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
 --
 
 ALTER TABLE ONLY rec_frt
-    ADD CONSTRAINT rec_frt_tagesart_nr_fkey FOREIGN KEY (tagesart_nr) REFERENCES menge_tagesart(tagesart_nr) DEFERRABLE;
+    ADD CONSTRAINT rec_frt_day_type_fkey FOREIGN KEY (day_type) REFERENCES menge_tagesart(day_type) DEFERRABLE;
 
 
 --
 -- TOC entry 3796 (class 2606 OID 591859)
 -- Dependencies: 175 3744 170 3806
--- Name: sel_fzt_feld_fgr_nr_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
+-- Name: sel_fzt_feld_trip_time_group_fkey; Type: FK CONSTRAINT; Schema: data; Owner: -
 --
 
 ALTER TABLE ONLY sel_fzt_feld
-    ADD CONSTRAINT sel_fzt_feld_fgr_nr_fkey FOREIGN KEY (fgr_nr) REFERENCES menge_fgr(fgr_nr) DEFERRABLE;
+    ADD CONSTRAINT sel_fzt_feld_trip_time_group_fkey FOREIGN KEY (trip_time_group) REFERENCES menge_fgr(trip_time_group) DEFERRABLE;
 
 
 --
@@ -1328,9 +1324,9 @@ CREATE INDEX ON data.rec_ort USING GIST(the_geom);
 
 CREATE TABLE line_colors (
     line INTEGER NOT NULL,
-    li_r SMALLINT NOT NULL,
-    li_g SMALLINT NOT NULL,
-    li_b SMALLINT NOT NULL,
+    red SMALLINT NOT NULL,
+    green SMALLINT NOT NULL,
+    blue SMALLINT NOT NULL,
     hex VARCHAR(6),
     hue SMALLINT NOT NULL
 );
@@ -1342,7 +1338,7 @@ ALTER TABLE line_colors OWNER TO postgres;
 -- Data for Name: line_colors; Type: TABLE DATA; Schema: data; Owner: postgres
 --
 
-INSERT INTO line_colors (line, li_r, li_g, li_b, hex, hue) VALUES
+INSERT INTO line_colors (line, red, green, blue, hex, hue) VALUES
     (116, 0, 73, 107, '3f51b5', 240),
     (117, 0, 73, 107, '3f51b5', 240),
     (1, 231, 120, 23, 'ff9800', 35),

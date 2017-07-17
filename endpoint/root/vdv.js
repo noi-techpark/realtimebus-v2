@@ -205,17 +205,17 @@ module.exports = {
                 return client.query(`
                     INSERT INTO data.rec_frt (trip_type)
                         (
-                        SELECT 1, rec_frt.fgr_nr, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+                        SELECT 1, rec_frt.trip_time_group, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
                         LEFT JOIN data.menge_fgr
-                            ON rec_frt.fgr_nr=menge_fgr.fgr_nr
-                        WHERE menge_fgr.fgr_nr IS NULL
-                        GROUP BY rec_frt.fgr_nr
-                        ORDER BY rec_frt.fgr_nr
+                            ON rec_frt.trip_time_group=menge_fgr.trip_time_group
+                        WHERE menge_fgr.trip_time_group IS NULL
+                        GROUP BY rec_frt.trip_time_group
+                        ORDER BY rec_frt.trip_time_group
                         );
                     `);
             }).then(() => {
-                return client.query(`INSERT INTO data.rec_lid (basis_version, line, variant, line_name)
+                return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
                         (
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
@@ -228,7 +228,7 @@ module.exports = {
                         );
                     `)
             }).then(() => {
-                return client.query(`INSERT INTO data.rec_lid (basis_version, line, variant, line_name)
+                return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
                         (
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
@@ -254,7 +254,7 @@ module.exports = {
                     }).on('line', function (line) {
                         if (!firstLine) {
                             let numbers = line.split("\t");
-                            sqlTeqChain.push(`UPDATE data.rec_frt SET teq_nummer=${numbers[1]} WHERE trip=${numbers[0]}`);
+                            sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
                         }
 
                         firstLine = false;
@@ -539,10 +539,26 @@ function parseVdvFile(file, data, cb) {
                 let col = [];
 
                 for (let c of csv) {
+                    c = c.replace("AUFTRAGGEBER_NR", "client");
+                    c = c.replace("BASIS_VERSION", "version");
+                    c = c.replace("BEMERKUNG", "remark");
+                    c = c.replace("FAHRTART_NR", "fahrtart_nr");
+                    c = c.replace("FGR_NR", "trip_time_group");
+                    c = c.replace("FREMDUNTERNEHMER_NR", "foreign_company");
+                    c = c.replace("FRT_EXT_NR", "trip_external");
                     c = c.replace("FRT_FID", "trip");
+                    c = c.replace("FRT_START", "departure");
+                    c = c.replace("FZG_TYP_NR", "vehicle_type");
+                    c = c.replace("KONZESSIONSINHABER_NR", "licensee");
+                    c = c.replace("LEISTUNGSART_NR", "service");
                     c = c.replace("LI_NR", "line");
                     c = c.replace("LIDNAME", "line_name");
+                    c = c.replace("LI_KU_NR", "course");
                     c = c.replace("STR_LI_VAR", "variant");
+                    c = c.replace("TAGESART_NR", "day_type");
+                    c = c.replace("UM_UID", "journey");
+                    c = c.replace("ZNR_NR", "display");
+                    c = c.replace("ZONE_WABE_NR", "area");
                     col.push(c);
                 }
 

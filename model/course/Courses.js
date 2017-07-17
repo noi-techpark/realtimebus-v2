@@ -18,13 +18,13 @@ module.exports = class Courses {
                 SELECT
                     rec_lid.line_name AS lidname,
                     rec_frt.trip AS frt_fid,
-                    data.data_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS bus_passes_at,
+                    data.data_seconds_to_hhmm(departure + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS bus_passes_at,
                 COALESCE(delay_sec, 0)/60 AS delay_minutes,
                     mta.tagesart_text,
-                    fahrtart_nr,
-                    li_r,
-                    li_g,
-                    li_b
+                    trip_type,
+                    red,
+                    green,
+                    blue
                     
                 FROM data.lid_verlauf
                 
@@ -42,13 +42,13 @@ module.exports = class Courses {
                     AND travel_times.li_lfd_nr_end=lid_verlauf.li_lfd_nr
                     
                 LEFT JOIN data.vehicle_positions
-                    ON vehicle_positions.trip=rec_frt.teq_nummer
+                    ON vehicle_positions.trip=rec_frt.teq
                     
                 LEFT JOIN data.menge_tagesart mta
-                    ON rec_frt.tagesart_nr=mta.tagesart_nr
+                    ON rec_frt.day=mta.day
                     
                 LEFT JOIN data.firmenkalender fkal
-                    ON rec_frt.tagesart_nr=fkal.tagesart_nr
+                    ON rec_frt.day=fkal.day
                     
                 LEFT JOIN data.line_colors
                     ON rec_frt.line=line_colors.line
@@ -56,7 +56,7 @@ module.exports = class Courses {
                 WHERE ort_nr=${stopId.ort_nr}
                     AND onr_typ_nr=${stopId.onr_typ_nr}
                     AND betriebstag=to_char(CURRENT_TIMESTAMP, 'YYYYMMDD')::integer
-                    AND frt_start > EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE))
+                    AND departure > EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE))
                     
                 ORDER BY bus_passes_at
                 ${limitSql}

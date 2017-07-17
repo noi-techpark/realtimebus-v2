@@ -16,7 +16,7 @@ module.exports = class PositionLineReference {
                 INNER JOIN data.lid_verlauf
                     ON rec_frt.line = lid_verlauf.line
                     AND rec_frt.variant = lid_verlauf.variant
-                WHERE rec_frt.teq_nummer = ${feature.properties.frt_fid}
+                WHERE rec_frt.teq = ${feature.properties.frt_fid}
                 ORDER BY ST_Distance(lid_verlauf.the_geom, ${feature.geometry_sql})
                 LIMIT 1
             `)

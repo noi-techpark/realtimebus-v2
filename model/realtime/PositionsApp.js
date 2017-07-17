@@ -90,7 +90,7 @@ module.exports = class PositionsApp {
                     FROM data.vehicle_positions
                     
                     INNER JOIN data.rec_frt
-                        ON vehicle_positions.trip=rec_frt.teq_nummer
+                        ON vehicle_positions.trip=rec_frt.teq
                         
                     INNER JOIN data.rec_lid
                         ON rec_frt.line=rec_lid.line

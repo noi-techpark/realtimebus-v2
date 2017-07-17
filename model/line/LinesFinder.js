@@ -41,10 +41,10 @@ module.exports = class LinesFinder {
                     LEFT JOIN vdv.rec_lid ON rec_frt.li_nr=rec_lid.li_nr AND rec_frt.str_li_var=rec_lid.str_li_var
                     
                     INNER JOIN vdv.menge_tagesart
-                        ON rec_frt.day=menge_tagesart.day
+                        ON rec_frt.day_type=menge_tagesart.day_type
                         
                     INNER JOIN vdv.firmenkalender
-                        ON menge_tagesart.day=firmenkalender.day
+                        ON menge_tagesart.day_type=firmenkalender.day_type
                         
                     LEFT JOIN vdv.line_colors
                         ON rec_frt.li_nr=line_colors.li_nr

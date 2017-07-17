@@ -151,14 +151,11 @@ module.exports = class PositionsApp {
                         bus_stop: row.bus_stop,
 
                         variant: parseInt(row.variant),
-                        vehicle: parseInt(row.vehicle.split(" ")[0]),
+                        vehicle: row.vehicle,
 
                         delay_min: Math.round(row.delay_sec / 60),
                         latitude: Math.round(geometry.coordinates[1] * 1000000) / 1000000,
                         longitude: Math.round(geometry.coordinates[0] * 1000000) / 1000000,
-
-                        inserted: row.insert_date,
-                        updated: row.gps_date,
 
                         color_hex: row.color_hex,
                         color_hue: row.color_hue,

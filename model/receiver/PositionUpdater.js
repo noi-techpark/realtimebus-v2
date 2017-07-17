@@ -47,7 +47,8 @@ module.exports = class PositionUpdater {
                             interpolation_distance = ${feature.properties.interpolation_distance},
                             interpolation_linear_ref = ${feature.properties.interpolation_linear_ref},
                             the_geom = ${feature.geometry_sql},
-                            vehicle = '${feature.properties.vehicleCode}'
+                            vehicle = SPLIT_PART('${feature.properties.vehicleCode}', ' ', 1)::int,
+                            depot = SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)
                         WHERE trip=${tripId}
                     `;
                 } else {
@@ -77,7 +78,7 @@ module.exports = class PositionUpdater {
                             ${feature.properties.interpolation_linear_ref},
                             ${feature.geometry_sql},
                             SPLIT_PART('${feature.properties.vehicleCode}', ' ', 1)::int,
-                            SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)'
+                            SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)
                         )
                    `;
                 }

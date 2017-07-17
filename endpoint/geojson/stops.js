@@ -16,11 +16,9 @@ module.exports = {
                 let outputFormat = config.coordinate_wgs84;
                 let stopFinder = new StopFinder(outputFormat);
 
-                // noinspection EqualityComparisonWithCoercionJS
-
                 let lines = req.query.lines;
 
-                if (utils.isEmpty(lines)) {
+                if (!utils.isEmpty(lines)) {
                     stopFinder.setLines(LineUtils.fromExpressQuery(lines));
                 }
 

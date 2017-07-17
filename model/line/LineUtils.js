@@ -6,27 +6,27 @@ const utils = require("../../util/utils");
 module.exports = {
 
     fromExpressQuery: function (query) {
+        if (utils.isEmpty(query)) {
+            logger.error("Line filter is active but no lines requested");
+            return [];
+        }
+
         let lines = [];
+        let regex = /\d+:[0-9]+(,\d+:[0-9]+)*$/;
 
-        if (!utils.isEmpty(query)) {
-            let regex = /\d+:[0-9]+(,\d+:[0-9]+)*$/;
+        if (!regex.test(query)) {
+            throw(`Filter '${query}' does not match required filter format '${regex}'`);
+        }
 
-            if (!regex.test(query)) {
-                throw(`Filter '${query}' does not match required filter format '${regex}'`);
-            }
+        let lineFragments = query.split(',');
+        for (let lineFragment of lineFragments) {
+            let exploded = lineFragment.split(":");
+            let line = {
+                line: exploded[0],
+                variant: exploded[1]
+            };
 
-            let lineFragments = query.split(',');
-            for (let lineFragment of lineFragments) {
-                let exploded = lineFragment.split(":");
-                let line = {
-                    line: exploded[0],
-                    variant: exploded[1]
-                };
-
-                lines.push(line);
-            }
-        } else {
-            logger.error("Line filter is active but no lines requested")
+            lines.push(line);
         }
 
         return lines;
@@ -36,7 +36,7 @@ module.exports = {
         let isFirst = true;
         let whereLines = '';
 
-        if (!utils.isEmpty(lines)) {
+        if (utils.isEmpty(lines)) {
             logger.error("Line filter is active but no lines requested");
             return whereLines;
         }

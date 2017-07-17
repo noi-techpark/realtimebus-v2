@@ -23,8 +23,7 @@ module.exports = {
                             positions.setLines(LineUtils.getLinesFromQuery(lines));
                         }
 
-                        // noinspection EqualityComparisonWithCoercionJS
-                        if (vehicle != null) {
+                        if (vehicle !== null) {
                             positions.setVehicle(vehicle);
                         }
 

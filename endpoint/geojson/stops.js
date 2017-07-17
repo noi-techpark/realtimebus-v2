@@ -2,6 +2,7 @@
 
 const config = require("../../config");
 const logger = require("../../util/logger");
+const utils = require("../../util/utils");
 
 const StopFinder = require("../../model/busstop/BusStops");
 const LineUtils = require("../../model/line/LineUtils");
@@ -17,10 +18,10 @@ module.exports = {
 
                 // noinspection EqualityComparisonWithCoercionJS
 
-                let queryLines = req.query.lines;
+                let lines = req.query.lines;
 
-                if (typeof queryLines !== 'undefined' && queryLines.length > 0) {
-                    stopFinder.setLines(LineUtils.getLinesFromQuery(queryLines));
+                if (utils.isEmpty(lines)) {
+                    stopFinder.setLines(LineUtils.fromExpressQuery(lines));
                 }
 
                 return stopFinder.getStops()
@@ -71,8 +72,7 @@ module.exports = {
 
                 let limit = config.realtime_next_stops_limit;
 
-                let coursesFinder = new CourseFinder();
-                return coursesFinder.getCourses(stopId, limit);
+                return CourseFinder.getCourses(stopId, limit);
             })
             .then(stops => {
                 res.status(200).jsonp(stops);

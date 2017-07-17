@@ -1,20 +1,21 @@
 'use strict';
 
 const logger = require("../../util/logger");
+const utils = require("../../util/utils");
 
-module.exports = class LineUtils {
+module.exports = {
 
-    static fromExpressQuery(lineString) {
+    fromExpressQuery: function (query) {
         let lines = [];
 
-        if (typeof lineString !== 'undefined' && lineString.length > 0) {
+        if (!utils.isEmpty(query)) {
             let regex = /\d+:[0-9]+(,\d+:[0-9]+)*$/;
 
-            if (!regex.test(lineString)) {
-                throw(`Filter '${lineString}' does not match required filter format '${regex}'`);
+            if (!regex.test(query)) {
+                throw(`Filter '${query}' does not match required filter format '${regex}'`);
             }
 
-            let lineFragments = lineString.split(',');
+            let lineFragments = query.split(',');
             for (let lineFragment of lineFragments) {
                 let exploded = lineFragment.split(":");
                 let line = {
@@ -29,13 +30,13 @@ module.exports = class LineUtils {
         }
 
         return lines;
-    }
+    },
 
-    static buildForSql(field1, field2, lines) {
+    buildForSql: function (field1, field2, lines) {
         let isFirst = true;
         let whereLines = '';
 
-        if (lines.count === 0) {
+        if (!utils.isEmpty(lines)) {
             logger.error("Line filter is active but no lines requested");
             return whereLines;
         }

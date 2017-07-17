@@ -3,9 +3,9 @@
 const logger = require("../../util/logger");
 const moment = require("moment");
 
-module.exports = class PositionUpdater {
+module.exports = {
 
-    static checkIfInternal(connection, tripId, feature) {
+    checkIfInternal: function (connection, tripId, feature) {
         logger.log(`checkIfInternal() trip=${tripId}`);
 
         return Promise.resolve(`
@@ -23,9 +23,9 @@ module.exports = class PositionUpdater {
                     throw(`Internal trip: ${result.rows[0].variant}`);
                 }
             })
-    }
+    },
 
-    static insertIntoDatabase(connection, tripId, feature) {
+    insertIntoDatabase: function (connection, tripId, feature) {
         logger.log(`insertIntoDatabase() trip=${tripId}`);
 
         return Promise.resolve(`
@@ -88,12 +88,4 @@ module.exports = class PositionUpdater {
                 logger.debug(`Inserted/Updated trip ${tripId}`);
             })
     }
-
-    /*insertTravelTimes(frtFid) {
-        let deleteOldSql = `DELETE FROM data.travel_times WHERE trip = ${frtFid}`;
-        connection.query(deleteOldSql);
-
-        let timeTableUtils = new TimeTableUtils();
-        timeTableUtils.insertTravelTimes(frtFid);
-    }*/
 };

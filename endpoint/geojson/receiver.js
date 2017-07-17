@@ -3,9 +3,9 @@
 const database = require("../../database/database");
 const logger = require('../../util/logger');
 const config = require("../../config");
+const utils = require("../../util/utils");
 
 const FeatureList = require("../../model/realtime/FeatureList");
-const Utils = require("../../util/utils");
 
 const PositionLineReference = require("../../model/receiver/PositionLineReference");
 const PositionUpdater = require("../../model/receiver/PositionUpdater");
@@ -15,7 +15,7 @@ module.exports.updatePositions = function (req, res) {
     database.connect()
         .then(client => {
             return new Promise(function (resolve, reject) {
-                let databaseFormat = config.database_coordinate_format;
+                let databaseFormat = config.coordinate_etrs89;
                 let inputFormat = config.coordinate_wgs84;
 
                 let featureList = FeatureList.createFromArray(req.body);
@@ -45,7 +45,7 @@ module.exports.updatePositions = function (req, res) {
                     feature.properties.frt_fid = parseInt(feature.properties.frt_fid);
                     let tripId = feature.properties.frt_fid;
 
-                    let pointString = Utils.pointFromGeoArray(feature.geometry);
+                    let pointString = utils.pointFromGeoArray(feature.geometry);
 
                     feature.geometry_sql = `ST_Transform(ST_GeomFromText('${pointString}', ${inputFormat}), ${databaseFormat})`;
 
@@ -81,11 +81,11 @@ module.exports.updatePositions = function (req, res) {
                     client.release();
 
                     logger.error(error);
-                    res.status(500).jsonp({success: false, error: error})
+                    utils.respondWithError(res, error);
                 })
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
-            res.status(500).jsonp({success: false, error: error})
+            utils.respondWithError(res, error);
         })
 };

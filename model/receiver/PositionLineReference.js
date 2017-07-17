@@ -2,10 +2,8 @@
 
 const logger = require("../../util/logger");
 
-module.exports = class PositionLineReference {
-
-    static getLineInfo(connection, feature) {
-        return Promise.resolve(`
+module.exports.getLineInfo = function (connection, feature) {
+    return Promise.resolve(`
                 SELECT
                     lid_verlauf.line,
                     lid_verlauf.variant,
@@ -20,21 +18,20 @@ module.exports = class PositionLineReference {
                 ORDER BY ST_Distance(lid_verlauf.the_geom, ${feature.geometry_sql})
                 LIMIT 1
             `)
-            .then(sql => connection.query(sql))
-            .then(result => {
-                if (result.rowCount === 0) {
-                    logger.warn(`Trip ${feature.properties.frt_fid} does not exist in database`);
+        .then(sql => connection.query(sql))
+        .then(result => {
+            if (result.rowCount === 0) {
+                logger.warn(`Trip ${feature.properties.frt_fid} does not exist in database`);
 
-                    return {
-                        line: null,
-                        variant: null,
-                        li_lfd_nr: null,
-                        interpolation_distance: null,
-                        interpolation_linear_ref: null,
-                    };
-                }
+                return {
+                    line: null,
+                    variant: null,
+                    li_lfd_nr: null,
+                    interpolation_distance: null,
+                    interpolation_linear_ref: null,
+                };
+            }
 
-                return result.rows[0];
-            });
-    }
+            return result.rows[0];
+        });
 };

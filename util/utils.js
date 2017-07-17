@@ -51,3 +51,12 @@ module.exports.getZoneForLine = function (line) {
         1012, 1014, 110, 111, 112, 116, 117, 1153, 183, 201, 202
     ].includes(line) ? 'BZ' : 'ME'
 };
+
+module.exports.isEmpty = function (array) {
+    // noinspection EqualityComparisonWithCoercionJS
+    return typeof array == null || array.length === 0
+};
+
+module.exports.respondWithError = function (res, error) {
+    res.status(500).jsonp({success: false, error: error})
+};

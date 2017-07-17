@@ -1,6 +1,6 @@
 'use strict';
-module.exports = class LinesFinder {
 
+module.exports = class LinesFinder {
 
     constructor(client) {
         this.client = client;

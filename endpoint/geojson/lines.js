@@ -3,6 +3,7 @@
 const database = require("../../database/database");
 const config = require("../../config");
 const logger = require("../../util/logger");
+const utils = require("../../util/utils");
 
 const LinesFinder = require("../../model/line/LinesFinder");
 
@@ -26,14 +27,14 @@ module.exports = {
                     })
                     .catch(error => {
                         logger.error(error);
-                        res.status(500).jsonp({success: false, error: error});
+                        utils.respondWithError(res, error);
 
                         client.release();
                     })
             })
             .catch(error => {
                 logger.error(`Error acquiring client: ${error}`);
-                res.status(500).jsonp({success: false, error: error})
+                utils.respondWithError(res, error);
             })
     },
 
@@ -46,7 +47,6 @@ module.exports = {
                         let timeHorizon = config.realtimebus_timetable_time_horizon;
 
                         let linesFinder = new LinesFinder(client);
-
                         return linesFinder.getActiveLines(timeHorizon, city)
                     })
                     .then(lines => {
@@ -56,14 +56,14 @@ module.exports = {
                     })
                     .catch(error => {
                         logger.error(error);
-                        res.status(500).jsonp({success: false, error: error});
+                        utils.respondWithError(res, error);
 
                         client.release();
                     })
             })
             .catch(error => {
                 logger.error(`Error acquiring client: ${error}`);
-                res.status(500).jsonp({success: false, error: error})
+                utils.respondWithError(res, error);
             })
     }
 };

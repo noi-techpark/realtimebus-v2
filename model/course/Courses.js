@@ -2,19 +2,17 @@
 
 const connection = require("../../database/database");
 
-module.exports = class Courses {
+module.exports.getCourses = function (stopId, limit) {
+    return Promise.resolve()
+        .then(() => {
+            let limitSql = '';
 
-    getCourses(stopId, limit) {
-        return Promise.resolve()
-            .then(() => {
-                let limitSql = '';
+            // noinspection EqualityComparisonWithCoercionJS
+            if (limit != null) {
+                limitSql = `LIMIT ${limit}`;
+            }
 
-                // noinspection EqualityComparisonWithCoercionJS
-                if (limit != null) {
-                    limitSql = `LIMIT ${limit}`;
-                }
-
-                return `
+            return `
                     SELECT
                         rec_lid.line_name AS lidname,
                         rec_frt.trip AS frt_fid,
@@ -61,10 +59,9 @@ module.exports = class Courses {
                     ORDER BY bus_passes_at
                     ${limitSql}
                 `;
-            })
-            .then(sql => connection.query(sql))
-            .then(result => {
-                return result.rows
-            });
-    }
+        })
+        .then(sql => connection.query(sql))
+        .then(result => {
+            return result.rows
+        });
 };

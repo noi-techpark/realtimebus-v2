@@ -3,6 +3,7 @@
 const database = require("../../database/database");
 const logger = require('../../util/logger');
 const config = require("../../config");
+const utils = require("../../util/utils");
 
 const LineUtils = require("../../model/line/LineUtils");
 const NewPositions = require("../../model/realtime/PositionsApp");
@@ -19,7 +20,7 @@ module.exports = {
                         let lines = req.params.lines;
                         let vehicle = req.params.vehicle;
 
-                        if (typeof lines !== 'undefined' && lines.length > 0) {
+                        if (!utils.isEmpty(lines)) {
                             positions.setLines(LineUtils.fromExpressQuery(lines));
                         }
 
@@ -37,14 +38,15 @@ module.exports = {
                     })
                     .catch(error => {
                         logger.error(error);
-                        res.status(500).jsonp({success: false, error: error});
+
+                        utils.respondWithError(res, error);
 
                         client.release();
                     })
             })
             .catch(error => {
                 logger.error(`Error acquiring client: ${error}`);
-                res.status(500).jsonp({success: false, error: error})
+                utils.respondWithError(res, error);
             })
     }
 };

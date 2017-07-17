@@ -91,9 +91,9 @@ function startServer() {
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
     });
 
-    app.group("/v2", (router) => {
+    app.group("/gtfs", (router) => {
 
-        router.get("/positions", v2Realtime.positions);
+        router.get("/realtime", v2Realtime.positions);
     });
 
     let listener = app.listen(80, function () {

@@ -12,56 +12,78 @@ const GtfsRealtimeBindings = require('gtfs-realtime-bindings');
 const fs = require("fs");
 const p = require("node-protobuf");
 
-
 module.exports = {
 
     positions: function (req, res) {
-        Promise.resolve().then(() => {
-            let outputFormat = config.database_coordinate_format;
-            let positions = new PositionsApp(outputFormat);
+        database.connect()
+            .then(client => {
 
-            let lines = req.query.lines;
+                Promise.resolve().then(() => {
+                    let positions = new PositionsApp(client);
+                    return positions.getBuses();
+                }).then(positions => {
+                    let buses = positions.buses;
 
-            if (typeof lines !== 'undefined' && lines.length > 0) {
-                positions.setLines(LineUtils.fromExpressQuery(lines));
-            }
+                    let message = new GtfsRealtimeBindings.FeedMessage();
 
-            return positions.getBuses();
-        }).then(positions => {
-            positions = JSON.parse(positions).buses;
+                    console.log(message);
 
-            let message = new GtfsRealtimeBindings.FeedMessage();
+                    let header = new GtfsRealtimeBindings.FeedHeader();
+                    header.gtfs_realtime_version = "1.0";
+                    header.incrementality = 0;
+                    header.timestamp = new Date().getTime();
 
-            console.log(message);
+                    let entities = [];
 
-            let header = new GtfsRealtimeBindings.FeedHeader();
-            header.gtfs_realtime_version = "1.0";
-            header.incrementality = 0;
-            header.timestamp = new Date().getTime();
+                    for (let bus of buses) {
+                        console.log(bus);
 
-            let entities = [];
+                        let position = new GtfsRealtimeBindings.Position();
+                        position.latitude = bus.latitude;
+                        position.longitude = bus.longitude;
 
-            for (let position of positions) {
-                console.log(position);
+                        let vehicleDescriptor = new GtfsRealtimeBindings.VehicleDescriptor();
+                        vehicleDescriptor.id = bus.vehicle;
 
-                let entity = new GtfsRealtimeBindings.FeedEntity();
-                entity.id = "410";
+                        let tripDescriptor = new GtfsRealtimeBindings.TripDescriptor();
+                        tripDescriptor.trip_id = bus.trip;
+                        tripDescriptor.route_id = bus.line_id;
 
-                entities.push(entity);
+                        let vehiclePosition = new GtfsRealtimeBindings.VehiclePosition();
+                        vehiclePosition.position = position;
+                        vehiclePosition.vehicle = vehicleDescriptor;
+                        vehiclePosition.stop_id = bus.bus_stop;
+                        vehiclePosition.timestamp = ((new Date().getTime() / 60000) - bus.updated_min_ago) * 60;
+                        vehiclePosition.trip = tripDescriptor;
 
-                break;
-            }
+                        let tripUpdate = new GtfsRealtimeBindings.TripUpdate();
+                        tripUpdate.trip = tripDescriptor;
+                        tripUpdate.vehicle = vehicleDescriptor;
+                        tripUpdate.delay = bus.delay_min * 60;
+                        tripUpdate.timestamp = ((new Date().getTime() / 60000) - bus.updated_min_ago) * 60;
 
-            message.header = header;
-            message.entity = entities;
+                        let entity = new GtfsRealtimeBindings.FeedEntity();
+                        entity.id = bus.vehicle;
+                        entity.vehicle = vehiclePosition;
+                        entity.trip_update = tripUpdate;
 
-            return message.encode().toBuffer();
-        }).then(buffer => {
-            console.log("Sending response");
-            res.status(200).send(buffer);
-        }).catch(error => {
-            logger.error(error);
-            res.status(500).jsonp({success: false, error: error})
-        })
+                        entities.push(entity);
+                    }
+
+                    message.header = header;
+                    message.entity = entities
+                    return message.encode().toBuffer();
+                }).then(buffer => {
+                    console.log("Sending response");
+                    res.status(200).header("Content-Type", "application/x-protobuf").send(buffer);
+                }).catch(error => {
+                    logger.error(error);
+                    res.status(500).jsonp({success: false, error: error})
+                })
+            })
+            .catch(error => {
+                logger.error(`Error acquiring client: ${error}`);
+                res.status(500).jsonp({success: false, error: error})
+            })
     }
 };

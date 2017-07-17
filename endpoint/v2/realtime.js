@@ -1,21 +1,24 @@
 'use strict';
 
-const connection = require("../../database/database");
+const database = require("../../database/database");
 const logger = require('../../util/logger');
 const config = require("../../config");
 
 const LineUtils = require("../../model/line/LineUtils");
-const Positions = require("../../model/realtime/Positions");
+const PositionsApp = require("../../model/realtime/PositionsApp");
 
-let fs = require("fs");
-let p = require("node-protobuf");
+const GtfsRealtimeBindings = require('gtfs-realtime-bindings');
+
+const fs = require("fs");
+const p = require("node-protobuf");
+
 
 module.exports = {
 
     positions: function (req, res) {
         Promise.resolve().then(() => {
             let outputFormat = config.database_coordinate_format;
-            let positions = new Positions(outputFormat);
+            let positions = new PositionsApp(outputFormat);
 
             let lines = req.query.lines;
 
@@ -23,27 +26,36 @@ module.exports = {
                 positions.setLines(LineUtils.fromExpressQuery(lines));
             }
 
-            return positions.getAll();
+            return positions.getBuses();
         }).then(positions => {
-            let pb = new p(fs.readFileSync("proto/gtfs-realtime.desc"));
+            positions = JSON.parse(positions).buses;
 
-            let position = {
-                "latitude": 46,
-                "longitude": 11
-            };
+            let message = new GtfsRealtimeBindings.FeedMessage();
 
-            let obj = {
-                "position": position,
-                "timestamp": new Date().getTime() / 1000
-            };
+            console.log(message);
 
-            let buffer = pb.serialize(obj, "transit_realtime.VehiclePosition");             // you get Buffer here, send it via socket.write, etc.
-            let newObj = pb.parse(buffer, "transit_realtime.VehiclePosition");    // you get Buffer here, send it via socket.write, etc.
+            let header = new GtfsRealtimeBindings.FeedHeader();
+            header.gtfs_realtime_version = "1.0";
+            header.incrementality = 0;
+            header.timestamp = new Date().getTime();
 
-            console.log(buffer);
-            console.log(newObj);
+            let entities = [];
 
-            return buffer;
+            for (let position of positions) {
+                console.log(position);
+
+                let entity = new GtfsRealtimeBindings.FeedEntity();
+                entity.id = "410";
+
+                entities.push(entity);
+
+                break;
+            }
+
+            message.header = header;
+            message.entity = entities;
+
+            return message.encode().toBuffer();
         }).then(buffer => {
             console.log("Sending response");
             res.status(200).send(buffer);

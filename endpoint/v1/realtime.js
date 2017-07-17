@@ -25,7 +25,7 @@ module.exports = {
                 positions.setVehicle(vehicle);
             }
 
-            return positions.getAll();
+            return positions.getBuses();
         }).then(positions => {
             res.status(200).jsonp(positions);
         }).catch(error => {

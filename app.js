@@ -96,6 +96,17 @@ function startServer() {
         router.get("/realtime", v2Realtime.positions);
     });
 
+
+    app.use(function (req, res, next) {
+        res.status(404).json({
+            error: {
+                code: 404,
+                message: "The requested URL was not found on this server."
+            }
+        });
+    });
+
+
     let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })

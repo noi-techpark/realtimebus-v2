@@ -62,247 +62,6 @@ let sqlTeqChain = [];
 
 module.exports = {
 
-    saveZipFiles: function (req) {
-        return new Promise(function (resolve, reject) {
-            fs.writeFile(LATEST_VDV_ZIP, req.body, function (err) {
-                try {
-                    if (err) {
-                        return reject(err);
-                    }
-
-                    logger.debug("Saved zip file containing VDV data");
-
-                    new AdmZip(LATEST_VDV_ZIP).extractAllTo(LATEST_EXTRACTED_VDV_DATA, true);
-                    logger.debug("Extracted latest VDV data");
-
-                    resolve()
-                } catch (e) {
-                    reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
-                }
-            })
-        }).then(() => {
-            return new Promise(function (resolve, reject) {
-                fs.writeFile('vdv/' + new Date().toISOString() + '.zip', req.body, function (err) {
-                    try {
-                        if (err) {
-                            return reject(err);
-                        }
-
-                        logger.debug("Archived zip file containing VDV data");
-
-                        resolve()
-                    } catch (e) {
-                        reject(new HttpError("The zip file could not be written to disk. Please try again later."))
-                    }
-                })
-            })
-        })
-    },
-
-    parseVdvFiles: function (data) {
-        return new Promise(function (resolve, reject) {
-            fs.readdir(VDV_FILES, (err, files) => {
-                try {
-                    if (err) {
-                        return reject(err);
-                    }
-
-                    logger.debug(`Found ${files.length} files`);
-
-                    if (files.indexOf(TEQ_MAPPING) === -1) {
-                        return reject(new Error(`The file ${TEQ_MAPPING} is missing. VDV import was aborted. No changes have been applied to the current data.`));
-                    }
-
-                    vdvFileList.forEach(file => {
-                        if (!files.indexOf(file) === -1) {
-                            return reject(new Error(`The file ${file} is missing. VDV import was aborted. No changes have been applied to the current data.`));
-                        }
-                    });
-
-                    let chain = Promise.resolve();
-
-                    vdvFileList.forEach(file => {
-                        chain = chain.then(() => {
-                            return new Promise(function (resolve, reject) {
-                                parseVdvFile(file, data, function (fileName, table, formats, columns, rows, data) {
-                                    if (rows.length === 0) {
-                                        return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
-                                    }
-
-                                    data.push(new VdvFile(fileName, table, formats, columns, rows));
-
-                                    logger.debug(`Processed table ${table}`);
-
-                                    resolve();
-                                })
-                            })
-                        });
-                    });
-
-                    logger.debug(`Successfully read ${vdvFileList.length} VDV files`);
-
-                    chain = chain.then(() => {
-                        resolve()
-                    }).catch(error => {
-                        reject(error)
-                    })
-                } catch (e) {
-                    reject(new HttpError("Failed to read from disk. Please try again later."))
-                }
-            })
-        })
-    },
-
-    insertVdvData: function (client) {
-        return Promise.resolve()
-            .then(() => {
-                let chain = Promise.resolve();
-
-                for (let sql of sqlCreateChain) {
-                    chain = chain.then(() => {
-                        return client.query(sql)
-                    })
-                }
-
-                return chain
-            })
-            .then(() => {
-                logger.debug("Created tables");
-            })
-            .then(() => {
-                let chain = Promise.resolve();
-
-                for (let sql of sqlTruncateChain) {
-                    chain = chain.then(() => {
-                        return client.query(sql)
-                    })
-                }
-
-                return chain
-            })
-            .then(() => {
-                logger.debug("Truncated tables");
-            })
-            .then(() => {
-                let chain = Promise.resolve();
-
-                for (let sql of sqlInsertChain) {
-                    chain = chain.then(() => {
-                        return client.query(sql)
-                    })
-                }
-
-                return chain
-            })
-            .then(() => {
-                logger.debug("Filled tables");
-            })
-    },
-
-    performOtherQueries: function (client) {
-        return Promise.resolve()
-            .then(() => {
-                return client.query(`
-                    INSERT INTO data.rec_frt (trip_type)
-                        (
-                        SELECT 1, rec_frt.trip_time_group, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
-                        FROM data.rec_frt
-                        LEFT JOIN data.menge_fgr
-                            ON rec_frt.trip_time_group=menge_fgr.trip_time_group
-                        WHERE menge_fgr.trip_time_group IS NULL
-                        GROUP BY rec_frt.trip_time_group
-                        ORDER BY rec_frt.trip_time_group
-                        );
-                    `);
-            }).then(() => {
-                return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
-                        (
-                        SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
-                        FROM data.rec_frt
-                        LEFT JOIN data.rec_lid
-                            ON rec_frt.line=rec_lid.line
-                            AND rec_frt.variant=rec_lid.variant
-                        WHERE rec_lid.line IS NULL
-                        GROUP BY rec_frt.line, rec_frt.variant
-                        ORDER BY rec_frt.line, rec_frt.variant
-                        );
-                    `)
-            }).then(() => {
-                return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
-                        (
-                        SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
-                        FROM data.rec_frt
-                        LEFT JOIN data.rec_lid
-                            ON rec_frt.line=rec_lid.line
-                            AND rec_frt.variant=rec_lid.variant
-                        WHERE rec_lid.line IS NULL
-                        GROUP BY rec_frt.line, rec_frt.variant
-                        ORDER BY rec_frt.line, rec_frt.variant
-                        );
-                    `)
-            })
-    },
-
-    fillTeqData: function (client) {
-        return Promise.resolve()
-            .then(() => {
-                return new Promise(function (resolve) {
-                    let firstLine = true;
-
-                    reader.createInterface({
-                        input: fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING)
-                    }).on('line', function (line) {
-                        if (!firstLine) {
-                            let numbers = line.split("\t");
-                            sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
-                        }
-
-                        firstLine = false;
-                    }).on('close', function () {
-                        resolve()
-                    });
-                })
-            })
-            .then(() => {
-                let chain = Promise.resolve();
-
-                for (let sql of sqlTeqChain) {
-                    chain = chain.then(() => {
-                        return client.query(sql)
-                    })
-                }
-
-                return chain
-            })
-    },
-
-    calculateTravelTimes: function (client) {
-        return Promise.resolve()
-            .then(() => {
-                return client.query(`DELETE FROM data.travel_times;`)
-            })
-            .then(() => {
-                return client.query(`SELECT data.data_fill_travel_times();`)
-            })
-            .then(() => {
-                return client.query(`DELETE FROM data.frt_ort_last;`)
-            })
-    },
-
-    fillConfigTable: function (client) {
-        return Promise.resolve()
-            .then(() => {
-                return client.query(`CREATE TABLE IF NOT EXISTS data.config (key text, value text);`);
-            })
-            .then(() => {
-                return client.query(`TRUNCATE TABLE data.config;`);
-            })
-            .then(() => {
-                return client.query(`INSERT INTO data.config VALUES('data_valid_from', '${response.data_valid_from}')`)
-            })
-    },
-
-
     upload: function (req, res) {
         let data = [];
 
@@ -312,10 +71,10 @@ module.exports = {
             .then(client => {
                 return Promise.resolve()
                     .then(() => {
-                        return this.saveZipFiles(req)
+                        return saveZipFiles(req)
                     })
                     .then(() => {
-                        return this.parseVdvFiles(data)
+                        return parseVdvFiles(data)
                     })
                     .then(() => {
                         return new Promise(function (resolve) {
@@ -386,19 +145,19 @@ module.exports = {
                         })
                     })
                     .then(() => {
-                        return this.insertVdvData(client)
+                        return insertVdvData(client)
                     })
                     .then(() => {
-                        return this.fillConfigTable(client)
+                        return fillConfigTable(client)
                     })
                     .then(() => {
-                        return this.performOtherQueries(client)
+                        return performOtherQueries(client)
                     })
                     .then(() => {
-                        return this.fillTeqData(client)
+                        return fillTeqData(client)
                     })
                     .then(() => {
-                        return this.calculateTravelTimes(client)
+                        return calculateTravelTimes(client)
                     })
                     .then(() => {
                         return client.query(`
@@ -508,7 +267,9 @@ module.exports = {
 
                         config.vdv_import_running = false;
 
-                        res.status(err.status).json({success: false, error: err})
+                        let status = err.status || 500;
+
+                        res.status(status).json({success: false, error: err})
                     });
             })
             .catch(error => {
@@ -519,6 +280,247 @@ module.exports = {
             })
     }
 };
+
+
+function saveZipFiles(req) {
+    return new Promise(function (resolve, reject) {
+        fs.writeFile(LATEST_VDV_ZIP, req.body, function (err) {
+            try {
+                if (err) {
+                    return reject(err);
+                }
+
+                logger.debug("Saved zip file containing VDV data");
+
+                new AdmZip(LATEST_VDV_ZIP).extractAllTo(LATEST_EXTRACTED_VDV_DATA, true);
+                logger.debug("Extracted latest VDV data");
+
+                resolve()
+            } catch (e) {
+                reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
+            }
+        })
+    }).then(() => {
+        return new Promise(function (resolve, reject) {
+            fs.writeFile('vdv/' + new Date().toISOString() + '.zip', req.body, function (err) {
+                try {
+                    if (err) {
+                        return reject(err);
+                    }
+
+                    logger.debug("Archived zip file containing VDV data");
+
+                    resolve()
+                } catch (e) {
+                    reject(new HttpError("The zip file could not be written to disk. Please try again later."))
+                }
+            })
+        })
+    })
+}
+
+function parseVdvFiles(data) {
+    return new Promise(function (resolve, reject) {
+        fs.readdir(VDV_FILES, (err, files) => {
+            try {
+                if (err) {
+                    return reject(err);
+                }
+
+                logger.debug(`Found ${files.length} files`);
+
+                if (files.indexOf(TEQ_MAPPING) === -1) {
+                    return reject(new Error(`The file ${TEQ_MAPPING} is missing. VDV import was aborted. No changes have been applied to the current data.`));
+                }
+
+                vdvFileList.forEach(file => {
+                    if (!files.indexOf(file) === -1) {
+                        return reject(new Error(`The file ${file} is missing. VDV import was aborted. No changes have been applied to the current data.`));
+                    }
+                });
+
+                let chain = Promise.resolve();
+
+                vdvFileList.forEach(file => {
+                    chain = chain.then(() => {
+                        return new Promise(function (resolve, reject) {
+                            parseVdvFile(file, data, function (fileName, table, formats, columns, rows, data) {
+                                if (rows.length === 0) {
+                                    return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
+                                }
+
+                                data.push(new VdvFile(fileName, table, formats, columns, rows));
+
+                                logger.debug(`Processed table ${table}`);
+
+                                resolve();
+                            })
+                        })
+                    });
+                });
+
+                logger.debug(`Successfully read ${vdvFileList.length} VDV files`);
+
+                chain = chain.then(() => {
+                    resolve()
+                }).catch(error => {
+                    reject(error)
+                })
+            } catch (e) {
+                reject(new HttpError("Failed to read from disk. Please try again later."))
+            }
+        })
+    })
+}
+
+function insertVdvData(client) {
+    return Promise.resolve()
+        .then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlCreateChain) {
+                chain = chain.then(() => {
+                    return client.query(sql)
+                })
+            }
+
+            return chain
+        })
+        .then(() => {
+            logger.debug("Created tables");
+        })
+        .then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlTruncateChain) {
+                chain = chain.then(() => {
+                    return client.query(sql)
+                })
+            }
+
+            return chain
+        })
+        .then(() => {
+            logger.debug("Truncated tables");
+        })
+        .then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlInsertChain) {
+                chain = chain.then(() => {
+                    return client.query(sql)
+                })
+            }
+
+            return chain
+        })
+        .then(() => {
+            logger.debug("Filled tables");
+        })
+}
+
+function performOtherQueries(client) {
+    return Promise.resolve()
+        .then(() => {
+            return client.query(`
+                    INSERT INTO data.rec_frt (trip_type)
+                        (
+                        SELECT 1, rec_frt.trip_time_group, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+                        FROM data.rec_frt
+                        LEFT JOIN data.menge_fgr
+                            ON rec_frt.trip_time_group=menge_fgr.trip_time_group
+                        WHERE menge_fgr.trip_time_group IS NULL
+                        GROUP BY rec_frt.trip_time_group
+                        ORDER BY rec_frt.trip_time_group
+                        );
+                    `);
+        }).then(() => {
+            return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
+                        (
+                        SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+                        FROM data.rec_frt
+                        LEFT JOIN data.rec_lid
+                            ON rec_frt.line=rec_lid.line
+                            AND rec_frt.variant=rec_lid.variant
+                        WHERE rec_lid.line IS NULL
+                        GROUP BY rec_frt.line, rec_frt.variant
+                        ORDER BY rec_frt.line, rec_frt.variant
+                        );
+                    `)
+        }).then(() => {
+            return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
+                        (
+                        SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
+                        FROM data.rec_frt
+                        LEFT JOIN data.rec_lid
+                            ON rec_frt.line=rec_lid.line
+                            AND rec_frt.variant=rec_lid.variant
+                        WHERE rec_lid.line IS NULL
+                        GROUP BY rec_frt.line, rec_frt.variant
+                        ORDER BY rec_frt.line, rec_frt.variant
+                        );
+                    `)
+        })
+}
+
+function fillTeqData(client) {
+    return Promise.resolve()
+        .then(() => {
+            return new Promise(function (resolve) {
+                let firstLine = true;
+
+                reader.createInterface({
+                    input: fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING)
+                }).on('line', function (line) {
+                    if (!firstLine) {
+                        let numbers = line.split("\t");
+                        sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
+                    }
+
+                    firstLine = false;
+                }).on('close', function () {
+                    resolve()
+                });
+            })
+        })
+        .then(() => {
+            let chain = Promise.resolve();
+
+            for (let sql of sqlTeqChain) {
+                chain = chain.then(() => {
+                    return client.query(sql)
+                })
+            }
+
+            return chain
+        })
+}
+
+function calculateTravelTimes(client) {
+    return Promise.resolve()
+        .then(() => {
+            return client.query(`DELETE FROM data.travel_times;`)
+        })
+        .then(() => {
+            return client.query(`SELECT data.data_fill_travel_times();`)
+        })
+        .then(() => {
+            return client.query(`DELETE FROM data.frt_ort_last;`)
+        })
+}
+
+function fillConfigTable(client) {
+    return Promise.resolve()
+        .then(() => {
+            return client.query(`CREATE TABLE IF NOT EXISTS data.config (key text, value text);`);
+        })
+        .then(() => {
+            return client.query(`TRUNCATE TABLE data.config;`);
+        })
+        .then(() => {
+            return client.query(`INSERT INTO data.config VALUES('data_valid_from', '${response.data_valid_from}')`)
+        })
+}
 
 function parseVdvFile(file, data, cb) {
     let table = null;

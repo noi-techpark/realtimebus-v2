@@ -1,6 +1,7 @@
 'use strict';
 
 const config = require("../../config");
+const utils = require("../../util/utils");
 
 const RealtimeModel = require("./RealtimeModel");
 const LineUtils = require("../line/LineUtils");
@@ -78,7 +79,7 @@ module.exports = class PositionsApp {
                         ROUND(extract(epoch FROM (NOW() - gps_date))::int / 60) as updated_min_ago,
                         ROUND(extract(epoch FROM (NOW() - insert_date))::int / 60) as inserted_min_ago,
                         
-                        delay_sec,
+                        ROUND(delay_sec / 60) AS delay_min,
 
                         gps_date,
                         insert_date,
@@ -138,11 +139,6 @@ module.exports = class PositionsApp {
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
 
-                    let zone =  [
-                        1001, 1003, 1005, 1006, 1071, 1072, 1008, 1009, 1101, 1102, 1011,
-                        1012, 1014, 110, 111, 112, 116, 117, 1153, 183, 201, 202
-                    ].includes(row.line) ? 'BZ' : 'ME';
-
                     let feature = {
                         trip: parseInt(row.trip),
 
@@ -150,17 +146,17 @@ module.exports = class PositionsApp {
                         line_name: row.line_name,
                         bus_stop: row.bus_stop,
 
-                        variant: parseInt(row.variant),
+                        variant: row.variant,
                         vehicle: row.vehicle,
 
-                        delay_min: Math.round(row.delay_sec / 60),
+                        delay_min: row.delay_min,
                         latitude: Math.round(geometry.coordinates[1] * 1000000) / 1000000,
                         longitude: Math.round(geometry.coordinates[0] * 1000000) / 1000000,
 
                         color_hex: row.color_hex,
                         color_hue: row.color_hue,
 
-                        zone: zone,
+                        zone: utils.getZoneForLine(row.line),
 
                         updated_min_ago: row.updated_min_ago,
                         inserted_min_ago: row.inserted_min_ago

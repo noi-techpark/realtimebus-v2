@@ -44,3 +44,10 @@ module.exports.sortObject = function (o) {
 
     return sorted;
 };
+
+module.exports.getZoneForLine = function (line) {
+    return [
+        1001, 1003, 1005, 1006, 1071, 1072, 1008, 1009, 1101, 1102, 1011,
+        1012, 1014, 110, 111, 112, 116, 117, 1153, 183, 201, 202
+    ].includes(line) ? 'BZ' : 'ME'
+};

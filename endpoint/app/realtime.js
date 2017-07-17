@@ -4,8 +4,8 @@ const database = require("../../database/database");
 const logger = require('../../util/logger');
 const config = require("../../config");
 
-const LineUtils = require("../../model/realtime/LineUtils");
-const NewPositions = require("../../model/realtime/new/NewPositions");
+const LineUtils = require("../../model/line/LineUtils");
+const NewPositions = require("../../model/realtime/NewPositions");
 
 module.exports = {
 

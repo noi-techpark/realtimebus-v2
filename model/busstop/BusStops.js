@@ -3,10 +3,10 @@
 const connection = require("../../database/database");
 const logger = require("../../util/logger");
 
-const FeatureList = require("./FeatureList");
-const LineUtils = require("./LineUtils");
+const FeatureList = require("../realtime/FeatureList");
+const LineUtils = require("../line/LineUtils");
 
-module.exports = class StopFinder {
+module.exports = class BusStops {
 
     constructor(outputFormat) {
         this.outputFormat = outputFormat;

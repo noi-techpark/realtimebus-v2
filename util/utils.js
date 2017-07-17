@@ -18,19 +18,12 @@ if (!('toJSON' in Error.prototype)) {
     });
 }
 
-module.exports = class HttpError extends Error {
 
-    constructor(message, status) {
-
-        // Calling parent constructor of base Error class.
-        super(message);
-
-        // You can use any additional properties you want.
-        // I'm going to use preferred HTTP status for this error types.
-        // `500` is the default value if not specified.
-        this.status = status || 500;
-
-        delete this.stack;
+module.exports.pointFromGeoArray = function (jsonArray) {
+    if (jsonArray.type === 'Point') {
+        return `POINT(${jsonArray.coordinates[0]} ${jsonArray.coordinates[1]})`;
+    } else {
+        throw new Error(`Geometry type '${jsonArray.type}' is not supported.`);
     }
 };
 

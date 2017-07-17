@@ -9,7 +9,7 @@ const moment = require("moment-timezone");
 const reader = require("readline");
 
 const VdvFile = require("../../model/vdv/VdvFile");
-const HttpError = require("../../util/utils");
+const HttpError = require("../../util/HttpError");
 
 const logger = require("../../util/logger");
 const config = require("../../config");

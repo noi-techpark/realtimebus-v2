@@ -4,7 +4,7 @@ const connection = require("../../database/database");
 const config = require("../../config");
 
 const FeatureList = require("../../model/realtime/FeatureList");
-const LineUtils = require("../../model/realtime/LineUtils");
+const LineUtils = require("../line/LineUtils");
 
 module.exports = class Positions {
 

@@ -2,7 +2,7 @@
 
 const connection = require("../../database/database");
 
-module.exports = class CourseFinder {
+module.exports = class Courses {
 
     getCourses(stopId, limit) {
         return Promise.resolve(function () {

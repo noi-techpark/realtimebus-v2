@@ -27,10 +27,6 @@ module.exports = class FeatureList {
         };
     }
 
-    static createFromGeoJson(json) {
-        return FeatureList.createFromArray(json)
-    }
-
     static createFromArray(array) {
         if (!array.hasOwnProperty("features")) {
             throw("Supplied JSON does not contain required object 'features'");

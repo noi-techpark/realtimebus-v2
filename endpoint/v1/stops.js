@@ -3,9 +3,9 @@
 const config = require("../../config");
 const logger = require("../../util/logger");
 
-const StopFinder = require("../../model/realtime/StopFinder");
-const LineUtils = require("../../model/realtime/LineUtils");
-const CourseFinder = require("../../model/realtime/CourseFinder");
+const StopFinder = require("../../model/busstop/BusStops");
+const LineUtils = require("../../model/line/LineUtils");
+const CourseFinder = require("../../model/course/Courses");
 
 module.exports = {
 

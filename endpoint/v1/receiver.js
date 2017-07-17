@@ -5,10 +5,10 @@ const logger = require('../../util/logger');
 const config = require("../../config");
 
 const FeatureList = require("../../model/realtime/FeatureList");
-const DataWriter = require("../../model/realtime/DataWriter");
+const Utils = require("../../util/utils");
 
-const ActualPositionLineReference = require("../../model/realtime/writertask/ActualPositionLineReference");
-const ActualPositionUpdater = require("../../model/realtime/writertask/ActualPositionUpdater");
+const PositionLineReference = require("../../model/receiver/PositionLineReference");
+const PositionUpdater = require("../../model/receiver/PositionUpdater");
 
 
 module.exports.updatePositions = function (req, res) {
@@ -18,16 +18,14 @@ module.exports.updatePositions = function (req, res) {
                 let databaseFormat = config.database_coordinate_format;
                 let inputFormat = config.coordinate_wgs84;
 
-                let featureList = FeatureList.createFromGeoJson(req.body);
-                let positionUpdater = new ActualPositionUpdater();
-                let lineReference = new ActualPositionLineReference();
+                let featureList = FeatureList.createFromArray(req.body);
 
                 logger.debug(`Inserting ${featureList.getFeatures().length} buses`);
 
                 let chain = Promise.resolve();
 
                 for (let feature of featureList.getFeatures()) {
-                    logger.log(`Feature: ${JSON.stringify(feature)}`);
+                    // logger.log(`Feature: ${JSON.stringify(feature)}`);
 
                     if (!feature.hasOwnProperty("properties")) {
                         logger.error("Required property 'properties' is missing");
@@ -47,12 +45,12 @@ module.exports.updatePositions = function (req, res) {
                     feature.properties.frt_fid = parseInt(feature.properties.frt_fid);
                     let tripId = feature.properties.frt_fid;
 
-                    let pointString = DataWriter.pointFromGeoArray(feature.geometry);
+                    let pointString = Utils.pointFromGeoArray(feature.geometry);
 
                     feature.geometry_sql = `ST_Transform(ST_GeomFromText('${pointString}', ${inputFormat}), ${databaseFormat})`;
 
                     chain = chain.then(() => {
-                        return lineReference.getLineReference(client, feature)
+                        return PositionLineReference.getLineInfo(client, feature)
                     }).then((result) => {
                         feature.properties = Object.assign(feature.properties, result);
 
@@ -60,9 +58,9 @@ module.exports.updatePositions = function (req, res) {
 
                         return result
                     }).then(() => {
-                        return positionUpdater.checkIfInternal(client, tripId, feature)
+                        return PositionUpdater.checkIfInternal(client, tripId, feature)
                     }).then(() => {
-                        return positionUpdater.insertIntoDatabase(client, tripId, feature)
+                        return PositionUpdater.insertIntoDatabase(client, tripId, feature)
                     }).catch(error => {
                         console.log(error);
                         logger.error(`Error inserting trip ${tripId}: ${error}`);

@@ -4,7 +4,7 @@ const connection = require("../../database/database");
 const logger = require('../../util/logger');
 const config = require("../../config");
 
-const LineUtils = require("../../model/realtime/LineUtils");
+const LineUtils = require("../../model/line/LineUtils");
 const Positions = require("../../model/realtime/Positions");
 
 let fs = require("fs");

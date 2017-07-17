@@ -1,9 +1,9 @@
 'use strict';
 
-const config = require("../../../config");
+const config = require("../../config");
 
 const RealtimeModel = require("./RealtimeModel");
-const LineUtils = require("../LineUtils");
+const LineUtils = require("../line/LineUtils");
 
 module.exports = class NewPositions {
 

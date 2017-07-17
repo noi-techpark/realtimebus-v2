@@ -1,10 +1,10 @@
 'use strict';
 
-const logger = require("../../../util/logger");
+const logger = require("../../util/logger");
 
-module.exports = class ActualPositionLineReference {
+module.exports = class PositionLineReference {
 
-    getLineReference(connection, feature) {
+    static getLineInfo(connection, feature) {
         return Promise.resolve(`
                 SELECT
                     lid_verlauf.line,
@@ -34,10 +34,7 @@ module.exports = class ActualPositionLineReference {
                     };
                 }
 
-                let reference = result.rows[0];
-                logger.log(`lineReferenceData='${reference}'`);
-
-                return reference;
+                return result.rows[0];
             });
     }
 };

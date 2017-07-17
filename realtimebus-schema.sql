@@ -706,6 +706,8 @@ CREATE TABLE rec_frt (
     foreign_company INTEGER,
     vehicle_type SMALLINT,
     remark VARCHAR(1000),
+    blank1 VARCHAR(10),
+    blank2 VARCHAR(10),
     teq BIGINT
 );
 

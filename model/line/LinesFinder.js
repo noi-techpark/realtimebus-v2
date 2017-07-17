@@ -10,7 +10,7 @@ module.exports = class LinesFinder {
         return Promise.resolve()
             .then(() => {
                 return `
-                    SELECT rec_frt.li_nr, TRIM(rec_frt.str_li_var) AS str_li_var, lidname, li_ri_nr, li_r, li_g, li_b
+                    SELECT rec_frt.li_nr, TRIM(rec_frt.str_li_var) AS str_li_var, lidname, direction, red, green, blue
                     FROM vdv.rec_frt
                     
                     LEFT JOIN vdv.rec_lid
@@ -22,7 +22,7 @@ module.exports = class LinesFinder {
                         
                     WHERE rec_lid.li_kuerzel LIKE '%${city}%'
                     
-                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_colors.li_nr, lidname, li_ri_nr
+                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_colors.li_nr, lidname, direction
                 `;
             })
             .then(sql => this.client.query(sql))
@@ -35,26 +35,26 @@ module.exports = class LinesFinder {
         return Promise.resolve()
             .then(() => {
                 return `
-                    SELECT rec_frt.li_nr, TRIM(rec_frt.str_li_var) AS str_li_var, lidname, li_ri_nr, li_r, li_g, li_b
+                    SELECT rec_frt.li_nr, TRIM(rec_frt.str_li_var) AS str_li_var, lidname, direction, red, green, blue
                     FROM vdv.rec_frt
                     
                     LEFT JOIN vdv.rec_lid ON rec_frt.li_nr=rec_lid.li_nr AND rec_frt.str_li_var=rec_lid.str_li_var
                     
                     INNER JOIN vdv.menge_tagesart
-                        ON rec_frt.tagesart_nr=menge_tagesart.tagesart_nr
+                        ON rec_frt.day=menge_tagesart.day
                         
                     INNER JOIN vdv.firmenkalender
-                        ON menge_tagesart.tagesart_nr=firmenkalender.tagesart_nr
+                        ON menge_tagesart.day=firmenkalender.day
                         
                     LEFT JOIN vdv.line_colors
                         ON rec_frt.li_nr=line_colors.li_nr
                         
                     WHERE betriebstag=to_char(CURRENT_TIMESTAMP, 'YYYYMMDD')::integer
-                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + frt_start * interval '1 seconds' > CURRENT_TIMESTAMP - interval '60 minutes'
-                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + frt_start * interval '1 seconds' < CURRENT_TIMESTAMP + interval '${timeHorizon} seconds'
+                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + departure * interval '1 seconds' > CURRENT_TIMESTAMP - interval '60 minutes'
+                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + departure * interval '1 seconds' < CURRENT_TIMESTAMP + interval '${timeHorizon} seconds'
                         AND rec_lid.li_kuerzel LIKE '%${city}%'
                         
-                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_colors.li_nr, lidname, li_ri_nr
+                    GROUP BY rec_frt.li_nr, rec_frt.str_li_var, line_colors.li_nr, lidname, direction
                 `
             })
             .then(sql => this.client.query(sql))

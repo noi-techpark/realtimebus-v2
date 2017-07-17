@@ -24,14 +24,14 @@ module.exports = class BusStops {
                 rec_ort.ort_name,
                 rec_ort.ort_ref_ort_name,
                 COALESCE(vpa.delay_sec, 0) delay_sec,
-                data.data_seconds_to_hhmm(frt_start + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS time_est,
-                li_ri_nr,
+                data.data_seconds_to_hhmm(departure + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) AS time_est,
+                direction,
                 ST_AsGeoJSON(rec_ort.the_geom) as json_geom
                 
             FROM data.vehicle_positions vpa
             
             INNER JOIN data.rec_frt
-                ON rec_frt.teq_nummer=vpa.trip
+                ON rec_frt.teq=vpa.trip
                 
             INNER JOIN data.rec_lid
                 ON rec_frt.line=rec_lid.line

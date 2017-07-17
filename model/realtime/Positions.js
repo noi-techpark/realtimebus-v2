@@ -49,9 +49,9 @@ module.exports = class Positions {
                         rec_frt.variant,
                         line_name,
                         insert_date,
-                        li_r,
-                        li_g,
-                        li_b,
+                        red,
+                        green,
+                        blue,
                         next_rec_ort.ort_nr AS ort_nr,
                         next_rec_ort.onr_typ_nr AS onr_typ_nr,
                         next_rec_ort.ort_name AS ort_name,
@@ -62,7 +62,7 @@ module.exports = class Positions {
                     FROM data.vehicle_positions
                     
                     INNER JOIN data.rec_frt
-                        ON vehicle_positions.trip=rec_frt.teq_nummer
+                        ON vehicle_positions.trip=rec_frt.teq
                         
                     INNER JOIN data.rec_lid
                         ON rec_frt.line=rec_lid.line
@@ -96,7 +96,7 @@ module.exports = class Positions {
                 for (let row of result.rows) {
                     // noinspection EqualityComparisonWithCoercionJS
                     let geometry = row.json_extrapolation_geom != null ? JSON.parse(row.json_extrapolation_geom) : JSON.parse(row.json_geom);
-                    let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
+                    let hex = ((1 << 24) + (row.red << 16) + (row.green << 8) + row.blue).toString(16).slice(1);
 
                     row.hexcolor = '#' + hex;
                     row.hexcolor2 = hex.toUpperCase();

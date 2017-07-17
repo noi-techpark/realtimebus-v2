@@ -81,9 +81,10 @@ function startServer() {
     });
 
     app.group("/v1", (router) => {
-        router.get("/positions", function (req, res) {
-            v1Realtime.positions(req, res)
-        });
+
+        router.get("/positions", v1Realtime.positions);
+        router.get("/positions/lines/:lines", v1Realtime.positions);
+        router.get("/positions/vehicle/:vehicle", v1Realtime.positions);
 
         router.post("/receiver", function (req, res) {
             v1Receiver.updatePositions(req, res)
@@ -103,12 +104,14 @@ function startServer() {
     });
 
     app.group("/app", (router) => {
-        router.get("/positions", function (req, res) {
-            appRealtime.positions(req, res)
-        });
+
+        router.get("/realtime", appRealtime.positions);
+        router.get("/realtime/lines/:lines", appRealtime.positions);
+        router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
     });
 
     app.group("/v2", (router) => {
+
         router.get("/positions", function (req, res) {
             v2Realtime.positions(req, res)
         });

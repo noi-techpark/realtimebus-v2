@@ -16,19 +16,32 @@ module.exports = class Positions {
         this.lines = lines;
     }
 
+    setVehicle(vehicle) {
+        this.vehicle = vehicle;
+    }
+
     getAll() {
         return Promise.resolve()
             .then(() => {
-                let whereLines = '';
+                let lineFilter = '';
+                let vehicleFilter = '';
 
                 if (typeof this.lines !== 'undefined' && this.lines.length > 0) {
-                    console.info(`Filter is enabled: lines='${this.lines}'`);
-                    whereLines = " AND (" + LineUtils.whereLines('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
+                    console.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
+                    lineFilter = " AND (" + LineUtils.whereLines('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (this.vehicle != null) {
+                    console.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
+
+                    // TODO: Find a better way to perform this filter.
+                    vehicleFilter = ` AND (vehicle = '${this.vehicle}' OR vehicle = '${this.vehicle} BZ' OR vehicle = '${this.vehicle} ME')`;
                 }
 
                 return `
-                    SELECT
-                    rec_frt.trip,
+                    SELECT DISTINCT (vehicle),
+                        rec_frt.trip,
                         gps_date,
                         delay_sec,
                         vehicle,
@@ -69,7 +82,11 @@ module.exports = class Positions {
                         
                     WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
                     -- AND vehicle_position_act.status='r'
-                    ${whereLines}
+                    
+                    ${lineFilter}
+                    ${vehicleFilter}
+                    
+                    ORDER BY gps_date
                `
             })
             .then(sql => connection.query(sql))

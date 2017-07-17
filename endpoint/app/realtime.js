@@ -16,10 +16,16 @@ module.exports = {
                     .then(() => {
                         let positions = new NewPositions(client);
 
-                        let lines = req.query.lines;
+                        let lines = req.params.lines;
+                        let vehicle = req.params.vehicle;
 
                         if (typeof lines !== 'undefined' && lines.length > 0) {
                             positions.setLines(LineUtils.getLinesFromQuery(lines));
+                        }
+
+                        // noinspection EqualityComparisonWithCoercionJS
+                        if (vehicle != null) {
+                            positions.setVehicle(vehicle);
                         }
 
                         return positions.getAll();

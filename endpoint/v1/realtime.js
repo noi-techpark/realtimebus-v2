@@ -13,10 +13,16 @@ module.exports = {
             let outputFormat = config.database_coordinate_format;
             let positions = new Positions(outputFormat);
 
-            let lines = req.query.lines;
+            let lines = req.params.lines;
+            let vehicle = req.params.vehicle;
 
             if (typeof lines !== 'undefined' && lines.length > 0) {
                 positions.setLines(LineUtils.getLinesFromQuery(lines));
+            }
+
+            // noinspection EqualityComparisonWithCoercionJS
+            if (vehicle != null) {
+                positions.setVehicle(vehicle);
             }
 
             return positions.getAll();

@@ -486,7 +486,7 @@ function fillTeqData(client) {
 function calculateTravelTimes(client) {
     return Promise.resolve()
         .then(() => {
-            return client.query(`DELETE FROM data.travel_times;`)
+            return client.query("DELETE FROM data.travel_times;")
         })
         .then(() => {
             return client.query(`SELECT data.data_fill_travel_times();`)

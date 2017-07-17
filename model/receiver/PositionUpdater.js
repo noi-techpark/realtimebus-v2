@@ -6,7 +6,7 @@ const moment = require("moment");
 module.exports = {
 
     checkIfInternal: function (connection, tripId, feature) {
-        logger.log(`checkIfInternal() trip=${tripId}`);
+        // logger.log(`checkIfInternal() trip=${tripId}`);
 
         return Promise.resolve(`
                 SELECT variant
@@ -26,7 +26,7 @@ module.exports = {
     },
 
     insertIntoDatabase: function (connection, tripId, feature) {
-        logger.log(`insertIntoDatabase() trip=${tripId}`);
+        // logger.log(`insertIntoDatabase() trip=${tripId}`);
 
         return Promise.resolve(`
                 SELECT COUNT(*) AS cnt FROM data.vehicle_positions
@@ -35,7 +35,9 @@ module.exports = {
             .then(sql => connection.query(sql))
             .then(result => {
                 if (result.rows[0].cnt > 0) {
-                    logger.log(`Trip ${tripId} already in database, updating...`);
+                    logger.log(`Updating trip ${tripId}`);
+
+                    // logger.log(`Trip ${tripId} already in database, updating...`);
 
                     return `
                         UPDATE data.vehicle_positions SET
@@ -52,7 +54,9 @@ module.exports = {
                         WHERE trip=${tripId}
                     `;
                 } else {
-                    logger.debug(`Trip ${tripId} not yet in database, inserting...`);
+                    // logger.debug(`Trip ${tripId} not yet in database, inserting...`);
+
+                    logger.log(`Inserting trip ${tripId}`);
 
                     return `
                         INSERT INTO data.vehicle_positions (
@@ -84,8 +88,8 @@ module.exports = {
                 }
             })
             .then(sql => connection.query(sql))
-            .then(() => {
-                logger.debug(`Inserted/Updated trip ${tripId}`);
-            })
+            // .then(() => {
+                // logger.log(`Inserted/Updated trip ${tripId}`);
+            //})
     }
 };

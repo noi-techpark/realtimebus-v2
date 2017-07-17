@@ -347,10 +347,11 @@ CREATE FUNCTION data_extrapolate_positions() RETURNS INTEGER
             num_extrapolations = num_extrapolations + 1;
         END IF;
     END LOOP;
-    RAISE INFO 'inserted % records processed, extrapolated % new positions',
-            num_frts, num_extrapolations;
+
+    -- RAISE INFO 'inserted % records processed, extrapolated % new positions',
+    --         num_frts, num_extrapolations;
     
-    RETURN num_frts;
+    RETURN num_extrapolations;
 END;
 $$;
 

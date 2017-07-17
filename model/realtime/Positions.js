@@ -40,20 +40,19 @@ module.exports = class Positions {
 
                 return `
                     SELECT DISTINCT (vehicle),
-                        rec_frt.trip,
+                        rec_frt.trip::int AS frt_fid,
                         gps_date,
                         delay_sec,
                         depot,
                         vehicle,
-                        rec_frt.line,
-                        rec_frt.variant,
-                        line_name,
+                        rec_frt.line AS li_nr,
+                        rec_frt.variant AS str_li_var,
+                        line_name AS lidname,
                         insert_date,
-                        red,
-                        green,
-                        blue,
+                        red AS li_r,
+                        green AS li_g,
+                        blue AS li_b,
                         next_rec_ort.ort_nr AS ort_nr,
-                        next_rec_ort.onr_typ_nr AS onr_typ_nr,
                         next_rec_ort.ort_name AS ort_name,
                         next_rec_ort.ort_ref_ort_name AS ort_ref_ort_name,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
@@ -96,16 +95,10 @@ module.exports = class Positions {
                 for (let row of result.rows) {
                     // noinspection EqualityComparisonWithCoercionJS
                     let geometry = row.json_extrapolation_geom != null ? JSON.parse(row.json_extrapolation_geom) : JSON.parse(row.json_geom);
-                    let hex = ((1 << 24) + (row.red << 16) + (row.green << 8) + row.blue).toString(16).slice(1);
+                    let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
 
                     row.hexcolor = '#' + hex;
                     row.hexcolor2 = hex.toUpperCase();
-
-                    row.frt_fid = parseInt(row.trip);
-                    row.li_nr = parseInt(row.line);
-                    row.lidname = row.line_name;
-                    row.str_li_var = parseInt(row.variant);
-                    row.vehicleCode = row.vehicle;
 
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;

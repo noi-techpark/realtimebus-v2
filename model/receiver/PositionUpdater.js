@@ -77,7 +77,7 @@ module.exports = class PositionUpdater {
                             ${feature.properties.interpolation_linear_ref},
                             ${feature.geometry_sql},
                             SPLIT_PART('${feature.properties.vehicleCode}', ' ', 1)::int,
-                            SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)'
+                            SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)
                         )
                    `;
                 }

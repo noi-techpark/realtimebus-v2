@@ -50,7 +50,7 @@ module.exports = class PositionsApp {
                 let lineFilter = '';
                 let vehicleFilter = '';
 
-                if (typeof this.lines !== 'undefined' && this.lines.length > 0) {
+                if (!utils.isEmpty(this.lines)) {
                     console.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
                 }
@@ -58,9 +58,7 @@ module.exports = class PositionsApp {
                 // noinspection EqualityComparisonWithCoercionJS
                 if (this.vehicle != null) {
                     console.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
-
-                    // TODO: Find a better way to perform this filter.
-                    vehicleFilter = ` AND (vehicle = '${this.vehicle}' OR vehicle = '${this.vehicle} BZ' OR vehicle = '${this.vehicle} ME')`;
+                    vehicleFilter = ` AND vehicle = ${this.vehicle}`;
                 }
 
                 // TODO: Check if 'updated_min_ago' and 'inserted_min_ago' are correct

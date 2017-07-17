@@ -2,6 +2,7 @@
 
 const connection = require("../../database/database");
 const config = require("../../config");
+const utils = require("../../util/utils");
 
 const FeatureList = require("../../model/realtime/FeatureList");
 const LineUtils = require("../line/LineUtils");
@@ -26,7 +27,7 @@ module.exports = class Positions {
                 let lineFilter = '';
                 let vehicleFilter = '';
 
-                if (typeof this.lines !== 'undefined' && this.lines.length > 0) {
+                if (!utils.isEmpty(this.lines)) {
                     console.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
                 }
@@ -34,7 +35,6 @@ module.exports = class Positions {
                 // noinspection EqualityComparisonWithCoercionJS
                 if (this.vehicle != null) {
                     console.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
-
                     vehicleFilter = ` AND SPLIT_PART(vehicle, ' ', 1) IN (${this.vehicle})`;
                 }
 

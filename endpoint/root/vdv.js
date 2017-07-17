@@ -25,10 +25,8 @@ const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
 const VALIDITY = "BASIS_VER_GUELTIGKEIT.X10";
 const CALENDAR = "FIRMENKALENDER.X10";
 const PATHS = "LID_VERLAUF.X10";
-const AREAS = "MENGE_BEREICH.X10";
 const TRIP_TYPES = "MENGE_FAHRTART.X10";
 const TRIP_PEEK_TIMES = "MENGE_FGR.X10";
-const VEHICLE_TYPES = "MENGE_FZG_TYP.X10";
 const LINE_SERVICES = "MENGE_LEISTUNGSART.X10";
 const STOP_TYPES = "MENGE_ONR_TYP.X10";
 const BUS_STOP_TYPES = "MENGE_ORT_TYP.X10";
@@ -45,16 +43,15 @@ const BUS_STOPS = "REC_ORT.X10";
 const BUS_STOP_CONNECTIONS = "REC_SEL.X10";
 const TRAVEL_TIMES = "SEL_FZT_FELD.X10";
 const TEQ_MAPPING = "teqnummern.csv";
-const SERVICE_PROVIDERS = "ZUL_VERKEHRSBETRIEB.X10";
 
 const VALID_FROM = "VER_GUELTIGKEIT";
 
 const VDV_COORDINATES_FORMAT = config.coordinate_wgs84;
 const DB_COORDINATES_FORMAT = 25832;
 
-const vdvFileList = [VALIDITY, DAY_TYPES, CALENDAR, LINES, BUS_STOPS, PATHS, AREAS, TRIP_TYPES, TRIP_PEEK_TIMES,
-    VEHICLE_TYPES, LINE_SERVICES, STOP_TYPES, BUS_STOP_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, TRIP_INFO_EXTENDED,
-    BUS_STOP_STOP_TIMES, STOP_POINTS, VARIANTS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES, SERVICE_PROVIDERS];
+const vdvFileList = [VALIDITY, DAY_TYPES, CALENDAR, LINES, BUS_STOPS, PATHS, TRIP_TYPES, TRIP_PEEK_TIMES, LINE_SERVICES,
+    STOP_TYPES, BUS_STOP_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, TRIP_INFO_EXTENDED, BUS_STOP_STOP_TIMES,
+    STOP_POINTS, VARIANTS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES];
 
 let response = {};
 let sqlTruncateChain = [];
@@ -205,7 +202,7 @@ module.exports = {
         return Promise.resolve()
             .then(() => {
                 return client.query(`
-                    INSERT INTO data.menge_fgr (basis_version, fgr_nr, fgr_text)
+                    INSERT INTO data.rec_frt (trip_type)
                         (
                         SELECT 1, rec_frt.fgr_nr, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
@@ -216,8 +213,7 @@ module.exports = {
                         ORDER BY rec_frt.fgr_nr
                         );
                     `);
-            })
-            .then(() => {
+            }).then(() => {
                 return client.query(`INSERT INTO data.rec_lid (basis_version, line, variant, line_name)
                         (
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
@@ -230,8 +226,7 @@ module.exports = {
                         ORDER BY rec_frt.line, rec_frt.variant
                         );
                     `)
-            })
-            .then(() => {
+            }).then(() => {
                 return client.query(`INSERT INTO data.rec_lid (basis_version, line, variant, line_name)
                         (
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')

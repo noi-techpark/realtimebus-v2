@@ -71,11 +71,10 @@ database.connect()
 function startServer() {
     app.post("/vdv", v1Vdv.upload);
 
-    app.group("/v1", (router) => {
-
-        router.get("/positions", v1Realtime.positions);
-        router.get("/positions/lines/:lines", v1Realtime.positions);
-        router.get("/positions/vehicle/:vehicle", v1Realtime.positions);
+    app.group("/geojson", (router) => {
+        router.get("/realtime", v1Realtime.positions);
+        router.get("/realtime/line/:lines", v1Realtime.positions);
+        router.get("/realtime/vehicle/:vehicle", v1Realtime.positions);
 
         router.post("/receiver", v1Receiver.updatePositions);
 
@@ -85,7 +84,6 @@ function startServer() {
     });
 
     app.group("/app", (router) => {
-
         router.get("/realtime", appRealtime.positions);
         router.get("/realtime/lines/:lines", appRealtime.positions);
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);

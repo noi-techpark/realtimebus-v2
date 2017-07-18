@@ -3,6 +3,8 @@
 require('express-group-routes');
 require("./util/utils");
 
+const raven = require('raven');
+
 const bodyParser = require('body-parser');
 const database = require("./database/database");
 const express = require('express');
@@ -42,11 +44,18 @@ function checkForRunningImport(req, res, next) {
 process.on('uncaughtException', (err) => {
     logger.error('Caught exception: ');
     console.log(err);
-});
 
+    raven.captureException(err);
+});
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
 });
+
+try {
+    raven.config('https://405c5b47fe2c4573949031e156954ed3:d701aea274ea4f8599cfa60b29b76185@sentry.io/192719').install();
+} catch (error) {
+    logger.error("Failed to set up raven")
+}
 
 const app = express();
 
@@ -60,14 +69,13 @@ app.use(bodyParser.raw({
 
 app.set('jsonp callback name', 'jsonp');
 
-database.connect()
-    .then(() => {
-        logger.warn("Connected to database");
+database.connect().then(() => {
+    logger.warn("Connected to database");
 
-        new ExtrapolatePositions().run();
+    new ExtrapolatePositions().run();
 
-        startServer()
-    });
+    startServer()
+});
 
 function startServer() {
     app.post("/vdv", v1Vdv.upload);

@@ -64,9 +64,9 @@ module.exports = class Positions {
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
                         gps_date AS updated,
-                        li_r,
-                        li_g,
-                        li_b
+                        red AS li_r,
+                        green AS li_g,
+                        blue AS li_b
                         
                     FROM data.vehicle_positions
                     

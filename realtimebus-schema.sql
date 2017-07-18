@@ -490,37 +490,6 @@ END;
 $$;
 
 
---
--- TOC entry 991 (class 1255 OID 732680)
--- Dependencies: 1412 7
--- Name: data_seconds_to_hhmm(INTEGER); Type: FUNCTION; Schema: data; Owner: -
---
-
-CREATE FUNCTION data_seconds_to_hhmm(seconds INTEGER) RETURNS text
-    LANGUAGE plpgsql IMMUTABLE COST 10
-    AS $$
-DECLARE
-    time_text TEXT;
-    minutes INTEGER;
-    hours INTEGER;
-BEGIN
-    minutes = round(seconds/60::float)::INTEGER;
-    hours = floor(minutes/60::float)::INTEGER;
-    time_text = to_char(hours, 'FM09') || ':' || to_char(minutes % 60, 'FM09');
-    RETURN time_text;
-END;
-$$;
-
-
---
--- TOC entry 3810 (class 0 OID 0)
--- Dependencies: 991
--- Name: FUNCTION data_seconds_to_hhmm(seconds INTEGER); Type: COMMENT; Schema: data; Owner: -
---
-
-COMMENT ON FUNCTION data_seconds_to_hhmm(seconds INTEGER) IS 'Convert seconds from midnight to time formatted as HH:MM';
-
-
 SET default_with_oids = false;
 
 --

@@ -42,7 +42,7 @@ module.exports = class ExtrapolatePositions {
                             now = new Date().getTime();
 
                             if (now - scriptStart > this.lifeTime) {
-                                console.error("End of extrapolation script life reached");
+                                logger.error("End of extrapolation script life reached");
                             } else {
                                 loop();
                             }

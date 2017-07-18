@@ -74,7 +74,6 @@ module.exports = {
                         return message.encode().toBuffer();
                     })
                     .then(buffer => {
-                        console.log("Sending response");
                         res.status(200).header("Content-Type", "application/x-protobuf").send(buffer);
                     })
                     .catch(error => {

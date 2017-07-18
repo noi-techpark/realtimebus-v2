@@ -74,7 +74,7 @@ function startServer() {
 
     app.group("/geojson", (router) => {
         router.get("/realtime", v1Realtime.positions);
-        router.get("/realtime/line/:lines", v1Realtime.positions);
+        router.get("/realtime/lines/:lines", v1Realtime.positions);
         router.get("/realtime/vehicle/:vehicle", v1Realtime.positions);
 
         router.post("/receiver", v1Receiver.updatePositions);
@@ -102,6 +102,7 @@ function startServer() {
 
 
     app.use(function (req, res) {
+        logger.error(`404: ${req.method} ${req.url}`);
         res.status(404).json({
             error: {
                 code: 404,

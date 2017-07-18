@@ -5,12 +5,13 @@ require("./util/utils");
 
 const raven = require('raven');
 
-const bodyParser = require('body-parser');
 const database = require("./database/database");
-const express = require('express');
-const fs = require('fs');
 const logger = require("./util/logger");
 const config = require("./config");
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
 
 const v1Realtime = require("./endpoint/geojson/realtime");
 const v1Lines = require("./endpoint/geojson/lines");
@@ -29,7 +30,6 @@ function logRequests(req, res, next) {
     logger.warn(`${req.method} ${req.url}`);
     next();
 }
-
 function checkForRunningImport(req, res, next) {
     if (config.vdv_import_running) {
         logger.info(`Import is running, skipping request '${req.url}'`);
@@ -72,9 +72,8 @@ app.set('jsonp callback name', 'jsonp');
 database.connect().then(() => {
     logger.warn("Connected to database");
 
-    new ExtrapolatePositions().run();
-
-    startServer()
+    startCommands();
+    startServer();
 });
 
 function startServer() {
@@ -123,4 +122,8 @@ function startServer() {
     let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
+}
+
+function startCommands() {
+    new ExtrapolatePositions().run();
 }

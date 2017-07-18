@@ -58,8 +58,6 @@ module.exports.updatePositions = function (req, res) {
 
                         return result
                     }).then(() => {
-                        return PositionUpdater.checkIfInternal(client, tripId, feature)
-                    }).then(() => {
                         return PositionUpdater.insertIntoDatabase(client, tripId, feature)
                     }).catch(error => {
                         console.log(error);

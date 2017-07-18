@@ -119,7 +119,8 @@ module.exports = class PositionsApp {
                         AND lid_verlauf_next.ort_nr=next_rec_ort.ort_nr
                         
                     WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
-                    -- AND vehicle_positions.status='r'
+                        -- AND str_li_var < 990
+                        -- AND vehicle_positions.status='r'
                     
                     ${lineFilter}
                     ${vehicleFilter}

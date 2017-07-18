@@ -5,7 +5,7 @@ const moment = require("moment");
 
 module.exports = {
 
-    checkIfInternal: function (connection, tripId, feature) {
+    /*checkIfInternal: function (connection, tripId, feature) {
         // logger.log(`checkIfInternal() trip=${tripId}`);
 
         return Promise.resolve(`
@@ -23,7 +23,7 @@ module.exports = {
                     throw(`Internal trip: ${result.rows[0].variant}`);
                 }
             })
-    },
+    },*/
 
     insertIntoDatabase: function (connection, tripId, feature) {
         // logger.log(`insertIntoDatabase() trip=${tripId}`);

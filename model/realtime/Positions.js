@@ -40,24 +40,36 @@ module.exports = class Positions {
 
                 return `
                     SELECT DISTINCT (vehicle),
-                        announcement,
-                        rec_frt.trip::int AS frt_fid,
-                        gps_date,
+                        remark AS bemerkung,
                         delay_sec,
                         depot,
-                        vehicle,
+                        direction,
+                        rec_frt.trip::int AS frt_fid,
+                        gps_date,
+                        leistungsart_text,
+                        upper(hex) AS line_color_hex,
+                        hue AS line_color_hue,
+                        insert_date,
                         rec_frt.line AS li_nr,
                         rec_frt.variant AS str_li_var,
-                        line_name AS lidname,
-                        insert_date,
-                        red AS li_r,
-                        green AS li_g,
                         blue AS li_b,
+                        line_name AS lidname,
+                        green AS li_g,
+                        li_kuerzel,
+                        vehicle_positions.li_lfd_nr + 1 AS li_lfd_nr,
+                        red AS li_r,
                         next_rec_ort.ort_nr AS ort_nr,
+                        next_rec_ort.ort_pos_breite,
+                        next_rec_ort.ort_pos_laenge,
+                        next_rec_ort.ort_ref_ort,
+                        next_rec_ort.ort_ref_ort_kuerzel,
                         next_rec_ort.ort_name AS ort_name,
                         next_rec_ort.ort_ref_ort_name AS ort_ref_ort_name,
+                        status,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
-                        ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom
+                        ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
+                        vehicle,
+                        concat(vehicle, ' ' , depot) AS vehiclecode
                         
                     FROM data.vehicle_positions
                     
@@ -116,11 +128,9 @@ module.exports = class Positions {
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
 
-                    /*delete row.trip;
+                    delete row.trip;
                     delete row.line;
                     delete row.line_name;
-                    delete row.variant;
-                    delete row.vehicle;*/
 
                     featureList.add(row, geometry);
                 }

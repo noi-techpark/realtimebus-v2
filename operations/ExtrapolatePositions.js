@@ -36,7 +36,7 @@ module.exports = class ExtrapolatePositions {
                         let timeLeft = Math.max(1, period - (now - iterationStart));
                         let updateText = `updated ${result.rows[0].data_extrapolate_positions} positions`;
 
-                        logger.debug(`Loops: ${loops++}, time left: ${timeLeft} (${now - scriptStart}), ${updateText}`);
+                        logger.log(`Loops: ${loops++}, time left: ${timeLeft} (${now - scriptStart}), ${updateText}`);
 
                         setTimeout(function () {
                             now = new Date().getTime();

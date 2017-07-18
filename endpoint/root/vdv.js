@@ -254,7 +254,7 @@ module.exports = {
                         });
                     })
                     .then(() => {
-                        logger.warn("Import finished!");
+                        logger.warn("Import finished");
 
                         config.vdv_import_running = false;
 
@@ -531,7 +531,7 @@ function parseVdvFile(file, data, cb) {
                     c = c.replace("AUFTRAGGEBER_NR", "client");
                     c = c.replace("BASIS_VERSION", "version");
                     c = c.replace("BEMERKUNG", "remark");
-                    c = c.replace("FAHRTART_NR", "fahrtart_nr");
+                    c = c.replace("FAHRTART_NR", "trip_type");
                     c = c.replace("FGR_NR", "trip_time_group");
                     c = c.replace("FREMDUNTERNEHMER_NR", "foreign_company");
                     c = c.replace("FRT_EXT_NR", "trip_external");

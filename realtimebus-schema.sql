@@ -143,36 +143,6 @@ BEGIN
        RETURN 0;
     END IF;
 
--- -- > EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE))
---     -- get departure and arrival time
---     
---     RAISE INFO 'Already at segment end';
---     SELECT MAX(li_lfd_nr) INTO max_li_lfd_nr
---     FROM data.lid_verlauf
---     WHERE lid_verlauf.line=pos_record.line
---     AND lid_verlauf.variant=pos_record.variant;
--- 
---     RAISE INFO 'li_lfd_nr=%, MAX(li_lfd_nr)=%', pos_record.li_lfd_nr, max_li_lfd_nr;
--- 
---     SELECT St_Distance(pos_record.the_geom, rec_ort.the_geom) INTO distance_to_end
---     FROM data.lid_verlauf
---     INNER JOIN data.rec_ort
---         ON lid_verlauf.ort_nr=rec_ort.ort_nr
---         AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
---     WHERE data.lid_verlauf.line=pos_record.line
---     AND lid_verlauf.variant=pos_record.variant
---     AND lid_verlauf.li_lfd_nr=max_li_lfd_nr;
--- 
---     RAISE INFO 'Distance to end is %', distance_to_end;
--- 
---     IF distance_to_end < 30 AND pos_record.arrival_time IS NULL THEN
---         UPDATE data.vehicle_positions
---         SET arrival_time=pos_record.gps_date,
---             status='f'
---         WHERE trip=teq_arg;
---         RETURN 0;
---     END IF;
-
     RAISE DEBUG 'x_act: %, y_act: %, ort_nr: %, next_ort_nr: %, ort_edge_id: %, dx: %, dy: %',
     pos_record.x_act, pos_record.y_act,
     pos_record.ort_nr, pos_record.next_ort_nr, pos_record.ort_edge_id,

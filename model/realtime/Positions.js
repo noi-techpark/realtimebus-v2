@@ -40,6 +40,7 @@ module.exports = class Positions {
 
                 return `
                     SELECT DISTINCT (vehicle),
+                        announcement,
                         rec_frt.trip::int AS frt_fid,
                         gps_date,
                         delay_sec,
@@ -78,6 +79,18 @@ module.exports = class Positions {
                         
                     LEFT JOIN data.line_colors
                         ON rec_frt.line=line_colors.line
+                        
+                    LEFT JOIN data.menge_fahrtart
+                        ON rec_frt.trip_type=menge_fahrtart.trip_type
+                        
+                    LEFT JOIN data.menge_fgr
+                        ON rec_frt.trip_time_group=menge_fgr.trip_time_group
+                        
+                    LEFT JOIN data.menge_leistungsart
+                        ON rec_frt.service=menge_leistungsart.service
+                    
+                    LEFT JOIN data.rec_frt_bedienung
+                        ON rec_frt.trip=rec_frt_bedienung.trip
                         
                     WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
                     -- AND vehicle_positions.status='r'

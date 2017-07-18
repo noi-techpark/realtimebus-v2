@@ -96,7 +96,9 @@ function startServer() {
 
     app.group("/app", (router) => {
         router.get("/realtime", appRealtime.positions);
-        router.get("/realtime/lines/:lines", appRealtime.positions);
+        router.get("/realtime/delays", appRealtime.delays);
+
+        router.get("/realtime/line/:lines", appRealtime.positions);
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
     });
 

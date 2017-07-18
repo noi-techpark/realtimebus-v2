@@ -52,7 +52,7 @@ module.exports = class PositionsApp {
 
                 if (!utils.isEmpty(this.lines)) {
                     console.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
-                    lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
+                    lineFilter = " AND (" + LineUtils.buildForAppSql(this.lines) + ")";
                 }
 
                 // noinspection EqualityComparisonWithCoercionJS

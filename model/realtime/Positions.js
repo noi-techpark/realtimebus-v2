@@ -43,13 +43,13 @@ module.exports = class Positions {
                         remark AS bemerkung,
                         delay_sec,
                         depot,
-                        direction,
+                        direction AS li_ri_nr,
                         rec_frt.trip::int AS frt_fid,
-                        gps_date,
+                        vehicle AS fzg_nr,
                         leistungsart_text,
-                        upper(hex) AS line_color_hex,
-                        hue AS line_color_hue,
-                        insert_date,
+                        upper(hex) AS hexcolor,
+                        hue,
+                        insert_date AS inserted,
                         rec_frt.line AS li_nr,
                         rec_frt.variant AS str_li_var,
                         blue AS li_b,
@@ -59,8 +59,6 @@ module.exports = class Positions {
                         vehicle_positions.li_lfd_nr + 1 AS li_lfd_nr,
                         red AS li_r,
                         next_rec_ort.ort_nr AS ort_nr,
-                        next_rec_ort.ort_pos_breite,
-                        next_rec_ort.ort_pos_laenge,
                         next_rec_ort.ort_ref_ort,
                         next_rec_ort.ort_ref_ort_kuerzel,
                         next_rec_ort.ort_name AS ort_name,
@@ -68,8 +66,7 @@ module.exports = class Positions {
                         status,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
-                        vehicle,
-                        concat(vehicle, ' ' , depot) AS vehiclecode
+                        gps_date AS updated
                         
                     FROM data.vehicle_positions
                     
@@ -122,7 +119,6 @@ module.exports = class Positions {
                     let geometry = row.json_extrapolation_geom != null ? JSON.parse(row.json_extrapolation_geom) : JSON.parse(row.json_geom);
                     let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
 
-                    row.hexcolor = '#' + hex;
                     row.hexcolor2 = hex.toUpperCase();
 
                     delete row.json_geom;
@@ -131,6 +127,7 @@ module.exports = class Positions {
                     delete row.trip;
                     delete row.line;
                     delete row.line_name;
+                    delete row.vehicle;
 
                     featureList.add(row, geometry);
                 }

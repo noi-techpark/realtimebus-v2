@@ -3,12 +3,15 @@
 require('express-group-routes');
 require("./util/utils");
 
-const bodyParser = require('body-parser');
+const raven = require('raven');
+
 const database = require("./database/database");
-const express = require('express');
-const fs = require('fs');
 const logger = require("./util/logger");
 const config = require("./config");
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
 
 const v1Realtime = require("./endpoint/geojson/realtime");
 const v1Lines = require("./endpoint/geojson/lines");
@@ -27,7 +30,6 @@ function logRequests(req, res, next) {
     logger.warn(`${req.method} ${req.url}`);
     next();
 }
-
 function checkForRunningImport(req, res, next) {
     if (config.vdv_import_running) {
         logger.info(`Import is running, skipping request '${req.url}'`);
@@ -42,11 +44,18 @@ function checkForRunningImport(req, res, next) {
 process.on('uncaughtException', (err) => {
     logger.error('Caught exception: ');
     console.log(err);
-});
 
+    raven.captureException(err);
+});
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
 });
+
+try {
+    raven.config('https://405c5b47fe2c4573949031e156954ed3:d701aea274ea4f8599cfa60b29b76185@sentry.io/192719').install();
+} catch (error) {
+    logger.error("Failed to set up raven")
+}
 
 const app = express();
 
@@ -60,14 +69,12 @@ app.use(bodyParser.raw({
 
 app.set('jsonp callback name', 'jsonp');
 
-database.connect()
-    .then(() => {
-        logger.warn("Connected to database");
+database.connect().then(() => {
+    logger.warn("Connected to database");
 
-        new ExtrapolatePositions().run();
-
-        startServer()
-    });
+    startCommands();
+    startServer();
+});
 
 function startServer() {
     app.post("/vdv", v1Vdv.upload);
@@ -115,4 +122,8 @@ function startServer() {
     let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
+}
+
+function startCommands() {
+    new ExtrapolatePositions().run();
 }

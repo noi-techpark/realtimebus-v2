@@ -39,7 +39,7 @@ function checkForRunningImport(req, res, next) {
     next();
 }
 
-process.on('uncaughtException', function (err) {
+process.on('uncaughtException', (err) => {
     logger.error('Caught exception: ');
     console.log(err);
 });
@@ -111,7 +111,7 @@ function startServer() {
     });
 
 
-    let listener = app.listen(88, function () {
+    let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

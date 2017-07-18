@@ -6,28 +6,6 @@ const utils = require("../../util/utils");
 const RealtimeModel = require("./RealtimeModel");
 const LineUtils = require("../line/LineUtils");
 
-// TODO: Add missing properties:
-
-/*
-{
-    "departure": -412,
-    "destination": 5115,
-    "origin": 5120,
-    "path": [
-        5120,
-        5106,
-        5029,
-        5027,
-        5025,
-        5032,
-        5108,
-        5110,
-        5112,
-        5114,
-        5115
-    ]
-}
-*/
 
 module.exports = class PositionsApp {
 
@@ -36,6 +14,7 @@ module.exports = class PositionsApp {
         this.outputFormat = config.coordinate_wgs84;
     }
 
+
     setLines(lines) {
         this.lines = lines;
     }
@@ -43,6 +22,7 @@ module.exports = class PositionsApp {
     setVehicle(vehicle) {
         this.vehicle = vehicle;
     }
+
 
     getBuses() {
         return Promise.resolve()
@@ -65,7 +45,7 @@ module.exports = class PositionsApp {
 
                 return `
                     SELECT DISTINCT ON (vehicle) vehicle,
-                        rec_frt.trip,
+                        rec_frt.trip::int,
                         rec_frt.line,
                         rec_frt.variant,
                         line_name,
@@ -154,7 +134,7 @@ module.exports = class PositionsApp {
                     delete row.json_extrapolation_geom;
 
                     let feature = {
-                        trip: parseInt(row.trip),
+                        trip: row.trip,
 
                         line_id: row.line,
                         line_name: row.line_name,
@@ -180,6 +160,64 @@ module.exports = class PositionsApp {
                         destination: row.destination,
 
                         departure: row.departure
+                    };
+
+                    realtime.add(feature);
+                }
+
+                return realtime.getBusCollection();
+            });
+    }
+
+    getDelays() {
+        return Promise.resolve()
+            .then(() => {
+                // TODO: Check if 'updated_min_ago' and 'inserted_min_ago' are correct
+
+                return `
+                    SELECT DISTINCT ON (vehicle) vehicle,
+                        rec_frt.trip::int,
+                        vehicle,
+                        
+                        ROUND(delay_sec / 60) AS delay_min,
+
+                        next_rec_ort.ort_nr AS bus_stop
+                        
+                    FROM data.vehicle_positions
+
+                    INNER JOIN data.rec_frt
+                        ON vehicle_positions.trip=rec_frt.teq
+
+                    LEFT JOIN data.lid_verlauf lid_verlauf_next
+                        ON rec_frt.line=lid_verlauf_next.line
+                        AND rec_frt.variant=lid_verlauf_next.variant
+                        AND vehicle_positions.li_lfd_nr + 1 = lid_verlauf_next.li_lfd_nr
+
+                    LEFT JOIN data.rec_ort next_rec_ort
+                        ON lid_verlauf_next.onr_typ_nr=next_rec_ort.onr_typ_nr
+                        AND lid_verlauf_next.ort_nr=next_rec_ort.ort_nr
+                        
+                    WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
+                        -- AND str_li_var < 990
+                        -- AND vehicle_positions.status='r'
+                    
+                    ORDER BY vehicle DESC, gps_date DESC
+               `
+            })
+            .then(sql => this.client.query(sql))
+            .then(result => {
+                // console.log(result);
+
+                let realtime = new RealtimeModel();
+
+                for (let row of result.rows) {
+                    // console.log(row);
+
+                    let feature = {
+                        trip: row.trip,
+                        bus_stop: row.bus_stop,
+                        vehicle: row.vehicle,
+                        delay_min: row.delay_min,
                     };
 
                     realtime.add(feature);

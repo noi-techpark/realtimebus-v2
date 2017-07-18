@@ -6,9 +6,11 @@ module.exports = class RealtimeModel {
         this.features = []
     }
 
+
     add(feature) {
         this.features.push(feature);
     }
+
 
     getBuses() {
         return this.features;

@@ -63,7 +63,10 @@ module.exports = class Positions {
                         status,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
-                        gps_date AS updated
+                        gps_date AS updated,
+                        li_r,
+                        li_g,
+                        li_b
                         
                     FROM data.vehicle_positions
                     
@@ -124,6 +127,9 @@ module.exports = class Positions {
                     delete row.trip;
                     delete row.line;
                     delete row.line_name;
+                    delete row.li_r;
+                    delete row.li_g;
+                    delete row.li_b;
                     delete row.vehicle;
 
                     featureList.add(row, geometry);

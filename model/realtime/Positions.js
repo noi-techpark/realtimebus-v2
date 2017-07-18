@@ -39,7 +39,7 @@ module.exports = class Positions {
                 }
 
                 return `
-                    SELECT DISTINCT (vehicle),
+                    SELECT DISTINCT ON (vehicle) vehicle,
                         remark AS bemerkung,
                         delay_sec,
                         depot,
@@ -107,7 +107,7 @@ module.exports = class Positions {
                     ${lineFilter}
                     ${vehicleFilter}
                     
-                    ORDER BY gps_date DESC
+                    ORDER BY vehicle DESC, gps_date DESC
                `
             })
             .then(sql => connection.query(sql))

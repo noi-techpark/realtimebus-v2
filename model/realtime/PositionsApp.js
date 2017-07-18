@@ -64,7 +64,7 @@ module.exports = class PositionsApp {
                 // TODO: Check if 'updated_min_ago' and 'inserted_min_ago' are correct
 
                 return `
-                    SELECT DISTINCT (vehicle),
+                    SELECT DISTINCT ON (vehicle) vehicle,
                         rec_frt.trip,
                         rec_frt.line,
                         rec_frt.variant,
@@ -128,7 +128,7 @@ module.exports = class PositionsApp {
                              vehicle_positions.gps_date, vehicle_positions.insert_date, vehicle_positions.delay_sec, 
                             next_rec_ort.ort_nr, vehicle_positions.the_geom, vehicle_positions.extrapolation_geom
                     
-                    ORDER BY gps_date
+                    ORDER BY vehicle DESC, gps_date DESC
                `
             })
             .then(sql => this.client.query(sql))

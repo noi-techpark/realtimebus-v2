@@ -60,107 +60,105 @@ let sqlCreateChain = [];
 let sqlInsertChain = [];
 let sqlTeqChain = [];
 
-module.exports = {
+module.exports.upload = function (req, res) {
+    let data = [];
 
-    upload: function (req, res) {
-        let data = [];
+    config.vdv_import_running = true;
 
-        config.vdv_import_running = true;
+    return database.connect()
+        .then(client => {
+            return Promise.resolve()
+                .then(() => {
+                    return saveZipFiles(req)
+                })
+                .then(() => {
+                    return parseVdvFiles(data)
+                })
+                .then(() => {
+                    return new Promise(function (resolve) {
+                        data.forEach(function (file) {
+                            //noinspection FallThroughInSwitchStatementJS
+                            switch (file.name) {
+                                case VALIDITY:
+                                    response.data_valid_from = moment(file.rows[0][file.columns.indexOf(VALID_FROM)]).tz("Europe/Rome").format();
+                                    logger.info(`Data is valid as of ${response.data_valid_from}`);
+                                    break;
+                                case CALENDAR:
+                                    response.calendar_days_amount = file.rows.length;
+                                    response.calendar_days_first = moment(file.rows[0][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
+                                    response.calendar_days_last = moment(file.rows[file.rows.length - 1][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
 
-        return database.connect()
-            .then(client => {
-                return Promise.resolve()
-                    .then(() => {
-                        return saveZipFiles(req)
-                    })
-                    .then(() => {
-                        return parseVdvFiles(data)
-                    })
-                    .then(() => {
-                        return new Promise(function (resolve) {
-                            data.forEach(function (file) {
-                                //noinspection FallThroughInSwitchStatementJS
-                                switch (file.name) {
-                                    case VALIDITY:
-                                        response.data_valid_from = moment(file.rows[0][file.columns.indexOf(VALID_FROM)]).tz("Europe/Rome").format();
-                                        logger.info(`Data is valid as of ${response.data_valid_from}`);
-                                        break;
-                                    case CALENDAR:
-                                        response.calendar_days_amount = file.rows.length;
-                                        response.calendar_days_first = moment(file.rows[0][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
-                                        response.calendar_days_last = moment(file.rows[file.rows.length - 1][file.columns.indexOf('BETRIEBSTAG')]).tz("Europe/Rome").format();
+                                    logger.info(`Calendar contains ${file.rows.length} days.`);
 
-                                        logger.info(`Calendar contains ${file.rows.length} days.`);
+                                    if (response.data_valid_from !== response.calendar_days_first) {
+                                        logger.warn("Validity begin of uploaded data and first day in calendar do not match. Did you mess up the previous upload?");
+                                    }
 
-                                        if (response.data_valid_from !== response.calendar_days_first) {
-                                            logger.warn("Validity begin of uploaded data and first day in calendar do not match. Did you mess up the previous upload?");
-                                        }
+                                    if (response.calendar_days_first === response.calendar_days_last) {
+                                        logger.warn("The first day in the calendar is equal to the last one. Are you sure you uploaded the correct calendar data?");
+                                    }
+                                default:
+                                    // CREATE
+                                    let sql1 = `CREATE TABLE IF NOT EXISTS data.${file.table.toLowerCase()} (`;
 
-                                        if (response.calendar_days_first === response.calendar_days_last) {
-                                            logger.warn("The first day in the calendar is equal to the last one. Are you sure you uploaded the correct calendar data?");
-                                        }
-                                    default:
-                                        // CREATE
-                                        let sql1 = `CREATE TABLE IF NOT EXISTS data.${file.table.toLowerCase()} (`;
+                                    file.columns.forEach(function (column) {
+                                        sql1 += `${column} ${file.formats[file.columns.indexOf(column)]}, `
+                                    });
 
-                                        file.columns.forEach(function (column) {
-                                            sql1 += `${column} ${file.formats[file.columns.indexOf(column)]}, `
+                                    sql1 = sql1.slice(0, -2) + ");";
+
+                                    sqlCreateChain.push(sql1);
+
+                                    // TRUNCATE
+                                    sqlTruncateChain.push(`TRUNCATE TABLE data.${file.table.toLowerCase()} CASCADE;`);
+
+                                    // INSERT
+                                    let sql2 = `INSERT INTO data.${file.table.toLowerCase()} VALUES `;
+
+                                    file.rows.forEach(function (row) {
+                                        sql2 += '(';
+
+                                        row.forEach(function (cell) {
+                                            if (cell === null) {
+                                                sql2 += `null, `;
+                                                return
+                                            }
+
+                                            cell = cell.replace(/'/g, "''");
+                                            sql2 += `'${cell}', `
                                         });
 
-                                        sql1 = sql1.slice(0, -2) + ");";
+                                        sql2 = sql2.slice(0, -2) + '), ';
+                                    });
 
-                                        sqlCreateChain.push(sql1);
+                                    sql2 = sql2.slice(0, -2);
 
-                                        // TRUNCATE
-                                        sqlTruncateChain.push(`TRUNCATE TABLE data.${file.table.toLowerCase()} CASCADE;`);
+                                    sqlInsertChain.push(sql2);
 
-                                        // INSERT
-                                        let sql2 = `INSERT INTO data.${file.table.toLowerCase()} VALUES `;
+                                    break;
+                            }
+                        });
 
-                                        file.rows.forEach(function (row) {
-                                            sql2 += '(';
-
-                                            row.forEach(function (cell) {
-                                                if (cell === null) {
-                                                    sql2 += `null, `;
-                                                    return
-                                                }
-
-                                                cell = cell.replace(/'/g, "''");
-                                                sql2 += `'${cell}', `
-                                            });
-
-                                            sql2 = sql2.slice(0, -2) + '), ';
-                                        });
-
-                                        sql2 = sql2.slice(0, -2);
-
-                                        sqlInsertChain.push(sql2);
-
-                                        break;
-                                }
-                            });
-
-                            resolve()
-                        })
+                        resolve()
                     })
-                    .then(() => {
-                        return insertVdvData(client)
-                    })
-                    .then(() => {
-                        return fillConfigTable(client)
-                    })
-                    .then(() => {
-                        return performOtherQueries(client)
-                    })
-                    .then(() => {
-                        return fillTeqData(client)
-                    })
-                    .then(() => {
-                        return calculateTravelTimes(client)
-                    })
-                    .then(() => {
-                        return client.query(`
+                })
+                .then(() => {
+                    return insertVdvData(client)
+                })
+                .then(() => {
+                    return fillConfigTable(client)
+                })
+                .then(() => {
+                    return performOtherQueries(client)
+                })
+                .then(() => {
+                    return fillTeqData(client)
+                })
+                .then(() => {
+                    return calculateTravelTimes(client)
+                })
+                .then(() => {
+                    return client.query(`
                             INSERT INTO data.frt_ort_last (trip, onr_typ_nr, ort_nr)
                                 (
                                 SELECT DISTINCT ON (trip) trip, onr_typ_nr, ort_nr
@@ -171,9 +169,9 @@ module.exports = {
                                 ORDER BY trip, li_lfd_nr DESC
                                 );
                         `);
-                    })
-                    .then(() => {
-                        return client.query(`
+                })
+                .then(() => {
+                    return client.query(`
                         UPDATE data.rec_ort
                             SET the_geom =
                                 ST_Transform(
@@ -185,9 +183,9 @@ module.exports = {
                                     ), ${DB_COORDINATES_FORMAT}
                                 );
                         `);
-                    })
-                    .then(() => {
-                        return client.query(`
+                })
+                .then(() => {
+                    return client.query(`
                             UPDATE data.lid_verlauf
                             SET the_geom=ort_edges.the_geom
                             FROM data.lid_verlauf verlauf_next, data.ort_edges
@@ -199,9 +197,9 @@ module.exports = {
                                     AND verlauf_next.ort_nr=ort_edges.end_ort_nr
                                     AND verlauf_next.onr_typ_nr=ort_edges.end_onr_typ_nr;
                         `);
-                    })
-                    .then(() => {
-                        return client.query(`
+                })
+                .then(() => {
+                    return client.query(`
                             UPDATE data.lid_verlauf
                             SET the_geom =
                                 (
@@ -227,9 +225,9 @@ module.exports = {
                                 )
                             WHERE lid_verlauf.the_geom IS NULL;
                         `)
-                    })
-                    .then(() => {
-                        return client.query(`
+                })
+                .then(() => {
+                    return client.query(`
                             UPDATE data.rec_lid
                             SET the_geom =
                                 (SELECT
@@ -241,44 +239,43 @@ module.exports = {
                                     AND lid_verlauf.variant=rec_lid.variant
                                 );
                         `)
-                    })
-                    .then(() => {
-                        return new Promise(function (resolve) {
-                            http.get({
-                                host: 'mail-pool.appspot.com',
-                                port: 80,
-                                path: '/sasa/vdv/import/success'
-                            });
-
-                            resolve()
+                })
+                .then(() => {
+                    return new Promise(function (resolve) {
+                        http.get({
+                            host: 'mail-pool.appspot.com',
+                            port: 80,
+                            path: '/sasa/vdv/import/success'
                         });
-                    })
-                    .then(() => {
-                        logger.warn("Import finished");
 
-                        config.vdv_import_running = false;
-
-                        response.success = true;
-                        res.status(200).json(Utils.sortObject(response))
-                    })
-                    .catch(err => {
-                        logger.error("Import failed!");
-                        logger.error(err);
-
-                        config.vdv_import_running = false;
-
-                        let status = err.status || 500;
-
-                        res.status(status).json({success: false, error: err})
+                        resolve()
                     });
-            })
-            .catch(error => {
-                config.vdv_import_running = false;
+                })
+                .then(() => {
+                    logger.warn("Import finished");
 
-                logger.error(`Error acquiring client: ${error}`);
-                res.status(500).jsonp({success: false, error: error})
-            })
-    }
+                    config.vdv_import_running = false;
+
+                    response.success = true;
+                    res.status(200).json(Utils.sortObject(response))
+                })
+                .catch(err => {
+                    logger.error("Import failed!");
+                    logger.error(err);
+
+                    config.vdv_import_running = false;
+
+                    let status = err.status || 500;
+
+                    res.status(status).json({success: false, error: err})
+                });
+        })
+        .catch(error => {
+            config.vdv_import_running = false;
+
+            logger.error(`Error acquiring client: ${error}`);
+            res.status(500).jsonp({success: false, error: error})
+        })
 };
 
 

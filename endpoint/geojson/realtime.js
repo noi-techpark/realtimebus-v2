@@ -7,30 +7,27 @@ const utils = require("../../util/utils");
 const LineUtils = require("../../model/line/LineUtils");
 const Positions = require("../../model/realtime/Positions");
 
-module.exports = {
+module.exports.positions = function (req, res) {
+    Promise.resolve().then(() => {
+        let positions = new Positions();
 
-    positions: function (req, res) {
-        Promise.resolve().then(() => {
-            let positions = new Positions();
+        let lines = req.params.lines;
+        let vehicle = req.params.vehicle;
 
-            let lines = req.params.lines;
-            let vehicle = req.params.vehicle;
+        if (!utils.isEmpty(lines)) {
+            positions.setLines(LineUtils.fromExpressQuery(lines));
+        }
 
-            if (!utils.isEmpty(lines)) {
-                positions.setLines(LineUtils.fromExpressQuery(lines));
-            }
+        // noinspection EqualityComparisonWithCoercionJS
+        if (vehicle != null) {
+            positions.setVehicle(vehicle);
+        }
 
-            // noinspection EqualityComparisonWithCoercionJS
-            if (vehicle != null) {
-                positions.setVehicle(vehicle);
-            }
-
-            return positions.getBuses();
-        }).then(positions => {
-            res.status(200).jsonp(positions);
-        }).catch(error => {
-            logger.error(error);
-            utils.respondWithError(res, error);
-        })
-    }
+        return positions.getBuses();
+    }).then(positions => {
+        res.status(200).jsonp(positions);
+    }).catch(error => {
+        logger.error(error);
+        utils.respondWithError(res, error);
+    })
 };

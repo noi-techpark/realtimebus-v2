@@ -84,8 +84,8 @@ BEGIN
         lid_verlauf.ort_nr ort_nr,
         next_verlauf.ort_nr next_ort_nr,
         ort_edges.id ort_edge_id,
-        ST_X(vehicle_positions.the_geom) - ST_X(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dx,
-        ST_Y(vehicle_positions.the_geom) - ST_Y(ST_Line_Interpolate_Point(ort_edges.the_geom, interpolation_linear_ref)) dy
+        ST_X(vehicle_positions.the_geom) - ST_X(ST_LineInterpolatePoint(ort_edges.the_geom, interpolation_linear_ref)) dx,
+        ST_Y(vehicle_positions.the_geom) - ST_Y(ST_LineInterpolatePoint(ort_edges.the_geom, interpolation_linear_ref)) dy
     INTO pos_record
     FROM data.vehicle_positions
     LEFT JOIN data.lid_verlauf
@@ -255,7 +255,7 @@ BEGIN
             (1 - extrapolated_completion) * pos_record.dx,
             (1 - extrapolated_completion) * pos_record.dy;
 
-    SELECT ST_Line_Interpolate_Point(the_geom, extrapolated_linear_ref_var) INTO extrapolated_position_var
+    SELECT ST_LineInterpolatePoint(the_geom, extrapolated_linear_ref_var) INTO extrapolated_position_var
     FROM data.lid_verlauf
     WHERE lid_verlauf.line=pos_record.line
         AND lid_verlauf.variant=pos_record.variant

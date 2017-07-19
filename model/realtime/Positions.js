@@ -67,23 +67,14 @@ module.exports = class Positions {
                         red AS li_r,
                         green AS li_g,
                         blue AS li_b,
-                        (SELECT JSON_AGG(bus_stops) FROM (SELECT
-                               lid_verlauf.ort_nr,
-                               rec_ort.ort_name,
-                               rec_ort.ort_ref_ort_kuerzel,
-                               rec_ort.ort_ref_ort_name,
-                               CASE
-                                   WHEN travel_times.travel_time IS NULL THEN departure * interval '1 sec'
-                                   ELSE (travel_times.travel_time + departure) * interval '1 sec'
-                               END AS departure
-                            FROM data.rec_frt
-                            LEFT JOIN data.lid_verlauf ON lid_verlauf.line = rec_frt.line
-                            AND lid_verlauf.variant = rec_frt.variant
-                            LEFT JOIN data.travel_times ON travel_times.trip = rec_frt.trip
-                            AND travel_times.li_lfd_nr_end = lid_verlauf.li_lfd_nr
-                            LEFT JOIN data.rec_ort ON lid_verlauf.ort_nr = rec_ort.ort_nr
-                            WHERE rec_frt.trip = vehicle_positions.trip
-                            ORDER BY li_lfd_nr) AS bus_stops) AS lid_verlauf
+                        
+                        ARRAY_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS path
+                        
+                        --lid_verlauf.ort_nr AS list_ort_nr,
+                        --CASE
+                        --   WHEN travel_times.travel_time IS NULL THEN departure * interval '1 sec'
+                        --   ELSE (travel_times.travel_time + departure) * interval '1 sec'
+                        --END AS departure
                         
                     FROM data.vehicle_positions
                     
@@ -127,6 +118,34 @@ module.exports = class Positions {
                     
                     ${lineFilter}
                     ${vehicleFilter}
+                    
+                    GROUP BY vehicle,
+                        bemerkung,
+                        delay_sec,
+                        depot,
+                        li_ri_nr,
+                        frt_fid,
+                        fzg_nr,
+                        leistungsart_text,
+                        hexcolor,
+                        hue,
+                        inserted,
+                        li_nr,
+                        str_li_var,
+                        lidname,
+                        li_kuerzel,
+                        li_lfd_nr,
+                        next_rec_ort.ort_nr,
+                        next_rec_ort.ort_ref_ort_kuerzel,
+                        next_rec_ort.ort_name,
+                        next_rec_ort.ort_ref_ort_name,
+                        status,
+                        json_geom,
+                        json_extrapolation_geom,
+                        updated,
+                        li_r,
+                        li_g,
+                        li_b
                     
                     ORDER BY vehicle DESC, gps_date DESC
                `

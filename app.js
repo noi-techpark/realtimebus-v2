@@ -3,7 +3,7 @@
 require('express-group-routes');
 require("./util/utils");
 
-const raven = require('raven');
+// const raven = require('raven');
 
 const database = require("./database/database");
 const logger = require("./util/logger");
@@ -45,7 +45,7 @@ process.on('uncaughtException', (err) => {
     logger.error('Caught exception: ');
     console.log(err);
 
-    raven.captureException(err);
+    // raven.captureException(err);
 });
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
@@ -121,7 +121,7 @@ function startServer() {
     });
 
 
-    let listener = app.listen(88, function () {
+    let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

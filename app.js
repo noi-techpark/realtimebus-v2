@@ -23,8 +23,8 @@ const v2Realtime = require("./endpoint/v2/realtime");
 
 const appRealtime = require("./endpoint/app/realtime");
 
-const ExtrapolatePositions = require("./operations/ExtrapolatePositions");
-const DropOldPositions = require("./operations/DropOldPositions");
+const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
+const DropOldPositions = require("./operation/DropOldPositions");
 
 function logRequests(req, res, next) {
     logger.warn(`${req.method} ${req.url}`);

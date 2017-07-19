@@ -56,20 +56,40 @@ module.exports = class Positions {
                         line_name AS lidname,
                         li_kuerzel,
                         vehicle_positions.li_lfd_nr + 1 AS li_lfd_nr,
-                        next_rec_ort.ort_nr AS ort_nr,
+                        next_rec_ort.ort_nr,
                         next_rec_ort.ort_ref_ort,
                         next_rec_ort.ort_ref_ort_kuerzel,
-                        next_rec_ort.ort_name AS ort_name,
-                        next_rec_ort.ort_ref_ort_name AS ort_ref_ort_name,
+                        next_rec_ort.ort_name,
+                        next_rec_ort.ort_pos_breite,
+                        next_rec_ort.ort_pos_laenge,
+                        next_rec_ort.ort_ref_ort_name,
                         status,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
                         gps_date AS updated,
                         red AS li_r,
                         green AS li_g,
-                        blue AS li_b
-                        
-                        -- ARRAY_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS lid_verlauf
+                        blue AS li_b,
+                        (SELECT JSON_AGG(bus_stops) FROM (SELECT
+                               lid_verlauf.ort_nr,
+                               rec_ort.ort_name,
+                               rec_ort.ort_pos_breite,
+                               rec_ort.ort_pos_laenge,
+                               rec_ort.ort_ref_ort,
+                               rec_ort.ort_ref_ort_kuerzel,
+                               rec_ort.ort_ref_ort_name,
+                               CASE
+                                   WHEN travel_times.travel_time IS NULL THEN departure * interval '1 sec'
+                                   ELSE (travel_times.travel_time + departure) * interval '1 sec'
+                               END AS departure
+                            FROM data.rec_frt
+                            LEFT JOIN data.lid_verlauf ON lid_verlauf.line = rec_frt.line
+                            AND lid_verlauf.variant = rec_frt.variant
+                            LEFT JOIN data.travel_times ON travel_times.trip = rec_frt.trip
+                            AND travel_times.li_lfd_nr_end = lid_verlauf.li_lfd_nr
+                            LEFT JOIN data.rec_ort ON lid_verlauf.ort_nr = rec_ort.ort_nr
+                            WHERE rec_frt.trip = vehicle_positions.trip
+                            ORDER BY li_lfd_nr) AS bus_stops) AS lid_verlauf
                         
                     FROM data.vehicle_positions
                     

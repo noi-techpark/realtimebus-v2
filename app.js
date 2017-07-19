@@ -22,7 +22,7 @@ const v1Vdv = require("./endpoint/root/vdv");
 const v2Realtime = require("./endpoint/v2/realtime");
 
 const appRealtime = require("./endpoint/app/realtime");
-const appBeacons = require("./endpoint/app/beacon");
+const appBeacons = require("./endpoint/app/beacons");
 
 const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
 const DropOldPositions = require("./operation/DropOldPositions");

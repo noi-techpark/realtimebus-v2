@@ -22,6 +22,7 @@ const v1Vdv = require("./endpoint/root/vdv");
 const v2Realtime = require("./endpoint/v2/realtime");
 
 const appRealtime = require("./endpoint/app/realtime");
+const appBeacons = require("./endpoint/app/beacon");
 
 const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
 const DropOldPositions = require("./operation/DropOldPositions");
@@ -100,6 +101,8 @@ function startServer() {
 
         router.get("/realtime/line/:lines", appRealtime.positions);
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
+
+        router.get("/beacons/bus", appBeacons.insertBus);
     });
 
     app.group("/gtfs", (router) => {

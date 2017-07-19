@@ -25,7 +25,7 @@ CREATE TABLE buses (
     battery SMALLINT,
     firmware VARCHAR(10),
     hardware VARCHAR(10),
-    inserted TIMESTAMP WITH TIME ZONE,
+    inserted TIMESTAMP WITH TIME ZONE DEFAULT (NOW() AT TIME ZONE 'UTC'),
     mac_address VARCHAR(17),
     major SMALLINT,
     minor SMALLINT,

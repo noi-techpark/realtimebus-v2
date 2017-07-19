@@ -7,7 +7,7 @@ const utils = require("../../util/utils");
 
 const LinesFinder = require("../../model/line/LinesFinder");
 
-module.exports.etchAllLinesAction = function (req, res) {
+module.exports.fetchAllLinesAction = function (req, res) {
     database.connect()
         .then(client => {
             return Promise.resolve()

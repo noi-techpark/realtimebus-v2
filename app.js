@@ -102,7 +102,7 @@ function startServer() {
         router.get("/realtime/line/:lines", appRealtime.positions);
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
 
-        router.get("/beacons/bus", appBeacons.insertBus);
+        router.post("/beacons/bus", appBeacons.insertBus);
     });
 
     app.group("/gtfs", (router) => {

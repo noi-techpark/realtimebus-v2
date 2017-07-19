@@ -25,11 +25,11 @@ CREATE TABLE buses (
     battery SMALLINT,
     firmware VARCHAR(10),
     hardware VARCHAR(10),
-    inserted TIMESTAMP WITH TIMEZONE,
+    inserted TIMESTAMP WITH TIME ZONE,
     mac_address VARCHAR(17),
     major SMALLINT,
     minor SMALLINT,
-    recorded TIMESTAMP WITH TIMEZONE,
+    recorded TIMESTAMP WITH TIME ZONE,
     system_id VARCHAR(12)
 );
 
@@ -37,10 +37,10 @@ CREATE TABLE bus_stops (
     battery SMALLINT,
     firmware VARCHAR(10),
     hardware VARCHAR(10),
-    inserted TIMESTAMP WITH TIMEZONE,
+    inserted TIMESTAMP WITH TIME ZONE,
     mac_address VARCHAR(17),
     major SMALLINT,
     minor SMALLINT,
-    recorded TIMESTAMP WITH TIMEZONE,
+    recorded TIMESTAMP WITH TIME ZONE,
     system_id VARCHAR(12)
 );

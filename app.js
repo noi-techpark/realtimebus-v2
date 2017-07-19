@@ -51,11 +51,11 @@ process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
 });
 
-try {
+/*try {
     raven.config('https://405c5b47fe2c4573949031e156954ed3:d701aea274ea4f8599cfa60b29b76185@sentry.io/192719').install();
 } catch (error) {
     logger.error("Failed to set up raven")
-}
+}*/
 
 const app = express();
 
@@ -121,7 +121,7 @@ function startServer() {
     });
 
 
-    let listener = app.listen(88, function () {
+    let listener = app.listen(80, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

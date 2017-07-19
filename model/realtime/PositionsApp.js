@@ -124,11 +124,7 @@ module.exports = class PositionsApp {
                     let geometry;
 
                     // noinspection EqualityComparisonWithCoercionJS
-                    if (row.json_extrapolation_geom != null) {
-                        geometry = JSON.parse(row.json_extrapolation_geom);
-                    } else {
-                        geometry = JSON.parse(row.json_geom);
-                    }
+                    geometry = JSON.parse(row.json_extrapolation_geom == null ? row.json_geom : row.json_extrapolation_geom);
 
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;

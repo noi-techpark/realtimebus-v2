@@ -34,9 +34,15 @@ module.exports = class ExtrapolatePositions {
                     client.query("SELECT data.data_extrapolate_positions()", function (err, result) {
                         let now = new Date().getTime();
                         let timeLeft = Math.max(1, period - (now - iterationStart));
-                        let updateText = `updated ${result.rows[0].data_extrapolate_positions} positions`;
 
-                        logger.log(`Loops: ${loops++}, time left: ${timeLeft} (${now - scriptStart}), ${updateText}`);
+                        let updateText;
+                        if (typeof result === 'undefined') {
+                            logger.error(`Interpolation did not return any result`);
+                        } else {
+                            updateText = `, updated ${result.rows[0].data_extrapolate_positions} positions`;
+                        }
+
+                        logger.log(`Loops: ${loops++}, time left: ${timeLeft} (${now - scriptStart})${updateText}`);
 
                         setTimeout(function () {
                             now = new Date().getTime();

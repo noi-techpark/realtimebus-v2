@@ -67,9 +67,9 @@ module.exports = class Positions {
                         gps_date AS updated,
                         red AS li_r,
                         green AS li_g,
-                        blue AS li_b,
+                        blue AS li_b
                         
-                        ARRAY_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS lid_verlauf
+                        -- ARRAY_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS lid_verlauf
                         
                     FROM data.vehicle_positions
                     
@@ -114,11 +114,11 @@ module.exports = class Positions {
                     ${lineFilter}
                     ${vehicleFilter}
                     
-                    GROUP BY vehicle, remark, delay_sec, depot, direction, rec_frt.trip::int, vehicle,
-                        leistungsart_text, upper(hex), hue, insert_date, rec_frt.line, rec_frt.variant, line_name,
-                        li_kuerzel, vehicle_positions.li_lfd_nr + 1, next_rec_ort.ort_nr, next_rec_ort.ort_ref_ort,
-                        next_rec_ort.ort_ref_ort_kuerzel, next_rec_ort.ort_name, next_rec_ort.ort_ref_ort_name, status,
-                        json_geom, json_extrapolation_geom, gps_date, red, green, blue
+                    -- GROUP BY vehicle, remark, delay_sec, depot, direction, rec_frt.trip::int, vehicle,
+                    --     leistungsart_text, upper(hex), hue, insert_date, rec_frt.line, rec_frt.variant, line_name,
+                    --     li_kuerzel, vehicle_positions.li_lfd_nr + 1, next_rec_ort.ort_nr, next_rec_ort.ort_ref_ort,
+                    --     next_rec_ort.ort_ref_ort_kuerzel, next_rec_ort.ort_name, next_rec_ort.ort_ref_ort_name, status,
+                    --     json_geom, json_extrapolation_geom, gps_date, red, green, blue
                     
                     ORDER BY vehicle DESC, gps_date DESC
                `

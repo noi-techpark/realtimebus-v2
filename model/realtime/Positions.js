@@ -57,11 +57,8 @@ module.exports = class Positions {
                         li_kuerzel,
                         vehicle_positions.li_lfd_nr + 1 AS li_lfd_nr,
                         next_rec_ort.ort_nr,
-                        next_rec_ort.ort_ref_ort,
                         next_rec_ort.ort_ref_ort_kuerzel,
                         next_rec_ort.ort_name,
-                        next_rec_ort.ort_pos_breite,
-                        next_rec_ort.ort_pos_laenge,
                         next_rec_ort.ort_ref_ort_name,
                         status,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
@@ -73,9 +70,6 @@ module.exports = class Positions {
                         (SELECT JSON_AGG(bus_stops) FROM (SELECT
                                lid_verlauf.ort_nr,
                                rec_ort.ort_name,
-                               rec_ort.ort_pos_breite,
-                               rec_ort.ort_pos_laenge,
-                               rec_ort.ort_ref_ort,
                                rec_ort.ort_ref_ort_kuerzel,
                                rec_ort.ort_ref_ort_name,
                                CASE
@@ -133,12 +127,6 @@ module.exports = class Positions {
                     
                     ${lineFilter}
                     ${vehicleFilter}
-                    
-                    -- GROUP BY vehicle, remark, delay_sec, depot, direction, rec_frt.trip::int, vehicle,
-                    --     leistungsart_text, upper(hex), hue, insert_date, rec_frt.line, rec_frt.variant, line_name,
-                    --     li_kuerzel, vehicle_positions.li_lfd_nr + 1, next_rec_ort.ort_nr, next_rec_ort.ort_ref_ort,
-                    --     next_rec_ort.ort_ref_ort_kuerzel, next_rec_ort.ort_name, next_rec_ort.ort_ref_ort_name, status,
-                    --     json_geom, json_extrapolation_geom, gps_date, red, green, blue
                     
                     ORDER BY vehicle DESC, gps_date DESC
                `

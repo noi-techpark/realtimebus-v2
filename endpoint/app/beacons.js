@@ -12,7 +12,16 @@ module.exports.insertBus = function (req, res) {
                 logger.debug(`Inserting bus: ${JSON.stringify(body)}`);
 
                 let sql = `INSERT INTO beacons.buses (battery, firmware, hardware, mac_address, major, minor, recorded, system_id)
-                           VALUES (${body.battery}, '${body.firmware}', '${body.hardware}', '${body.mac}', ${body.major}, ${body.minor}, '${body.recorded}', '${body.sysId}')`;
+                           VALUES (
+                                ${body.battery}, 
+                                '${body.firmware}', 
+                                '${body.hardware}', 
+                                '${body.mac}', 
+                                ${body.major}, 
+                                ${body.minor}, 
+                                '${body.recorded}', 
+                                '${body.sysId}'
+                            )`;
 
                 resolve(sql)
             })

@@ -5,7 +5,7 @@ const utils = require("../../util/utils");
 
 
 module.exports.fromExpressQuery = function (query) {
-    if (utils.isEmpty(query)) {
+    if (utils.isEmptyArray(query)) {
         logger.error("Line filter is active but no lines requested");
         return [];
     }
@@ -32,7 +32,7 @@ module.exports.fromExpressQuery = function (query) {
 };
 
 module.exports.fromAppExpressQuery = function (query) {
-    if (utils.isEmpty(query)) {
+    if (utils.isEmptyArray(query)) {
         logger.error("Line filter is active but no lines requested");
         return [];
     }
@@ -57,7 +57,7 @@ module.exports.buildForSql = function (field1, field2, lines) {
     let isFirst = true;
     let whereLines = '';
 
-    if (utils.isEmpty(lines)) {
+    if (utils.isEmptyArray(lines)) {
         logger.error("Line filter is active but no lines requested");
         return whereLines;
     }
@@ -79,7 +79,7 @@ module.exports.buildForAppSql = function (lines) {
     let isFirst = true;
     let whereLines = '';
 
-    if (utils.isEmpty(lines)) {
+    if (utils.isEmptyArray(lines)) {
         logger.error("Line filter is active but no lines requested");
         return whereLines;
     }

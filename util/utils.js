@@ -1,7 +1,9 @@
 'use strict';
 
 const raven = require('raven');
+
 const logger = require('./logger');
+const config = require('../config');
 
 const enableErrorReporting = false;
 
@@ -56,6 +58,18 @@ module.exports.getZoneForLine = function (line) {
 };
 
 
+// =================================================== REQUESTS ========================================================
+
+module.exports.getLanguage = function (req) {
+    let lang = req.get("X-Language").substring(0, 2);
+
+    if (lang !== 'it' && lang !== 'de' && lang !== 'en') {
+        return config.lang_default;
+    }
+
+    return lang;
+};
+
 // ==================================================== ERRORS =========================================================
 
 module.exports.startErrorReporting = function () {
@@ -90,9 +104,14 @@ module.exports.isNumber = function (toTest) {
     return !isNaN(parseFloat(toTest)) && isFinite(toTest);
 };
 
-module.exports.isEmpty = function (array) {
+module.exports.isEmptyArray = function (array) {
     // noinspection EqualityComparisonWithCoercionJS
     return array == null || array.length === 0
+};
+
+module.exports.isEmpty = function (field) {
+    // noinspection EqualityComparisonWithCoercionJS
+    return typeof field == null
 };
 
 module.exports.throwTypeError = function (name, type, value) {

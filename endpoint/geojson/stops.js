@@ -16,7 +16,7 @@ module.exports.stops = function (req, res) {
 
             let lines = req.query.lines;
 
-            if (!utils.isEmpty(lines)) {
+            if (!utils.isEmptyArray(lines)) {
                 stopFinder.setLines(LineUtils.fromExpressQuery(lines));
             }
 

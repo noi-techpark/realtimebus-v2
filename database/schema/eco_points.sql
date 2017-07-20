@@ -41,6 +41,11 @@ CREATE TABLE password_reset (
     reset_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE blocked_domains (
+    id INTEGER NOT NULL UNIQUE,
+    address TEXT NOT NULL,
+);
+
 ALTER TABLE ONLY users_login
     ADD CONSTRAINT users_login_id_fkey FOREIGN KEY (id) REFERENCES users(id) DEFERRABLE;
 

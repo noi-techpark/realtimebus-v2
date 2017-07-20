@@ -14,7 +14,7 @@ module.exports.positions = function (req, res) {
         let lines = req.params.lines;
         let vehicle = req.params.vehicle;
 
-        if (!utils.isEmpty(lines)) {
+        if (!utils.isEmptyArray(lines)) {
             positions.setLines(LineUtils.fromExpressQuery(lines));
         }
 

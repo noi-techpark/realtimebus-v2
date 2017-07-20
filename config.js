@@ -12,4 +12,6 @@ config.realtimebus_timetable_time_horizon = 43200;
 
 config.vdv_import_running = false;
 
+config.lang_default = "en";
+
 module.exports = config;

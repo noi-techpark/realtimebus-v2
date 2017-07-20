@@ -44,7 +44,7 @@ module.exports = class PositionsApp {
                 let vehicleFilter = '';
                 let tripFilter = '';
 
-                if (!utils.isEmpty(this.lines)) {
+                if (!utils.isEmptyArray(this.lines)) {
                     logger.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForAppSql(this.lines) + ")";
                 }

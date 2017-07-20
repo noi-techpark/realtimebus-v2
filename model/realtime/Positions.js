@@ -27,7 +27,7 @@ module.exports = class Positions {
             .then(() => {
                 let lineFilter = '';
 
-                if (!utils.isEmpty(this.lines)) {
+                if (!utils.isEmptyArray(this.lines)) {
                     logger.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
                 }

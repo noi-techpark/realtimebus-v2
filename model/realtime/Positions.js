@@ -43,7 +43,7 @@ module.exports = class Positions {
                     SELECT DISTINCT ON (vehicle) vehicle,
                         remark AS bemerkung,
                         delay_sec,
-                        ROUND(delay_sec / 60::DECIMAL) AS delay_min,
+                        ROUND(delay_sec / 60::DECIMAL)::INT AS delay_min,
                         depot AS fzg_depot,
                         direction AS li_ri_nr,
                         EXTRACT(EPOCH FROM TIMEZONE('Europe/Rome', NOW()))::INT % 86400 - departure AS fahrzeit,

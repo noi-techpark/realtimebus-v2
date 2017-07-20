@@ -140,8 +140,8 @@ module.exports = class PositionsApp {
                         vehicle: row.vehicle,
 
                         delay_min: row.delay_min,
-                        latitude: Math.round(geometry.coordinates[1] * 1000000) / 1000000,
-                        longitude: Math.round(geometry.coordinates[0] * 1000000) / 1000000,
+                        latitude: Math.round(geometry.coordinates[1] * 100000) / 100000,
+                        longitude: Math.round(geometry.coordinates[0] * 100000) / 100000,
 
                         color_hex: row.color_hex,
                         color_hue: row.color_hue,
@@ -151,11 +151,11 @@ module.exports = class PositionsApp {
                         updated_min_ago: row.updated_min_ago,
                         inserted_min_ago: row.inserted_min_ago,
 
-                        path: row.path,
                         origin: row.origin,
                         destination: row.destination,
+                        departure: row.departure,
 
-                        departure: row.departure
+                        path: row.path
                     };
 
                     realtime.add(feature);

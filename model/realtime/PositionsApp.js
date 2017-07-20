@@ -20,10 +20,18 @@ module.exports = class PositionsApp {
     }
 
     setVehicle(vehicle) {
+        if (!utils.isNumber(vehicle)) {
+            utils.throwTypeError("vehicle", "number", vehicle)
+        }
+
         this.vehicle = vehicle;
     }
 
     setTrip(trip) {
+        if (!utils.isNumber(trip)) {
+            utils.throwTypeError("trip", "number", trip)
+        }
+
         this.trip = trip;
     }
 
@@ -51,8 +59,6 @@ module.exports = class PositionsApp {
                     console.info(`Trip filter is enabled: trip='${this.trip}'`);
                     tripFilter = ` AND rec_frt.trip = ${this.trip}`;
                 }
-
-                // TODO: Check if 'updated_min_ago' and 'inserted_min_ago' are correct
 
                 return `
                     SELECT DISTINCT ON (vehicle) vehicle,
@@ -190,8 +196,6 @@ module.exports = class PositionsApp {
     getDelays() {
         return Promise.resolve()
             .then(() => {
-                // TODO: Check if 'updated_min_ago' and 'inserted_min_ago' are correct
-
                 return `
                     SELECT DISTINCT ON (vehicle) vehicle,
                         rec_frt.trip::int,

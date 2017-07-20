@@ -60,3 +60,11 @@ module.exports.isEmpty = function (array) {
 module.exports.respondWithError = function (res, error) {
     res.status(500).jsonp({success: false, error: error})
 };
+
+module.exports.isNumber = function (toTest) {
+    return !isNaN(parseFloat(toTest)) && isFinite(toTest);
+};
+
+module.exports.throwTypeError = function (name, type, value) {
+    throw(`Parameter '${name}' must be of type '${type}', was '${value}'`)
+};

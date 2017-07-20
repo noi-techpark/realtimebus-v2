@@ -1,15 +1,13 @@
 'use strict';
 
 require('express-group-routes');
-require("./util/utils");
 
 const yargs = require('yargs');
-
-// const raven = require('raven');
 
 const database = require("./database/database");
 const logger = require("./util/logger");
 const config = require("./config");
+const utils = require("./util/utils");
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -29,38 +27,17 @@ const appBeacons = require("./endpoint/app/beacons");
 const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
 const DropOldPositions = require("./operation/DropOldPositions");
 
-
-function logRequests(req, res, next) {
-    logger.warn(`${req.method} ${req.url}`);
-    next();
-}
-
-function checkForRunningImport(req, res, next) {
-    if (config.vdv_import_running) {
-        logger.info(`Import is running, skipping request '${req.url}'`);
-        res.status(503).json({success: false, error: "VDV import is running. Please wait for it to complete."});
-
-        return;
-    }
-
-    next();
-}
+utils.startErrorReporting();
 
 process.on('uncaughtException', (err) => {
     logger.error('Caught exception: ');
     console.log(err);
 
-    // raven.captureException(err);
+    utils.handleError(err)
 });
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
 });
-
-/*try {
-    raven.config('https://405c5b47fe2c4573949031e156954ed3:d701aea274ea4f8599cfa60b29b76185@sentry.io/192719').install();
-} catch (error) {
-    logger.error("Failed to set up raven")
-}*/
 
 const app = express();
 
@@ -158,4 +135,23 @@ function startServer() {
 
 function startCommands() {
     new ExtrapolatePositions().run();
+}
+
+
+// =================================================== MIDDLEWARE ======================================================
+
+function logRequests(req, res, next) {
+    logger.warn(`${req.method} ${req.url}`);
+    next();
+}
+
+function checkForRunningImport(req, res, next) {
+    if (config.vdv_import_running) {
+        logger.info(`Import is running, skipping request '${req.url}'`);
+        res.status(503).json({success: false, error: "VDV import is running. Please wait for it to complete."});
+
+        return;
+    }
+
+    next();
 }

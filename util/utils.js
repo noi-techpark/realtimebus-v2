@@ -1,6 +1,9 @@
 'use strict';
 
-const util = require('util');
+const raven = require('raven');
+const logger = require('./logger');
+
+const enableErrorReporting = false;
 
 if (!('toJSON' in Error.prototype)) {
     Object.defineProperty(Error.prototype, 'toJSON', {
@@ -52,17 +55,44 @@ module.exports.getZoneForLine = function (line) {
     ].includes(line) ? 'BZ' : 'ME'
 };
 
-module.exports.isEmpty = function (array) {
-    // noinspection EqualityComparisonWithCoercionJS
-    return array == null || array.length === 0
+
+// ==================================================== ERRORS =========================================================
+
+module.exports.startErrorReporting = function () {
+    if (!enableErrorReporting) {
+        logger.warn("Raven error reporting is disabled");
+        return
+    }
+
+    try {
+        raven.config('https://405c5b47fe2c4573949031e156954ed3:d701aea274ea4f8599cfa60b29b76185@sentry.io/192719').install();
+    } catch (error) {
+        logger.error("Failed to set up raven")
+    }
+};
+
+module.exports.handleError = function (error) {
+    if (!enableErrorReporting) {
+        return;
+    }
+
+    raven.captureException(error);
 };
 
 module.exports.respondWithError = function (res, error) {
     res.status(500).jsonp({success: false, error: error})
 };
 
+
+// ================================================ TYPE VALIDATION ====================================================
+
 module.exports.isNumber = function (toTest) {
     return !isNaN(parseFloat(toTest)) && isFinite(toTest);
+};
+
+module.exports.isEmpty = function (array) {
+    // noinspection EqualityComparisonWithCoercionJS
+    return array == null || array.length === 0
 };
 
 module.exports.throwTypeError = function (name, type, value) {

@@ -126,6 +126,7 @@ function startServer() {
         router.get("/realtime/delays", appRealtime.delays);
 
         router.get("/realtime/line/:lines", appRealtime.positions);
+        router.get("/realtime/trip/:trip", appRealtime.positions);
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
 
         router.post("/beacons/bus", appBeacons.insertBus);

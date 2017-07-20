@@ -16,15 +16,22 @@ module.exports.positions = function (req, res) {
                     let positions = new NewPositions(client);
 
                     let lines = req.params.lines;
+                    let trip = req.params.trip;
                     let vehicle = req.params.vehicle;
 
-                    if (!utils.isEmpty(lines)) {
+                    // noinspection EqualityComparisonWithCoercionJS
+                    if (lines != null) {
                         positions.setLines(LineUtils.fromAppExpressQuery(lines));
                     }
 
                     // noinspection EqualityComparisonWithCoercionJS
                     if (vehicle != null) {
                         positions.setVehicle(vehicle);
+                    }
+
+                    // noinspection EqualityComparisonWithCoercionJS
+                    if (trip != null) {
+                        positions.setTrip(trip);
                     }
 
                     return positions.getBuses();

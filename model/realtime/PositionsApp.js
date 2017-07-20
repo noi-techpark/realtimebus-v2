@@ -23,12 +23,17 @@ module.exports = class PositionsApp {
         this.vehicle = vehicle;
     }
 
+    setTrip(trip) {
+        this.trip = trip;
+    }
+
 
     getBuses() {
         return Promise.resolve()
             .then(() => {
                 let lineFilter = '';
                 let vehicleFilter = '';
+                let tripFilter = '';
 
                 if (!utils.isEmpty(this.lines)) {
                     console.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
@@ -39,6 +44,12 @@ module.exports = class PositionsApp {
                 if (this.vehicle != null) {
                     console.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
                     vehicleFilter = ` AND vehicle = ${this.vehicle}`;
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (this.trip != null) {
+                    console.info(`Trip filter is enabled: trip='${this.trip}'`);
+                    tripFilter = ` AND rec_frt.trip = ${this.trip}`;
                 }
 
                 // TODO: Check if 'updated_min_ago' and 'inserted_min_ago' are correct
@@ -64,14 +75,28 @@ module.exports = class PositionsApp {
                         
                         next_rec_ort.ort_nr AS bus_stop,
                         
-                        ARRAY_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS path,
-                        (ARRAY_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr))[1] AS origin,
-                        (ARRAY_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr DESC))[1] AS destination,
-                        
                         (floor((extract(epoch FROM NOW()::time) - rec_frt.departure) / 60)::int % 1440) AS departure,
                         
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
-                        ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom
+                        ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
+                        
+                        (SELECT lid_verlauf.ort_nr
+                            FROM data.lid_verlauf
+                            
+                            WHERE lid_verlauf.line = rec_frt.line
+                                AND lid_verlauf.variant = rec_frt.variant
+                            
+                            ORDER BY lid_verlauf.li_lfd_nr
+                            LIMIT 1) AS origin,
+                            
+                        (SELECT lid_verlauf.ort_nr
+                            FROM data.lid_verlauf
+                            
+                            WHERE lid_verlauf.line = rec_frt.line
+                                AND lid_verlauf.variant = rec_frt.variant
+                            
+                            ORDER BY lid_verlauf.li_lfd_nr DESC
+                            LIMIT 1) AS destination
                         
                     FROM data.vehicle_positions
 
@@ -84,10 +109,6 @@ module.exports = class PositionsApp {
 
                     LEFT JOIN data.line_colors
                         ON rec_frt.line=line_colors.line
-
-                    LEFT JOIN data.lid_verlauf lid_verlauf_paths
-                        ON lid_verlauf_paths.line=rec_frt.line
-                        AND lid_verlauf_paths.variant=rec_frt.variant
 
                     LEFT JOIN data.lid_verlauf lid_verlauf_next
                         ON rec_frt.line=lid_verlauf_next.line
@@ -104,6 +125,7 @@ module.exports = class PositionsApp {
                     
                     ${lineFilter}
                     ${vehicleFilter}
+                    ${tripFilter}
                     
                     GROUP BY vehicle, rec_frt.trip, rec_lid.line_name, line_colors.hex, line_colors.hue,
                              vehicle_positions.gps_date, vehicle_positions.insert_date, vehicle_positions.delay_sec, 

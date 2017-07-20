@@ -103,7 +103,7 @@ module.exports = class Positions {
                     LEFT JOIN data.rec_frt_bedienung
                         ON rec_frt.trip=rec_frt_bedienung.trip
                         
-                    WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
+                    WHERE gps_date > NOW() - INTERVAL '${config.realtime_bus_timeout_minutes} minute'
                     
                     ${lineFilter}
                     

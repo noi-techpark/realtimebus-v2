@@ -66,8 +66,8 @@ module.exports = class LinesFinder {
                         ON rec_frt.line=line_colors.line
                         
                     WHERE betriebstag=to_char(CURRENT_TIMESTAMP, 'YYYYMMDD')::integer
-                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + departure * interval '1 seconds' > CURRENT_TIMESTAMP - interval '60 minutes'
-                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + departure * interval '1 seconds' < CURRENT_TIMESTAMP + interval '${timeHorizon} seconds'
+                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + departure * INTERVAL '1 seconds' > CURRENT_TIMESTAMP - INTERVAL '60 minutes'
+                        AND CAST(CURRENT_DATE AS TIMESTAMP) AT TIME ZONE 'GMT+1' + departure * INTERVAL '1 seconds' < CURRENT_TIMESTAMP + INTERVAL '${timeHorizon} seconds'
                         AND rec_lid.li_kuerzel LIKE '%${city}%'
                         
                     GROUP BY rec_frt.line, rec_frt.variant, line_colors.line, line_name, direction

@@ -98,7 +98,7 @@ module.exports = class PositionsApp {
                         ON lid_verlauf_next.onr_typ_nr=next_rec_ort.onr_typ_nr
                         AND lid_verlauf_next.ort_nr=next_rec_ort.ort_nr
                         
-                    WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
+                    WHERE gps_date > NOW() - INTERVAL '${config.realtime_bus_timeout_minutes} minute'
                         -- AND str_li_var < 990
                         -- AND vehicle_positions.status='r'
                     
@@ -193,7 +193,7 @@ module.exports = class PositionsApp {
                         ON lid_verlauf_next.onr_typ_nr=next_rec_ort.onr_typ_nr
                         AND lid_verlauf_next.ort_nr=next_rec_ort.ort_nr
                         
-                    WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
+                    WHERE gps_date > NOW() - INTERVAL '${config.realtime_bus_timeout_minutes} minute'
                         -- AND str_li_var < 990
                         -- AND vehicle_positions.status='r'
                     

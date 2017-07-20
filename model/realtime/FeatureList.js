@@ -24,8 +24,8 @@ module.exports = class FeatureList {
 
     getFeatureCollection() {
         return {
-            type: "FeatureCollection",
             features: this.features,
+            type: "FeatureCollection"
         };
     }
 

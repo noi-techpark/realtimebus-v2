@@ -3,6 +3,8 @@
 require('express-group-routes');
 require("./util/utils");
 
+const yargs = require('yargs');
+
 // const raven = require('raven');
 
 const database = require("./database/database");
@@ -27,10 +29,12 @@ const appBeacons = require("./endpoint/app/beacons");
 const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
 const DropOldPositions = require("./operation/DropOldPositions");
 
+
 function logRequests(req, res, next) {
     logger.warn(`${req.method} ${req.url}`);
     next();
 }
+
 function checkForRunningImport(req, res, next) {
     if (config.vdv_import_running) {
         logger.info(`Import is running, skipping request '${req.url}'`);
@@ -70,12 +74,34 @@ app.use(bodyParser.raw({
 
 app.set('jsonp callback name', 'jsonp');
 
-database.connect().then(() => {
-    logger.warn("Connected to database");
+let args = yargs
+    .command('serve', 'Starts the server', (yargs) => {
+        yargs.option('port', {
+            describe: 'Port to bind the server on',
+            default: 80,
+            type: 'number'
+        }).check(function (argv) {
+            return !isNaN(parseFloat(argv.port)) && isFinite(argv.port);
+        })
+    }, (argv) => {
+        startDatabase()
+    })
+    .strict(true)
+    .demandCommand()
+    .option('verbose', {
+        alias: 'v',
+        default: false
+    })
+    .argv;
 
-    startCommands();
-    startServer();
-});
+function startDatabase() {
+    database.connect().then(() => {
+        logger.warn("Connected to database");
+
+        startCommands();
+        startServer();
+    });
+}
 
 function startServer() {
     app.post("/vdv", v1Vdv.upload);
@@ -124,7 +150,7 @@ function startServer() {
     });
 
 
-    let listener = app.listen(80, function () {
+    let listener = app.listen(args.port, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }

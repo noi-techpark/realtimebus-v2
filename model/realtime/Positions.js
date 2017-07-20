@@ -26,17 +26,10 @@ module.exports = class Positions {
         return Promise.resolve()
             .then(() => {
                 let lineFilter = '';
-                let vehicleFilter = '';
 
                 if (!utils.isEmpty(this.lines)) {
                     logger.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
-                }
-
-                // noinspection EqualityComparisonWithCoercionJS
-                if (this.vehicle != null) {
-                    logger.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
-                    vehicleFilter = ` AND SPLIT_PART(vehicle, ' ', 1) IN (${this.vehicle})`;
                 }
 
                 return `
@@ -113,7 +106,6 @@ module.exports = class Positions {
                     WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
                     
                     ${lineFilter}
-                    ${vehicleFilter}
                     
                     GROUP BY vehicle, bemerkung, delay_sec, delay_min, departure, depot, li_ri_nr, fgr_nr, fgr_text,
                         frt_fid, frt_start, fzg_nr, leistungsart_nr, leistungsart_text, hexcolor, hue, gps_enabled_at,

@@ -50,7 +50,7 @@ module.exports = class Positions {
                         rec_frt.trip_time_group AS fgr_nr,
                         trip_time_group_text AS fgr_text,
                         rec_frt.trip::int AS frt_fid,
-                        TO_CHAR((departure || ' second')::INTERVAL, 'HH24:MI') AS frt_start,
+                        departure AS frt_start,
                         vehicle AS fzg_nr,
                         rec_frt.service AS leistungsart_nr,
                         leistungsart_text,

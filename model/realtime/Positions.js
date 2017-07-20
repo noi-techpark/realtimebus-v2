@@ -10,8 +10,8 @@ const LineUtils = require("../line/LineUtils");
 
 module.exports = class Positions {
 
-    constructor() {
-        this.outputFormat = config.coordinate_etrs89;
+    constructor(outputFormat) {
+        this.outputFormat = outputFormat;
     }
 
     setLines(lines) {

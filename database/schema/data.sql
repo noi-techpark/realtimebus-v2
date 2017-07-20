@@ -308,7 +308,7 @@ CREATE FUNCTION data_extrapolate_positions() RETURNS INTEGER
     num_frts := 0;
 
     DELETE FROM data.vehicle_positions
-        WHERE gps_date < NOW() - interval '10 minute';
+        WHERE gps_date < NOW() - interval '2 minute';
 
     FOR recordvar IN frt_cur LOOP
         SELECT data.data_extrapolate_frt_position(recordvar.trip) INTO num_insert;

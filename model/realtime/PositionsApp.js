@@ -2,6 +2,7 @@
 
 const config = require("../../config");
 const utils = require("../../util/utils");
+const logger = require("../../util/logger");
 
 const RealtimeModel = require("./RealtimeModel");
 const LineUtils = require("../line/LineUtils");
@@ -44,19 +45,19 @@ module.exports = class PositionsApp {
                 let tripFilter = '';
 
                 if (!utils.isEmpty(this.lines)) {
-                    console.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
+                    logger.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForAppSql(this.lines) + ")";
                 }
 
                 // noinspection EqualityComparisonWithCoercionJS
                 if (this.vehicle != null) {
-                    console.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
+                    logger.info(`Vehicle filter is enabled: vehicle='${this.vehicle}'`);
                     vehicleFilter = ` AND vehicle = ${this.vehicle}`;
                 }
 
                 // noinspection EqualityComparisonWithCoercionJS
                 if (this.trip != null) {
-                    console.info(`Trip filter is enabled: trip='${this.trip}'`);
+                    logger.info(`Trip filter is enabled: trip='${this.trip}'`);
                     tripFilter = ` AND rec_frt.trip = ${this.trip}`;
                 }
 

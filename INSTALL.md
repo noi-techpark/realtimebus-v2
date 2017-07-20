@@ -58,6 +58,34 @@ To install all needed NodeJs dependencies run the following command in your proj
 
 <br/>
 
+# Import data
+
+To run this server you need to import the VDV data first. This is done in three steps:
+
+1. Make sure that the schemas `data` and `beacons` do not exist. If they do, drop them:
+
+        DROP SCHEMA data CASCADE;
+        DROP SCHEMA beacons CASCADE;
+        
+2. Import both PostgreSQL database schemas:
+
+        beacons.sql
+        data.sql
+   
+3. Import the VDV data. Download the latest version of the VDV data from [here](http://open.sasabz.it/files/vdv.zip).
+Upload the data by executing a POST request to the VDV-endpoint like follows:
+
+        curl --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://HOST/vdv
+        
+    The import may take a while, please be patient. After the import is completed, the server will respond to 
+    your request with the validity dates for the uploaded VDV data.
+   
+   
+   To re-import the VDV data you only need to perform step 3. The existing tables will be truncated automatically. 
+   
+<br/>
+
+
 # Running the project
 
 1. Enter the project directory and execute `node`:

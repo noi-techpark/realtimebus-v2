@@ -45,6 +45,8 @@ module.exports = class Positions {
                         delay_sec,
                         depot,
                         direction AS li_ri_nr,
+                        rec_frt.trip_time_group AS fgr_nr,
+                        trip_time_group_text AS fgr_text,
                         rec_frt.trip::int AS frt_fid,
                         vehicle AS fzg_nr,
                         rec_frt.service AS leistungsart_nr,
@@ -57,12 +59,10 @@ module.exports = class Positions {
                         line_name AS lidname,
                         li_kuerzel,
                         vehicle_positions.li_lfd_nr + 1 AS li_lfd_nr,
+                        next_rec_ort.ort_name,
                         next_rec_ort.ort_nr,
                         next_rec_ort.ort_ref_ort,
                         next_rec_ort.ort_ref_ort_kuerzel,
-                        next_rec_ort.ort_name,
-                        next_rec_ort.ort_pos_laenge / 10000000::DECIMAL AS ort_pos_laenge,
-                        next_rec_ort.ort_pos_breite / 10000000::DECIMAL AS ort_pos_laenge,
                         next_rec_ort.ort_ref_ort_name,
                         -- status,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
@@ -73,18 +73,18 @@ module.exports = class Positions {
                         blue AS li_b,
                         (SELECT JSON_AGG(bus_stops) FROM (SELECT
                                 lid_verlauf.ort_nr,
+                                rec_ort.ort_name,
                                 rec_ort.ort_nr,
+                                rec_ort.ort_pos_breite / 10000000::DECIMAL AS ort_pos_breite,
+                                rec_ort.ort_pos_laenge / 10000000::DECIMAL AS ort_pos_laenge,
                                 rec_ort.ort_ref_ort,
                                 rec_ort.ort_ref_ort_kuerzel,
                                 rec_ort.ort_ref_ort_name,
-                                rec_ort.ort_pos_laenge / 10000000::DECIMAL AS ort_pos_laenge,
-                                rec_ort.ort_pos_breite / 10000000::DECIMAL AS ort_pos_breite,
-                                rec_ort.richtungswechsel,
-                                departure,
                                 CASE
-                                    WHEN travel_times.travel_time IS NULL THEN CURRENT_DATE + (departure % 86400) * interval '1 second'
-                                    ELSE CURRENT_DATE + ((travel_times.travel_time + departure) % 86400) * interval '1 second'
-                                END AS departure
+                                    WHEN travel_times.travel_time IS NULL THEN (departure % 86400) * interval '1 second'
+                                    ELSE ((departure + travel_times.travel_time) % 86400) * interval '1 second'
+                                END AS ort_zeit,
+                                CASE WHEN rec_ort.richtungswechsel = 0 THEN FALSE ELSE TRUE END AS richtungswechsel
                     
                             FROM data.rec_frt
                             
@@ -99,7 +99,7 @@ module.exports = class Positions {
                             LEFT JOIN data.rec_ort
                                 ON lid_verlauf.ort_nr = rec_ort.ort_nr
                             
-                            WHERE rec_frt.trip = 1 ORDER BY li_lfd_nr) AS bus_stops) AS lid_verlauf
+                            WHERE rec_frt.teq = vehicle_positions.trip ORDER BY li_lfd_nr) AS bus_stops) AS lid_verlauf
                         
                     FROM data.vehicle_positions
                     
@@ -126,9 +126,6 @@ module.exports = class Positions {
                     LEFT JOIN data.line_colors
                         ON rec_frt.line=line_colors.line
                         
-                    LEFT JOIN data.menge_fahrtart
-                        ON rec_frt.trip_type=menge_fahrtart.trip_type
-                        
                     LEFT JOIN data.menge_fgr
                         ON rec_frt.trip_time_group=menge_fgr.trip_time_group
                         
@@ -138,7 +135,7 @@ module.exports = class Positions {
                     LEFT JOIN data.rec_frt_bedienung
                         ON rec_frt.trip=rec_frt_bedienung.trip
                         
-                    WHERE gps_date > NOW() - interval '${config.realtime_bus_timeout_minutes} minute'
+                    WHERE gps_date > NOW() - interval '10 minute'
                     -- AND vehicle_positions.status='r'
                     
                     ${lineFilter}

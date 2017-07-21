@@ -1,6 +1,7 @@
 'use strict';
 
 const raven = require('raven');
+const crypto = require('crypto');
 
 const logger = require('./logger');
 const config = require('../config');
@@ -55,6 +56,48 @@ module.exports.getZoneForLine = function (line) {
         1001, 1003, 1005, 1006, 1071, 1072, 1008, 1009, 1101, 1102, 1011,
         1012, 1014, 110, 111, 112, 116, 117, 1153, 183, 201, 202
     ].includes(line) ? 'BZ' : 'ME'
+};
+
+module.exports.randomHex = function rand_string(n) {
+    if (n <= 0) {
+        return '';
+    }
+
+    let rs = '';
+    try {
+        rs = crypto.randomBytes(Math.ceil(n / 2)).toString('hex').slice(0, n);
+    } catch (ex) {
+        console.error('Exception generating random string: ' + ex);
+        rs = '';
+
+        let r = n % 8, q = (n - r) / 8, i;
+        for (i = 0; i < q; i++) {
+            rs += Math.random().toString(16).slice(2);
+        }
+        if (r > 0) {
+            rs += Math.random().toString(16).slice(2, i);
+        }
+    }
+    return rs;
+};
+
+module.exports.random = function (low, high) {
+    return Math.random() * (high - low) + low;
+};
+
+module.exports.generateProfileId = function () {
+    let token = "";
+    let codeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    codeAlphabet += "abcdefghijklmnopqrstuvwxyz";
+    codeAlphabet += "0123456789";
+
+    let max = codeAlphabet.length;
+
+    for (let i = 0; i < 32; i++) {
+        token += codeAlphabet.charAt([random(0, max)]);
+    }
+
+    return token;
 };
 
 

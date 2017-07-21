@@ -13,10 +13,34 @@ module.exports.register = function (req, res) {
         .then(client => {
             return Promise.resolve()
                 .then(() => {
-                    return new NewPositions(client).getDelays();
+                    return checkForMissingParams(req)
                 })
-                .then(positions => {
-                    res.status(200).jsonp(positions);
+                .then(() => {
+                    return checkForCorrectUsername(req)
+                })
+                .then(() => {
+                    return checkForCorrectPassword(req)
+                })
+                .then(() => {
+                    return checkForCorrectEmail(req)
+                })
+                .then(() => {
+                    return checkForCorrectAge(req)
+                })
+                .then(() => {
+                    return checkForRequiredHeaders(req)
+                })
+                .then(() => {
+                    return checkIfEmailAlreadyExists(req, client)
+                })
+                .then(() => {
+                    return checkIfUserAlreadyExists(req, client)
+                })
+                .then(() => {
+                    return insert(req, client)
+                })
+                .then(() => {
+                    res.status(200).jsonp({success: true});
                     client.release();
                 })
                 .catch(error => {
@@ -229,65 +253,63 @@ function checkIfUserAlreadyExists(req, client) {
 }
 
 function insert(req, client) {
+    let id;
+
     return Promise.resolve()
         .then(() => {
             let birthDate = moment(req.query.birthdate);
 
             let hashedPassword = bcrypt.hashSync(req.query.password);
+            let emailVerificationHash = utils.randomHex(16);
+
+            let profile = utils.random(0, Number.MAX_SAFE_INTEGER);
+            id = utils.generateProfileId();
+
+            let gender = req.query.male ? 1 : 2;
+
+            return `INSERT INTO eco_points.users 
+                       VALUES (id, profile, email, username, password, gender, birth_date)
+                       (
+                        '${id}', 
+                        ${profile},
+                        '${req.query.email}', 
+                        '${req.query.username}', 
+                        '${hashedPassword}', 
+                        ${gender},
+                        '${birthDate}',
+                        )`;
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+        .then(() => {
+            return `
+                INSERT INTO eco_points.users_login
+                VALUES (id, device_android_id, device_serial, device_model, ip, locale)
+                (
+                '${id}',
+                '${req.get("X-Android-Id")}',
+                '${req.get("X-Serial")}',
+                '${req.get("X-Device")}',
+                '${req.get("X-IP")}',
+                '${req.get("X-Language")}',
+                )
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+        .then(() => {
+            return `
+                INSERT INTO eco_points.password_reset VALUES (id, secret)
+                ('${id}', ${utils.random(0, Number.MAX_SAFE_INTEGER)})
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+        .then(() => {
+            // TODO: Create profile picture dir, send registration email, add FCM token, add email verification hash
+            return true
         })
 }
-
-
-$lang = Utils::getLanguage($request);
-
-$hashed_password = password_hash($request->getParam('password'), PASSWORD_BCRYPT);
-$email_verification_hash = bin2hex(openssl_random_pseudo_bytes(16));
-$profile = rand();
-$id = Qr::get_token(32);
-$gender = $request->getParam('male') === null ? 'unknown' : $request->getParam('male') ? 'male' : 'female';
-
-$store->upsert($store->createEntity([
-    'id' => $id,
-    'email' => $request->getParam('email'),
-    'username' => $request->getParam('username'),
-    'password' => $hashed_password,
-    'birthdate' => $birth_timestamp,
-    'created' => new DateTime,
-    'last_login' => new DateTime,
-    'ip_created' => Utils::getIp($request),
-    'ip_last_login' => Utils::getIp($request),
-    'android_id' => Headers::getDeviceId($request),
-    'android_id_ll' => Headers::getDeviceId($request),
-    'device_created' => Headers::getDevice($request),
-    'device_last_login' => Headers::getDevice($request),
-    'language' => Headers::getLanguage($request),
-    'serial' => Headers::getSerial($request),
-    'serial_ll' => Headers::getSerial($request),
-    'version_code' => Headers::getVersionCode($request),
-    'version_name' => Headers::getVersionName($request),
-    'email_verification_hash' => $email_verification_hash,
-    'email_verified' => false,
-    'gender' => $gender,
-    'km_driven' => 0,
-    'secret' => rand(),
-    'profile' => $profile,
-    'spag' => Utils::startsWith(Headers::getUserAgent($request), 'SASAbus'),
-    'last_access' => new DateTime
-]));
-
-Utils::addFcmToken($id, json_encode($request->getParam('fcm_token') == null ? [] : [$request->getParam('fcm_token')]));
-
-$images = array_values(preg_grep('/^([^.])/', scandir(__DIR__ . "/../../../static/images/eco/profiles/$gender")));
-file_put_contents(Config::BUCKET . 'eco/profile_pictures/' . $profile, file_get_contents("https://sasa-bus.appspot.com/static/images/eco/profiles/$gender/" . $images[array_rand($images)]));
-
-(new SasaBusMail([$request->getParam('email')],
-    [
-        'it' => 'Benvenuto in SasaBus',
-    'de' => 'Wilkommen bei SasaBus',
-    'en' => 'Welcome to SasaBus'
-][$lang],
-    sprintf(file_get_contents(sprintf(__DIR__ . '/../../../static/txt/eco/registration/registration_%s.txt', $lang)),
-$request->getParam('username'),
-    "https://sasa-bus.appspot.com/v1/auth/verify/{$request->getParam('email')}/$email_verification_hash/$lang")))->send();
-
-return $response->withJson(['success' => true]);

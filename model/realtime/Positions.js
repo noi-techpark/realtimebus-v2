@@ -25,7 +25,7 @@ const DB_PARAMS = {
     bemerkung: "remark",
     delay_min: "ROUND(delay_sec / 60::DECIMAL)::INT",
     delay_sec: "delay_sec",
-    fahrzeit: "(EXTRACT(EPOCH FROM TIMEZONE('Europe/Rome', NOW()))::INT - departure) % 86400",
+    fahrzeit: "(EXTRACT(EPOCH FROM TIMEZONE('Europe/Rome', NOW()))::INT) % 86400 - departure % 86400",
     fgr_nr: "rec_frt.trip_time_group",
     fgr_text: "trip_time_group_text",
     frt_fid: "rec_frt.trip::INT",

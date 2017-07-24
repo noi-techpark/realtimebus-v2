@@ -96,7 +96,7 @@ module.exports = class Positions {
                 let params = urlParams['params'] == null ? null : urlParams['params'].split(',');
 
                 Object.keys(DB_PARAMS).sort().forEach(function (key) {
-                    if (params == null || params.indexOf(key) > -1) {
+                    if (params === undefined || params.indexOf(key) > -1) {
                         select += `${DB_PARAMS[key]} AS ${key}, `;
                         groupBy += `${key}, `;
 

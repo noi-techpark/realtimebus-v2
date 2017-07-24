@@ -10,6 +10,8 @@ const config = require("./config");
 const utils = require("./util/utils");
 
 const express = require('express');
+const expressAuth = require('express-basic-auth');
+
 const bodyParser = require('body-parser');
 const fs = require('fs');
 
@@ -47,6 +49,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.raw({
     limit: '10mb'
+}));
+
+app.use("/vdv", expressAuth({
+    users: {'sasa': 'sasabz2016!'}
 }));
 
 app.set('jsonp callback name', 'jsonp');

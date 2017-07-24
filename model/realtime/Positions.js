@@ -9,7 +9,16 @@ const FeatureList = require("../../model/realtime/FeatureList");
 const HttpError = require("../../util/HttpError");
 const LineUtils = require("../line/LineUtils");
 
-const OPERATORS = {'eq': '=', 'le': '<=', 'lt': '<', 'ne': '<>', 'is_not_null': 'IS NOT NULL', 'is_null': 'IS NULL', 'ge': '>=', 'gt': '>'};
+const OPERATORS = {
+    'eq': '=',
+    'le': '<=',
+    'lt': '<',
+    'ne': '<>',
+    'is_not_null': 'IS NOT NULL',
+    'is_null': 'IS NULL',
+    'ge': '>=',
+    'gt': '>'
+};
 const DB_PARAMS = {
     bemerkung: "remark",
     delay_min: "ROUND(delay_sec / 60::DECIMAL)::INT",
@@ -96,11 +105,24 @@ module.exports = class Positions {
                 let params = urlParams['params'] == null ? null : urlParams['params'].split(',');
 
                 Object.keys(DB_PARAMS).sort().forEach(function (key) {
-                    if (params === undefined || params.indexOf(key) > -1) {
+                    if (params == null || params.indexOf(key) > -1) {
                         select += `${DB_PARAMS[key]} AS ${key}, `;
+
+                        if (key === "li_lfd_nr") {
+                            key = "vehicle_positions.li_lfd_nr"
+                        }
+
+                        if (key === "ort_nr") {
+                            key = "next_rec_ort.ort_nr"
+                        }
+
+                        if (key === "lid_verlauf") {
+                            return
+                        }
+
                         groupBy += `${key}, `;
 
-                        if (key === "hexcolor2") {
+                        if (params !== undefined && key === "hexcolor2") {
                             includeHexColor2 = true;
                         }
                     }
@@ -180,7 +202,7 @@ module.exports = class Positions {
                     delete row.li_g;
                     delete row.li_b;
 
-                    featureList.add(row, geometry);
+                    featureList.add(row, urlParams['geometry'] == false ? null : geometry);
                 }
 
                 return featureList.getFeatureCollection();

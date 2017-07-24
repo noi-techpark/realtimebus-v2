@@ -121,10 +121,6 @@ module.exports = class Positions {
                         }
 
                         groupBy += `${key}, `;
-
-                        if (params !== undefined && key === "hexcolor2") {
-                            includeHexColor2 = true;
-                        }
                     }
                 });
 
@@ -189,7 +185,7 @@ module.exports = class Positions {
                     let geometry = row.json_extrapolation_geom != null ? JSON.parse(row.json_extrapolation_geom) : JSON.parse(row.json_geom);
                     let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
 
-                    if (includeHexColor2) {
+                    if (row.hexcolor2 == "hexcolor2") {
                         row.hexcolor2 = hex.toUpperCase();
                     }
 

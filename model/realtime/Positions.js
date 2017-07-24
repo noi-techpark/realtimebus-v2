@@ -105,11 +105,24 @@ module.exports = class Positions {
                 let params = urlParams['params'] == null ? null : urlParams['params'].split(',');
 
                 Object.keys(DB_PARAMS).sort().forEach(function (key) {
-                    if (params === undefined || params.indexOf(key) > -1) {
+                    if (params == null || params.indexOf(key) > -1) {
                         select += `${DB_PARAMS[key]} AS ${key}, `;
+
+                        if (key === "li_lfd_nr") {
+                            key = "vehicle_positions.li_lfd_nr"
+                        }
+
+                        if (key === "ort_nr") {
+                            key = "next_rec_ort.ort_nr"
+                        }
+
+                        if (key === "lid_verlauf") {
+                            return
+                        }
+
                         groupBy += `${key}, `;
 
-                        if (key === "hexcolor2") {
+                        if (params !== undefined && key === "hexcolor2") {
                             includeHexColor2 = true;
                         }
                     }
@@ -189,7 +202,7 @@ module.exports = class Positions {
                     delete row.li_g;
                     delete row.li_b;
 
-                    featureList.add(row, geometry);
+                    featureList.add(row, urlParams['geometry'] == false ? null : geometry);
                 }
 
                 return featureList.getFeatureCollection();

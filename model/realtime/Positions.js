@@ -209,7 +209,7 @@ module.exports = class Positions {
                             featureList.add(row, geometry);
                             break;
                         default:
-                            throw new HttpError(`Cannot set geometry to '${showGeom}'`);
+                            throw new HttpError(`Cannot set geometry to '${showGeom}'`, 400);
                     }
                 }
 

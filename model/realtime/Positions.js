@@ -6,7 +6,39 @@ const utils = require("../../util/utils");
 const logger = require("../../util/logger");
 
 const FeatureList = require("../../model/realtime/FeatureList");
+const HttpError = require("../../util/HttpError");
 const LineUtils = require("../line/LineUtils");
+
+const OPERATORS = {'eq': '=', 'le': '<=', 'lt': '<', 'ne': '<>', 'is_not_null': 'IS NOT NULL', 'is_null': 'IS NULL', 'ge': '>=', 'gt': '>'};
+const DB_PARAMS = {
+    bemerkung: "remark",
+    delay_min: "ROUND(delay_sec / 60::DECIMAL)::INT",
+    delay_sec: "delay_sec",
+    fahrzeit: "(EXTRACT(EPOCH FROM TIMEZONE('Europe/Rome', NOW()))::INT - departure) % 86400",
+    fgr_nr: "rec_frt.trip_time_group",
+    fgr_text: "trip_time_group_text",
+    frt_fid: "rec_frt.trip::INT",
+    frt_start: "departure % 86400",
+    fzg_depot: "depot",
+    fzg_nr: "vehicle",
+    gps_date: "gps_date",
+    hexcolor: "upper(hex)",
+    hue: "hue",
+    insert_date: "insert_date",
+    leistungsart_nr: "rec_frt.service",
+    leistungsart_text: "leistungsart_text",
+    lidname: "line_name",
+    li_lfd_nr: "vehicle_positions.li_lfd_nr + 1",
+    li_nr: "rec_frt.line",
+    li_ri_nr: "direction",
+    li_zone: "SPLIT_PART(li_kuerzel, ' ', 2)",
+    ort_name: "next_rec_ort.ort_name",
+    ort_nr: "next_rec_ort.ort_nr",
+    ort_ref_ort: "next_rec_ort.ort_ref_ort",
+    ort_ref_ort_kuerzel: "next_rec_ort.ort_ref_ort_kuerzel",
+    ort_ref_ort_name: "next_rec_ort.ort_ref_ort_name",
+    str_li_var: "rec_frt.variant"
+};
 
 module.exports = class Positions {
 
@@ -18,53 +50,54 @@ module.exports = class Positions {
         this.lines = lines;
     }
 
-    setVehicle(vehicle) {
-        this.vehicle = vehicle;
-    }
-
-    getBuses() {
+    getBuses(urlParams) {
         return Promise.resolve()
             .then(() => {
+                let sqlFilter = '';
+
+                Object.keys(urlParams).sort().forEach(function (jsonParam) {
+                    if (DB_PARAMS[jsonParam] == null || jsonParam.slice(-3) === "_op") {
+                        return;
+                    }
+
+                    let dbParam = DB_PARAMS[jsonParam];
+                    let urlValue = urlParams[jsonParam];
+                    let opField = urlParams[jsonParam + "_op"];
+                    let op = OPERATORS[opField];
+
+                    if (opField == null && op == null) {
+                        sqlFilter += ` AND ${DB_PARAMS[jsonParam]} IN (${urlValue.split(',').map(function (value) {
+                            return `'${value}'`;
+                        }).join()})`;
+                    } else {
+                        sqlFilter += ` AND ${DB_PARAMS[jsonParam]} ${op}`;
+
+                        if (op !== 'IS NOT NULL' && op !== 'IS NULL') {
+                            sqlFilter += ` '${urlValue}'`;
+                        }
+                    }
+                });
+
+                logger.info("SQL filter:" + sqlFilter);
+
                 let lineFilter = '';
 
                 if (!utils.isEmptyArray(this.lines)) {
-                    logger.info(`Line filter is enabled: lines='${JSON.stringify(this.lines)}'`);
+                    logger.info(`Line filter: '${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
                 }
 
+                let select = '';
+
+                Object.keys(DB_PARAMS).sort().forEach(function (key) {
+                    select += `${DB_PARAMS[key]} AS ${key}, `;
+                });
+
                 return `
-                    SELECT DISTINCT ON (vehicle) vehicle,
-                        remark AS bemerkung,
-                        delay_sec,
-                        ROUND(delay_sec / 60::DECIMAL)::INT AS delay_min,
-                        depot AS fzg_depot,
-                        direction AS li_ri_nr,
-                        EXTRACT(EPOCH FROM TIMEZONE('Europe/Rome', NOW()))::INT % 86400 - departure AS fahrzeit,
-                        rec_frt.trip_time_group AS fgr_nr,
-                        trip_time_group_text AS fgr_text,
-                        rec_frt.trip::int AS frt_fid,
-                        departure % 86400 AS frt_start,
-                        vehicle AS fzg_nr,
-                        rec_frt.service AS leistungsart_nr,
-                        leistungsart_text,
-                        JSON_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS lid_verlauf,
-                        upper(hex) AS hexcolor,
-                        hue,
-                        insert_date AS gps_enabled_at,
-                        rec_frt.line AS li_nr,
-                        rec_frt.variant AS str_li_var,
-                        line_name AS lidname,
-                        li_kuerzel,
-                        vehicle_positions.li_lfd_nr + 1 AS li_lfd_nr,
-                        next_rec_ort.ort_name,
-                        next_rec_ort.ort_nr,
-                        next_rec_ort.ort_ref_ort,
-                        next_rec_ort.ort_ref_ort_kuerzel,
-                        next_rec_ort.ort_ref_ort_name,
-                        -- status,
+                    SELECT DISTINCT ON (vehicle) vehicle, ${select}
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
-                        gps_date AS gps_updated_at,
+                        JSON_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS lid_verlauf,
                         red AS li_r,
                         green AS li_g,
                         blue AS li_b
@@ -105,15 +138,16 @@ module.exports = class Positions {
                         
                     WHERE gps_date > NOW() - INTERVAL '${config.realtime_bus_timeout_minutes} minute'
                     
+                    ${sqlFilter}
                     ${lineFilter}
                     
                     GROUP BY vehicle, bemerkung, delay_sec, delay_min, departure, depot, li_ri_nr, fgr_nr, fgr_text,
-                        frt_fid, frt_start, fzg_nr, leistungsart_nr, leistungsart_text, hexcolor, hue, gps_enabled_at,
-                        li_nr, str_li_var, lidname, li_kuerzel, vehicle_positions.li_lfd_nr + 1, next_rec_ort.ort_name,
+                        frt_fid, frt_start, fzg_nr, leistungsart_nr, leistungsart_text, hexcolor, hue, insert_date,
+                        li_nr, str_li_var, lidname, li_zone, vehicle_positions.li_lfd_nr + 1, next_rec_ort.ort_name,
                         next_rec_ort.ort_nr, next_rec_ort.ort_ref_ort, next_rec_ort.ort_ref_ort_kuerzel,
-                        next_rec_ort.ort_ref_ort_name, json_geom, json_extrapolation_geom, gps_updated_at, li_r, li_g, li_b
+                        next_rec_ort.ort_ref_ort_name, json_geom, json_extrapolation_geom, gps_date, li_r, li_g, li_b
                     
-                    ORDER BY vehicle DESC, gps_updated_at DESC
+                    ORDER BY vehicle DESC, gps_date DESC
                `
             })
             .then(sql => connection.query(sql))
@@ -130,13 +164,9 @@ module.exports = class Positions {
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
 
-                    delete row.trip;
-                    delete row.line;
-                    delete row.line_name;
                     delete row.li_r;
                     delete row.li_g;
                     delete row.li_b;
-                    delete row.vehicle;
 
                     featureList.add(row, geometry);
                 }

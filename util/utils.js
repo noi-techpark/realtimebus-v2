@@ -109,7 +109,7 @@ module.exports.generateEcoPointsJwt = function (user) {
     }
 
     let cert = fs.readFileSync('static/private.key');
-    return jwt.sign({ sub: user.id }, cert, { algorithm: 'RS256'});
+    return jwt.sign({sub: user.id}, cert, {algorithm: 'RS256'});
 };
 
 

@@ -205,6 +205,7 @@ module.exports = class Positions {
                             break;
                         case "true":
                         case null:
+                        case undefined:
                             featureList.add(row, geometry);
                             break;
                         default:

@@ -15,7 +15,7 @@ module.exports = class FeatureList {
             feature.geometry = Utils.sortObject(geometry)
         }
 
-        if (Utils.isEmptyArray(properties)) {
+        if (JSON.stringify(properties) !== "{}") {
             feature.properties = Utils.sortObject(properties)
         }
 

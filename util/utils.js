@@ -8,7 +8,7 @@ const fs = require("fs");
 const logger = require('./logger');
 const config = require('../config');
 
-const enableErrorReporting = false;
+const enableErrorReporting = process.env.ERROR_REPORTING || false;
 
 if (!('toJSON' in Error.prototype)) {
     Object.defineProperty(Error.prototype, 'toJSON', {
@@ -135,6 +135,8 @@ module.exports.startErrorReporting = function () {
 
     try {
         raven.config('https://405c5b47fe2c4573949031e156954ed3:d701aea274ea4f8599cfa60b29b76185@sentry.io/192719').install();
+
+        logger.warn("Enabled Raven error reporting");
     } catch (error) {
         logger.error("Failed to set up raven")
     }

@@ -2,7 +2,7 @@
 
 const connection = require("../../database/database");
 const config = require("../../config");
-const utils = require("../../util/utils");
+const Utils = require("../../util/utils");
 const logger = require("../../util/logger");
 
 const FeatureList = require("../../model/realtime/FeatureList");
@@ -95,7 +95,7 @@ module.exports = class Positions {
 
                 let lineFilter = '';
 
-                if (!utils.isEmptyArray(this.lines)) {
+                if (!Utils.isEmptyArray(this.lines)) {
                     logger.info(`Line filter: '${JSON.stringify(this.lines)}'`);
                     lineFilter = " AND (" + LineUtils.buildForSql('rec_frt.line', 'rec_frt.variant', this.lines) + ")";
                 }

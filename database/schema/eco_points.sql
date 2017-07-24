@@ -46,7 +46,7 @@ CREATE TABLE password_reset (
 
 CREATE TABLE blocked_domains (
     id INTEGER NOT NULL UNIQUE,
-    address TEXT NOT NULL,
+    address TEXT NOT NULL
 );
 
 CREATE TABLE email_verification (

@@ -32,7 +32,7 @@ const DB_PARAMS = {
     frt_start: "departure % 86400",
     fzg_depot: "depot",
     fzg_nr: "vehicle",
-    gps_inserted_at: "insert_date",
+    gps_enabled_at: "insert_date",
     gps_updated_at: "gps_date",
     hexcolor: "upper(hex)",
     hexcolor2: "'hexcolor2'",

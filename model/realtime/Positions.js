@@ -9,6 +9,8 @@ const FeatureList = require("../../model/realtime/FeatureList");
 const HttpError = require("../../util/HttpError");
 const LineUtils = require("../line/LineUtils");
 
+const GEOMETRY = "geometry";
+const PROPERTIES = "properties";
 const OPERATORS = {
     'eq': '=',
     'le': '<=',
@@ -102,7 +104,7 @@ module.exports = class Positions {
 
                 let select = '';
                 let groupBy = '';
-                let params = urlParams['params'] == null ? null : urlParams['params'].split(',');
+                let params = urlParams[PROPERTIES] == null ? null : urlParams[PROPERTIES].split(',');
 
                 Object.keys(DB_PARAMS).sort().forEach(function (key) {
                     if (params == null || params.indexOf(key) > -1) {
@@ -179,7 +181,7 @@ module.exports = class Positions {
             .then(sql => connection.query(sql))
             .then(result => {
                 let featureList = new FeatureList();
-                let showGeom = urlParams["geometry"];
+                let showGeom = urlParams[GEOMETRY];
 
                 for (let row of result.rows) {
                     // noinspection EqualityComparisonWithCoercionJS

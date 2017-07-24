@@ -32,6 +32,8 @@ CREATE TABLE users_login (
     device_model VARCHAR(32) NOT NULL,
     ip inet NOT NULL,
     locale VARCHAR(5) NOT NULL,
+    version_code SMALLINT NOT NULL,
+    version_name VARCHAR(8) NOT NULL,
     login_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

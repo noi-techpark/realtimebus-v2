@@ -2,6 +2,8 @@
 
 const raven = require('raven');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const fs = require("fs");
 
 const logger = require('./logger');
 const config = require('../config');
@@ -98,6 +100,16 @@ module.exports.generateProfileId = function () {
     }
 
     return token;
+};
+
+module.exports.generateEcoPointsJwt = function (user) {
+    // noinspection EqualityComparisonWithCoercionJS
+    if (user == null) {
+        return null;
+    }
+
+    let cert = fs.readFileSync('static/private.key');
+    return jwt.sign({ sub: user.id }, cert, { algorithm: 'RS256'});
 };
 
 

@@ -44,7 +44,7 @@ const app = express();
 app.use(logRequests);
 app.use(checkForRunningImport);
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded());
+app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.raw({
     limit: '10mb'
 }));

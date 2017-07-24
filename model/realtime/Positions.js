@@ -23,10 +23,12 @@ const DB_PARAMS = {
     fzg_nr: "vehicle",
     gps_date: "gps_date",
     hexcolor: "upper(hex)",
+    hexcolor2: "'hexcolor2'",
     hue: "hue",
     insert_date: "insert_date",
     leistungsart_nr: "rec_frt.service",
     leistungsart_text: "leistungsart_text",
+    lid_verlauf: "JSON_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr)",
     lidname: "line_name",
     li_lfd_nr: "vehicle_positions.li_lfd_nr + 1",
     li_nr: "rec_frt.line",
@@ -39,6 +41,8 @@ const DB_PARAMS = {
     ort_ref_ort_name: "next_rec_ort.ort_ref_ort_name",
     str_li_var: "rec_frt.variant"
 };
+
+let includeHexColor2 = false;
 
 module.exports = class Positions {
 
@@ -88,16 +92,24 @@ module.exports = class Positions {
                 }
 
                 let select = '';
+                let groupBy = '';
+                let params = urlParams['params'] == null ? null : urlParams['params'].split(',');
 
                 Object.keys(DB_PARAMS).sort().forEach(function (key) {
-                    select += `${DB_PARAMS[key]} AS ${key}, `;
+                    if (params == null || params.indexOf(key) > -1) {
+                        select += `${DB_PARAMS[key]} AS ${key}, `;
+                        groupBy += `${key}, `;
+
+                        if (key === "hexcolor2") {
+                            includeHexColor2 = true;
+                        }
+                    }
                 });
 
                 return `
                     SELECT DISTINCT ON (vehicle) vehicle, ${select}
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.the_geom, ${this.outputFormat})) AS json_geom,
                         ST_AsGeoJSON(ST_Transform(vehicle_positions.extrapolation_geom, ${this.outputFormat})) AS json_extrapolation_geom,
-                        JSON_AGG(lid_verlauf_paths.ort_nr ORDER BY lid_verlauf_paths.li_lfd_nr) AS lid_verlauf,
                         red AS li_r,
                         green AS li_g,
                         blue AS li_b
@@ -141,11 +153,7 @@ module.exports = class Positions {
                     ${sqlFilter}
                     ${lineFilter}
                     
-                    GROUP BY vehicle, bemerkung, delay_sec, delay_min, departure, depot, li_ri_nr, fgr_nr, fgr_text,
-                        frt_fid, frt_start, fzg_nr, leistungsart_nr, leistungsart_text, hexcolor, hue, insert_date,
-                        li_nr, str_li_var, lidname, li_zone, vehicle_positions.li_lfd_nr + 1, next_rec_ort.ort_name,
-                        next_rec_ort.ort_nr, next_rec_ort.ort_ref_ort, next_rec_ort.ort_ref_ort_kuerzel,
-                        next_rec_ort.ort_ref_ort_name, json_geom, json_extrapolation_geom, gps_date, li_r, li_g, li_b
+                    GROUP BY ${groupBy}vehicle, json_geom, json_extrapolation_geom, li_r, li_g, li_b, gps_date
                     
                     ORDER BY vehicle DESC, gps_date DESC
                `
@@ -159,10 +167,14 @@ module.exports = class Positions {
                     let geometry = row.json_extrapolation_geom != null ? JSON.parse(row.json_extrapolation_geom) : JSON.parse(row.json_geom);
                     let hex = ((1 << 24) + (row.li_r << 16) + (row.li_g << 8) + row.li_b).toString(16).slice(1);
 
-                    row.hexcolor2 = hex.toUpperCase();
+                    if (includeHexColor2) {
+                        row.hexcolor2 = hex.toUpperCase();
+                    }
 
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;
+
+                    delete row.vehicle;
 
                     delete row.li_r;
                     delete row.li_g;

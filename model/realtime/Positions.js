@@ -205,7 +205,6 @@ module.exports = class Positions {
                             break;
                         case "true":
                         case null:
-                            logger.debug(showGeom);
                             featureList.add(row, geometry);
                             break;
                         default:

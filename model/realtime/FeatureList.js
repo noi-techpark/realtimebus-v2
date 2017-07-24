@@ -9,11 +9,17 @@ module.exports = class FeatureList {
     }
 
     add(properties, geometry) {
-        let feature = {
-            geometry: Utils.sortObject(geometry),
-            properties: Utils.sortObject(properties),
-            type: "Feature"
-        };
+        let feature = {};
+
+        if (geometry != null) {
+            feature.geometry = Utils.sortObject(geometry)
+        }
+
+        if (Utils.isEmptyArray(properties)) {
+            feature.properties = Utils.sortObject(properties)
+        }
+
+        feature.type = "Feature";
 
         this.features.push(feature);
     }

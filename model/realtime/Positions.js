@@ -179,6 +179,7 @@ module.exports = class Positions {
             .then(sql => connection.query(sql))
             .then(result => {
                 let featureList = new FeatureList();
+                let showGeom = urlParams["geometry"];
 
                 for (let row of result.rows) {
                     // noinspection EqualityComparisonWithCoercionJS
@@ -198,7 +199,18 @@ module.exports = class Positions {
                     delete row.li_g;
                     delete row.li_b;
 
-                    featureList.add(row, urlParams['geometry'] == false ? null : geometry);
+                    switch (showGeom) {
+                        case "false":
+                            featureList.add(row, null);
+                            break;
+                        case "true":
+                        case null:
+                            logger.debug(showGeom);
+                            featureList.add(row, geometry);
+                            break;
+                        default:
+                            throw new HttpError(`Cannot set geometry to '${showGeom}'`);
+                    }
                 }
 
                 return featureList.getFeatureCollection();

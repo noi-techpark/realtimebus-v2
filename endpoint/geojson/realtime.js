@@ -9,7 +9,7 @@ const Positions = require("../../model/realtime/Positions");
 
 module.exports.positions = function (req, res) {
     Promise.resolve().then(() => {
-        let positions = new Positions(req.query.coords || config.coordinate_wgs84);
+        let positions = new Positions(req.query.coords);
         let lines = req.params.lines;
 
         if (!utils.isEmptyArray(lines)) {

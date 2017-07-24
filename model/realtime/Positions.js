@@ -9,7 +9,16 @@ const FeatureList = require("../../model/realtime/FeatureList");
 const HttpError = require("../../util/HttpError");
 const LineUtils = require("../line/LineUtils");
 
-const OPERATORS = {'eq': '=', 'le': '<=', 'lt': '<', 'ne': '<>', 'is_not_null': 'IS NOT NULL', 'is_null': 'IS NULL', 'ge': '>=', 'gt': '>'};
+const OPERATORS = {
+    'eq': '=',
+    'le': '<=',
+    'lt': '<',
+    'ne': '<>',
+    'is_not_null': 'IS NOT NULL',
+    'is_null': 'IS NULL',
+    'ge': '>=',
+    'gt': '>'
+};
 const DB_PARAMS = {
     bemerkung: "remark",
     delay_min: "ROUND(delay_sec / 60::DECIMAL)::INT",
@@ -47,7 +56,7 @@ let includeHexColor2 = false;
 module.exports = class Positions {
 
     constructor(outputFormat) {
-        this.outputFormat = outputFormat;
+        this.outputFormat = outputFormat || config.coordinate_wgs84;
     }
 
     setLines(lines) {

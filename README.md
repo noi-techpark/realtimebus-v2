@@ -7,16 +7,16 @@ It provides real-time positions of the public transport vehicles in South Tyrol.
 
 ### Architecture
 
-The Server is written in [NodeJs](https://nodejs.org/) and is backed by a [PostgreSQL](https://www.postgresql.org) database.
-The RESTful interface is done using [Express.js](https://expressjs.com).
+The server is written in [NodeJs](https://nodejs.org/) and is backed by a [PostgreSQL](https://www.postgresql.org) database.
+The RESTful interface is implemented using [Express.js](https://expressjs.com).
 
-It uses Open Data provided by SASA. The documentation about it can be found [here](http://opensasa.info).
+It uses both open and private data provided by SASA SpA-AG. The documentation about it can be found [here](http://opensasa.info).
 
 ### Install
 
 If you want to install this project, please refer to our [installation instructions](INSTALL.md).
 
-### Built With
+### Built with
 
 - [NodeJs](https://nodejs.org/) - The web framework used
 - [Express.js](https://expressjs.com) - RESTful interface
@@ -25,7 +25,7 @@ If you want to install this project, please refer to our [installation instructi
 
 ### Contributing
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests to us.
 
 ### Versioning
 

@@ -106,7 +106,7 @@ To fix this error you can either:
 
 - Run this project using elevated permissions (Unrecommended)
     
-        sudo node app.js
+        sudo node app.js serve --port 80
         
 - Give Safe User Permission To Use Port 80 (Recommended)
 
@@ -115,7 +115,7 @@ To fix this error you can either:
       
     You can now launch the server using:
   
-        node app.js
+        node app.js serve --port 80
         
 - Change the port to a number over 1024
 
@@ -123,4 +123,4 @@ To fix this error you can either:
       
     You can now launch the server using:
   
-        node app.js
+        node app.js serve --port 80

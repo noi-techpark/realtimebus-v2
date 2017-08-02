@@ -1,7 +1,7 @@
-## SASA SpA-AG Realtime Server
+## SASA SpA-AG real-time server
 
-RealtimeServer is the backend code of [http://realtime.opensasa.info](http://realtime.opensasa.info). 
-It provides real time positions of the public transport vehicles managed by SASA SpA-AG in South Tyrol. 
+This is the backend code of [http://realtimetest.opensasa.info](http://realtimetest.opensasa.info). 
+It provides real-time positions of the public transport vehicles in South Tyrol. 
 
 <br>
 

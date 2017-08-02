@@ -95,7 +95,7 @@ Upload the data by executing a POST request to the VDV-endpoint like follows:
         
 2. The server should now be running on port 80 and can be accessed using:
         
-        curl http://localhost/v1/
+        curl http://localhost/geojson/realtime
         
 
 ## Troubleshooting

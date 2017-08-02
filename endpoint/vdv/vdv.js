@@ -2,11 +2,16 @@
 
 require("moment");
 
+const path = require('path');
+const mime = require('mime');
+
 const AdmZip = require("adm-zip");
 const fs = require("fs");
 const http = require("http");
 const moment = require("moment-timezone");
 const reader = require("readline");
+
+const spawn = require('child_process').spawnSync;
 
 const VdvFile = require("../../model/vdv/VdvFile");
 const HttpError = require("../../util/HttpError");
@@ -16,9 +21,14 @@ const config = require("../../config");
 const database = require("../../database/database.js");
 const Utils = require("../../util/utils");
 
-const LATEST_VDV_ZIP = 'vdv/latest.zip';
-const LATEST_EXTRACTED_VDV_DATA = 'vdv/latest';
+const VDV_ROOT = 'vdv';
+const VDV_APP_ROOT = `${VDV_ROOT}/app`;
+
+const LATEST_VDV_ZIP = `${VDV_ROOT}/latest.zip`;
+const LATEST_EXTRACTED_VDV_DATA = `${VDV_ROOT}/latest`;
 const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
+
+const APP_ZIP_FILE = `${VDV_ROOT}/data.zip`;
 
 // import vdv data
 // curl --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://HOST/vdv
@@ -241,6 +251,9 @@ module.exports.upload = function (req, res) {
                         `)
                 })
                 .then(() => {
+                    return generateZipForApp(client)
+                })
+                .then(() => {
                     return new Promise(function (resolve) {
                         http.get({
                             host: 'mail-pool.appspot.com',
@@ -278,8 +291,49 @@ module.exports.upload = function (req, res) {
         })
 };
 
+module.exports.testZip = function (req, res) {
+    return database.connect()
+        .then(client => {
+            return generateZipForApp(client)
+                .then(lines => {
+                    logger.warn("Zip generated");
+                    res.status(200).json(lines)
+                })
+                .catch(error => {
+                    logger.error("Zip generation failed!");
+                    logger.error(error);
+
+                    res.status(500).json({success: false, error: error})
+                });
+        })
+        .catch(error => {
+            logger.error(`Error acquiring client: ${error}`);
+            res.status(500).jsonp({success: false, error: error})
+        })
+};
+
+module.exports.asZip = function (req, res) {
+    let file = APP_ZIP_FILE;
+
+    let fileName = path.basename(file);
+    let mimeType = mime.lookup(file);
+
+    res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
+    res.setHeader('Content-type', mimeType);
+
+    let fileStream = fs.createReadStream(file);
+    fileStream.pipe(res);
+};
+
+
+// ================================================== VDV IMPORT =======================================================
 
 function saveZipFiles(req) {
+    if (!fs.existsSync(VDV_ROOT)) {
+        logger.info(`Creating directory '${VDV_ROOT}'`);
+        fs.mkdirSync(VDV_ROOT);
+    }
+
     return new Promise(function (resolve, reject) {
         fs.writeFile(LATEST_VDV_ZIP, req.body, function (err) {
             try {
@@ -599,4 +653,337 @@ function parseVdvFile(file, data, cb) {
     }).on('close', function () {
         cb(file, table, formats, columns, records, data);
     })
+}
+
+
+// ============================================== APP ZIP GENERATION ===================================================
+
+function generateZipForApp(client) {
+    logger.warn("Generating planned data zip for app");
+
+    let mainFile = {};
+
+    return getTrips(client)
+        .then(result => {
+            let lines = {};
+
+            for (let entry of result.rows) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type] == null) {
+                    lines[entry.day_type] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line] == null) {
+                    lines[entry.day_type][entry.line] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line].variants == null) {
+                    lines[entry.day_type][entry.line].variants = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line].variants[entry.variant] == null) {
+                    lines[entry.day_type][entry.line].variants[entry.variant] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line].variants[entry.variant].trips == null) {
+                    lines[entry.day_type][entry.line].variants[entry.variant].trips = [];
+                }
+
+                lines[entry.day_type][entry.line].line = entry.line;
+                lines[entry.day_type][entry.line].variants[entry.variant].variant = entry.variant;
+
+                lines[entry.day_type][entry.line].variants[entry.variant].trips.push({
+                    d: entry.departure,
+                    tg: entry.trip_time_group,
+                    t: entry.trip
+                });
+            }
+
+            Object.keys(lines).forEach(function (el1, key, array) {
+                Object.keys(lines[el1]).forEach(function (el2, key, array) {
+                    lines[el1][el2].variants = Object.keys(lines[el1][el2].variants)
+                        .map(p => lines[el1][el2].variants[p]);
+                });
+
+                lines[el1] = Object.keys(lines[el1])
+                    .map(p => lines[el1][p]);
+            });
+
+            return lines;
+        })
+
+        .then(lines => {
+            if (!fs.existsSync(VDV_APP_ROOT)) {
+                logger.info(`Creating directory '${VDV_APP_ROOT}'`);
+                fs.mkdirSync(VDV_APP_ROOT);
+            }
+
+            Object.keys(lines).forEach(function (element, key, array) {
+                let file = `${VDV_APP_ROOT}/trips_${element}.json`;
+                logger.info(`Writing file '${file}'`);
+                fs.writeFileSync(file, JSON.stringify(lines[element]));
+            });
+
+            return null
+        })
+
+        .then(() => {
+            return getCalendar(client)
+        })
+        .then(result => {
+            let calendar = [];
+
+            for (let entry of result.rows) {
+                calendar.push({
+                    dt: entry.day_type,
+                    da: entry.betriebstag,
+                });
+            }
+
+            mainFile.calendar = calendar;
+
+            return null
+        })
+
+        .then(() => {
+            return getBusStopStopTimes(client)
+        })
+        .then(result => {
+            let busStopStopTimes = [];
+
+            for (let entry of result.rows) {
+                busStopStopTimes.push({
+                    bs: entry.ort_nr,
+                    st: entry.hp_hzt,
+                    tg: entry.trip_time_group,
+                });
+            }
+
+            mainFile.bus_stop_stop_times = busStopStopTimes;
+
+            return null
+        })
+
+        .then(() => {
+            return getTravelTimes(client)
+        })
+        .then(result => {
+            let travelTimes = [];
+
+            for (let entry of result.rows) {
+                travelTimes.push({
+                    di: entry.sel_ziel,
+                    oi: entry.ort_nr,
+                    tg: entry.trip_time_group,
+                    tt: entry.sel_fzt,
+                });
+            }
+
+            mainFile.travel_times = travelTimes;
+
+            return null
+        })
+
+        .then(() => {
+            return getTripStopTimes(client)
+        })
+        .then(result => {
+            let tripStopTimes = [];
+
+            for (let entry of result.rows) {
+                tripStopTimes.push({
+                    bs: entry.ort_nr,
+                    st: entry.frt_hzt_zeit,
+                    tr: entry.trip,
+                });
+            }
+
+            mainFile.trip_stop_times = tripStopTimes;
+
+            return null
+        })
+
+        .then(() => {
+            return getLinePath(client)
+        })
+        .then(result => {
+            let linePath = {};
+
+            for (let entry of result.rows) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line] == null) {
+                    linePath[entry.line] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line].variants == null) {
+                    linePath[entry.line].variants = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line].variants[entry.variant] == null) {
+                    linePath[entry.line].variants[entry.variant] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line].variants[entry.variant].path == null) {
+                    linePath[entry.line].variants[entry.variant].path = [];
+                }
+
+                linePath[entry.line].line = entry.line;
+                linePath[entry.line].variants[entry.variant].variant = entry.variant;
+
+                linePath[entry.line].variants[entry.variant].path.push(entry.ort_nr);
+            }
+
+            Object.keys(linePath).forEach(function (el2, key, array) {
+                linePath[el2].variants = Object.keys(linePath[el2].variants)
+                    .map(p => linePath[el2].variants[p]);
+            });
+
+            linePath = Object.keys(linePath)
+                .map(p => linePath[p]);
+
+            mainFile.paths = linePath;
+
+            return null
+        })
+
+        .then(() => {
+            let file = `${VDV_APP_ROOT}/planned_data.json`;
+            logger.info(`Writing file '${file}'`);
+            fs.writeFileSync(file, JSON.stringify(mainFile));
+
+            if (fs.existsSync(`${VDV_APP_ROOT}/${APP_ZIP_FILE}`)) {
+                logger.info(`Deleting old zip '${APP_ZIP_FILE}'`);
+                fs.unlinkSync(`${VDV_APP_ROOT}/${APP_ZIP_FILE}`);
+            }
+
+            logger.info(`Compressing files as '${APP_ZIP_FILE}'`);
+
+            const command = `zip -j -D ${APP_ZIP_FILE} ${VDV_APP_ROOT}/*.json`;
+            const zip = spawn('/bin/sh', ['-c', command]);
+
+            console.log(`ZIP: stdout: ${zip.stdout.toString()}`);
+
+            if (zip.status !== 0) {
+                throw new HttpError(`zip exited with status code '${zip.status}', stderr=${zip.stderr.toString()}`, 500)
+            }
+
+            logger.info("File compression successful");
+
+            return null
+        })
+
+}
+
+function getTrips(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    day_type,
+                    trip,
+                    departure,
+                    trip_time_group,
+                    line,
+                    variant
+                    
+                FROM data.rec_frt
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getCalendar(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    day_type,
+                    betriebstag
+                    
+                FROM data.firmenkalender
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getBusStopStopTimes(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    trip_time_group,
+                    ort_nr,
+                    hp_hzt
+                    
+                FROM data.ort_hztf
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getTravelTimes(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    sel_ziel,
+                    ort_nr,
+                    trip_time_group,
+                    sel_fzt
+                    
+                FROM data.sel_fzt_feld
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getTripStopTimes(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    ort_nr,
+                    frt_hzt_zeit,
+                    trip
+                    
+                FROM data.rec_frt_hzt
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getLinePath(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    ort_nr,
+                    li_lfd_nr,
+                    line,
+                    variant
+                    
+                FROM data.lid_verlauf
+                ORDER BY line, li_lfd_nr
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
 }

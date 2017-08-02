@@ -19,7 +19,8 @@ const v1Realtime = require("./endpoint/geojson/realtime");
 const v1Lines = require("./endpoint/geojson/lines");
 const v1Receiver = require("./endpoint/geojson/receiver");
 const v1Stops = require("./endpoint/geojson/stops");
-const v1Vdv = require("./endpoint/root/vdv");
+
+const vdv = require("./endpoint/vdv/vdv");
 
 const v2Realtime = require("./endpoint/v2/realtime");
 
@@ -51,7 +52,7 @@ app.use(bodyParser.raw({
     limit: '10mb'
 }));
 
-app.use("/vdv", expressAuth({
+app.use("/vdv/import", expressAuth({
     users: {'sasa': 'sasabz2016!'}
 }));
 
@@ -87,7 +88,12 @@ function startDatabase() {
 }
 
 function startServer() {
-    app.post("/vdv", v1Vdv.upload);
+
+    app.group("/vdv", (router) => {
+        router.post("/import", vdv.upload);
+        router.get("/testZip", vdv.testZip);
+        router.get("/zip", vdv.asZip);
+    });
 
     app.group("/geojson", (router) => {
         router.get("/realtime", v1Realtime.positions);

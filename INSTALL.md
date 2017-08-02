@@ -14,7 +14,7 @@
 You should be able to compile RealtimeServer successfully on the following
 platforms:
 
-* Linux with at least 4GB of RAM
+* Linux with at least 8GB of RAM
 
 <br/>
 

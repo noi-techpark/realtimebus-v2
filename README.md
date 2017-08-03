@@ -7,7 +7,7 @@ It provides real-time positions of the public transport vehicles managed by SASA
 
 ### Architecture
 
-The server is written in [NodeJs](https://nodejs.org/) and is backed by a [PostgreSQL](https://www.postgresql.org) database.
+The server is written in [Node.js](https://nodejs.org/) and is backed by a [PostgreSQL](https://www.postgresql.org) database.
 The RESTful interface is implemented using [Express.js](https://expressjs.com).
 
 It uses both open and private data provided by SASA SpA-AG. The documentation about it can be found [here](http://opensasa.info).
@@ -18,7 +18,7 @@ If you want to install this project, please refer to our [installation instructi
 
 ### Built with
 
-- [NodeJs](https://nodejs.org/) - The web framework used
+- [Node.js](https://nodejs.org/) - The web framework used
 - [Express.js](https://expressjs.com) - RESTful interface
 - [PostgreSQL](https://www.postgresql.org) - Database
 - [PostGIS](http://postgis.net) - Spatial database extender for PostgreSQL

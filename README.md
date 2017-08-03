@@ -31,10 +31,10 @@ We use [SemVer](http://semver.org) for versioning. For the versions available, s
 
 ### Team Members
 
-- "Markus Windegger" — <windegger@sasabz.it>
-- "Patrick Bertolla" — <patrick.bertolla@idm-suedtirol.com>
-- "David Dejori" — <dejoridavid@gmail.com>
-- "Alex Lardschneider" — <alex.lardschneider@gmail.com>
+- Markus Windegger — <windegger@sasabz.it>
+- Patrick Bertolla — <patrick.bertolla@idm-suedtirol.com>
+- David Dejori — <dejoridavid@gmail.com>
+- Alex Lardschneider — <alex.lardschneider@gmail.com>
 
 ### License
 

@@ -1,7 +1,7 @@
 ## SASA SpA-AG real-time server
 
 This is the backend code of [http://realtimetest.opensasa.info](http://realtimetest.opensasa.info). 
-It provides real-time positions of the public transport vehicles in South Tyrol. 
+It provides real-time positions of the public transport vehicles managed by SASA SpA-AG in South Tyrol. 
 
 <br>
 

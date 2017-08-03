@@ -38,4 +38,4 @@ We use [SemVer](http://semver.org) for versioning. For the versions available, s
 
 ### License
 
-This project is licensed under the Apache 2.0 License — see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the Apache 2.0 License — see [LICENSE.md](LICENSE.md) file for details.

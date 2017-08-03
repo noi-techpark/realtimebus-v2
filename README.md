@@ -33,11 +33,11 @@ We use [SemVer](http://semver.org) for versioning. For the versions available, s
 
 ### Team Members
 
-- "Markus Windegger" - <windegger@sasabz.it>
-- "Patrick Bertolla" - <patrick.bertolla@idm-suedtirol.com>
-- "David Dejori" - <dejoridavid@gmail.com>
-- "Alex Lardschneider" - <alex.lardschneider@gmail.com>
+- "Markus Windegger" — <windegger@sasabz.it>
+- "Patrick Bertolla" — <patrick.bertolla@idm-suedtirol.com>
+- "David Dejori" — <dejoridavid@gmail.com>
+- "Alex Lardschneider" — <alex.lardschneider@gmail.com>
 
 ### License
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the Apache 2.0 License — see the [LICENSE.md](LICENSE.md) file for details.

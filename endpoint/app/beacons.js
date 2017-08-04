@@ -5,25 +5,45 @@ const logger = require("../../util/logger");
 
 const utils = require("../../util/utils");
 
+const moment = require("moment");
+
 module.exports.insertBus = function (req, res) {
     database.connect()
         .then(client => {
             return new Promise(function (resolve, reject) {
                 let body = req.body;
 
-                logger.debug(`Inserting bus: ${JSON.stringify(body)}`);
+                if (body.length === 0) {
+                    throw("No beacons uploaded");
+                }
+
+                logger.debug(`Inserting buses: ${JSON.stringify(body)}`);
 
                 let sql = `INSERT INTO beacons.buses (battery, firmware, hardware, mac_address, major, minor, recorded, system_id)
-                           VALUES (
-                                ${body.battery}, 
-                                '${body.firmware}', 
-                                '${body.hardware}', 
-                                '${body.mac}', 
-                                ${body.major}, 
-                                ${body.minor}, 
-                                '${body.recorded}', 
-                                '${body.sysId}'
-                            )`;
+                           VALUES `;
+
+                for (let i = 0; i < body.length; i++) {
+                    let beacon = body[i];
+
+                    logger.debug(`Processing beacon: '${beacon}'`);
+
+                    let time = moment(beacon.recorded).format("DD MMM YYYY hh:mm:ss a");
+
+                    sql += `(
+                            ${beacon.battery},
+                            '${beacon.firmware}',
+                            '${beacon.hardware}',
+                            '${beacon.mac_address}',
+                            ${beacon.major},
+                            ${beacon.minor},
+                            '${time}',
+                            '${beacon.system_id}'
+                        ), `;
+                }
+
+                sql = sql.substring(0, sql.length - 2);
+
+                logger.debug(`Sql: '${sql}'`);
 
                 resolve(sql)
             })

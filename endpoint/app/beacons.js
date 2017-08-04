@@ -3,6 +3,8 @@
 const database = require("../../database/database");
 const logger = require("../../util/logger");
 
+const utils = require("../../util/utils");
+
 module.exports.insertBus = function (req, res) {
     database.connect()
         .then(client => {

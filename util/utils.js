@@ -26,6 +26,12 @@ if (!('toJSON' in Error.prototype)) {
     });
 }
 
+Array.prototype.clear = function () {
+    while (this.length) {
+        this.pop();
+    }
+};
+
 
 module.exports.pointFromGeoArray = function (jsonArray) {
     if (jsonArray.type === 'Point') {

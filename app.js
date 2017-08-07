@@ -28,7 +28,6 @@ const appRealtime = require("./endpoint/app/realtime");
 const appBeacons = require("./endpoint/app/beacons");
 
 const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
-const DropOldPositions = require("./operation/DropOldPositions");
 
 utils.startErrorReporting();
 

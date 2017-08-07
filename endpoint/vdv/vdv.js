@@ -16,6 +16,8 @@ const spawn = require('child_process').spawnSync;
 const VdvFile = require("../../model/vdv/VdvFile");
 const HttpError = require("../../util/HttpError");
 
+const ExtrapolatePositions = require("../../operation/ExtrapolatePositions");
+
 const logger = require("../../util/logger");
 const config = require("../../config");
 const database = require("../../database/database.js");
@@ -65,6 +67,7 @@ const vdvFileList = [VALIDITY, DAY_TYPES, CALENDAR, LINES, BUS_STOPS, PATHS, TRI
     STOP_POINTS, VARIANTS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES];
 
 let response = {};
+
 let sqlTruncateChain = [];
 let sqlCreateChain = [];
 let sqlInsertChain = [];
@@ -79,11 +82,19 @@ module.exports.upload = function (req, res) {
         .then(client => {
             return Promise.resolve()
                 .then(() => {
+                    sqlTruncateChain.clear();
+                    sqlCreateChain.clear();
+                    sqlInsertChain.clear();
+                    sqlTeqChain.clear();
+                })
+
+                .then(() => {
                     return saveZipFiles(req)
                 })
                 .then(() => {
                     return parseVdvFiles(data)
                 })
+
                 .then(() => {
                     return new Promise(function (resolve) {
                         data.forEach(function (file) {
@@ -155,18 +166,23 @@ module.exports.upload = function (req, res) {
                 .then(() => {
                     return insertVdvData(client)
                 })
+
                 .then(() => {
                     return fillConfigTable(client)
                 })
+
                 .then(() => {
                     return performOtherQueries(client)
                 })
+
                 .then(() => {
                     return fillTeqData(client)
                 })
+
                 .then(() => {
                     return calculateTravelTimes(client)
                 })
+
                 .then(() => {
                     return client.query(`
                             INSERT INTO data.frt_ort_last (trip, onr_typ_nr, ort_nr)
@@ -250,28 +266,30 @@ module.exports.upload = function (req, res) {
                                 );
                         `)
                 })
+
                 .then(() => {
                     return generateZipForApp(client)
                 })
-                .then(() => {
-                    return new Promise(function (resolve) {
-                        http.get({
-                            host: 'mail-pool.appspot.com',
-                            port: 80,
-                            path: '/sasa/vdv/import/success'
-                        });
 
-                        resolve()
-                    });
-                })
                 .then(() => {
                     logger.warn("Import finished");
 
                     config.vdv_import_running = false;
 
+                    new ExtrapolatePositions().run();
+
                     response.success = true;
-                    res.status(200).json(Utils.sortObject(response))
+
+                    let json = Utils.sortObject(response);
+
+                    res.status(200).json(json);
+
+                    return json;
                 })
+                .then(json => {
+                    return sendSuccessMail(json);
+                })
+
                 .catch(err => {
                     logger.error("Import failed!");
                     logger.error(err);
@@ -280,14 +298,18 @@ module.exports.upload = function (req, res) {
 
                     let status = err.status || 500;
 
-                    res.status(status).json({success: false, error: err})
+                    res.status(status).json({success: false, error: err});
+
+                    sendFailureMail(err);
                 });
         })
         .catch(error => {
             config.vdv_import_running = false;
 
             logger.error(`Error acquiring client: ${error}`);
-            res.status(500).jsonp({success: false, error: error})
+            res.status(500).jsonp({success: false, error: error});
+
+            sendFailureMail(error);
         })
 };
 
@@ -440,11 +462,13 @@ function insertVdvData(client) {
         .then(() => {
             logger.debug("Created tables");
         })
+
         .then(() => {
             let chain = Promise.resolve();
 
             for (let sql of sqlTruncateChain) {
                 chain = chain.then(() => {
+                    logger.debug(`SQL: '${sql}'`);
                     return client.query(sql)
                 })
             }
@@ -454,6 +478,7 @@ function insertVdvData(client) {
         .then(() => {
             logger.debug("Truncated tables");
         })
+
         .then(() => {
             let chain = Promise.resolve();
 
@@ -986,4 +1011,91 @@ function getLinePath(client) {
         .then(sql => {
             return client.query(sql)
         })
+}
+
+
+// ==================================================== OTHER ==========================================================
+
+function sendSuccessMail(json) {
+    return new Promise(function (resolve, reject) {
+        logger.info("Sending success mail");
+
+        let options = {
+            host: 'mail-pool.appspot.com',
+            port: 80,
+            path: '/sasa/vdv/import/success',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+
+        let req = http.request(options, function (res) {
+            logger.info('Mail status: ' + res.statusCode);
+
+            let body = '';
+
+            res.on('data', function (chunk) {
+                body += chunk;
+            });
+
+            res.on('end', function () {
+                console.log("Mail response: " + body);
+
+                resolve();
+            });
+        });
+
+        req.on('error', function (e) {
+            console.log("Mail error: " + e.message);
+
+            reject(e);
+        });
+
+        req.write(JSON.stringify(json));
+        req.end();
+    });
+}
+
+function sendFailureMail(error) {
+    return new Promise(function (resolve, reject) {
+        logger.info("Sending failure mail");
+
+        let options = {
+            host: 'mail-pool.appspot.com',
+            port: 80,
+            path: '/sasa/vdv/import/failure',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+
+        let req = http.request(options, function (res) {
+            logger.info('Mail status: ' + res.statusCode);
+
+            res.setEncoding('utf8');
+
+            let body = '';
+
+            res.on('data', function (chunk) {
+                body += chunk;
+            });
+
+            res.on('end', function () {
+                logger.info("Mail response: " + body);
+
+                resolve();
+            });
+        });
+
+        req.on('error', function (e) {
+            logger.error('Mail error: ' + e.message);
+
+            reject(e);
+        });
+
+        req.write(JSON.stringify(error));
+        req.end();
+    });
 }

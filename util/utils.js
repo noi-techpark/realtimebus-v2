@@ -93,31 +93,6 @@ module.exports.random = function (low, high) {
     return Math.random() * (high - low) + low;
 };
 
-module.exports.generateProfileId = function () {
-    let token = "";
-    let codeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    codeAlphabet += "abcdefghijklmnopqrstuvwxyz";
-    codeAlphabet += "0123456789";
-
-    let max = codeAlphabet.length;
-
-    for (let i = 0; i < 32; i++) {
-        token += codeAlphabet.charAt([random(0, max)]);
-    }
-
-    return token;
-};
-
-module.exports.generateEcoPointsJwt = function (user) {
-    // noinspection EqualityComparisonWithCoercionJS
-    if (user == null) {
-        return null;
-    }
-
-    let cert = fs.readFileSync('static/private.key');
-    return jwt.sign({sub: user.id}, cert, {algorithm: 'RS256'});
-};
-
 
 // =================================================== REQUESTS ========================================================
 
@@ -130,6 +105,7 @@ module.exports.getLanguage = function (req) {
 
     return lang;
 };
+
 
 // ==================================================== ERRORS =========================================================
 
@@ -157,6 +133,8 @@ module.exports.handleError = function (error) {
 };
 
 module.exports.respondWithError = function (res, error) {
+    exports.handleError(error);
+
     res.status(500).jsonp({success: false, error: error})
 };
 

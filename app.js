@@ -118,6 +118,7 @@ function startServer() {
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
 
         router.post("/beacons/bus", appBeacons.insertBus);
+        router.post("/beacons/busstop", appBeacons.insertBusStops);
     });
 
     app.group("/gtfs", (router) => {
@@ -130,6 +131,7 @@ function startServer() {
 
     app.use(function (req, res) {
         logger.error(`404: ${req.method} ${req.url}`);
+
         res.status(404).json({
             error: {
                 code: 404,

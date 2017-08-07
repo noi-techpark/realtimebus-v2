@@ -7,7 +7,7 @@ const utils = require("../../util/utils");
 
 const moment = require("moment");
 
-module.exports.insertBus = function (req, res) {
+module.exports.insertBuses = function (req, res) {
     database.connect()
         .then(client => {
             return Promise.resolve()

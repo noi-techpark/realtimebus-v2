@@ -1,5 +1,7 @@
 'use strict';
 
+// TODO: Check if imported date is in the past
+
 require("moment");
 
 const path = require('path');
@@ -272,7 +274,9 @@ module.exports.upload = function (req, res) {
                 })
 
                 .then(() => {
-                    logger.warn("Import finished");
+                    logger.warn("========================================================");
+                    logger.warn("=================== Import finished! ===================");
+                    logger.warn("========================================================");
 
                     config.vdv_import_running = false;
 
@@ -291,7 +295,10 @@ module.exports.upload = function (req, res) {
                 })
 
                 .catch(err => {
-                    logger.error("Import failed!");
+                    logger.error("========================================================");
+                    logger.error("==================== Import failed! ====================");
+                    logger.error("========================================================");
+
                     logger.error(err);
 
                     config.vdv_import_running = false;
@@ -500,63 +507,72 @@ function performOtherQueries(client) {
         .then(() => {
             return client.query(`
                     INSERT INTO data.menge_fgr (version, trip_time_group, trip_time_group_text)
-                        (
+                    (
                         SELECT 1, rec_frt.trip_time_group, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
+                        
                         LEFT JOIN data.menge_fgr
                             ON rec_frt.trip_time_group = menge_fgr.trip_time_group
+                            
                         WHERE menge_fgr.trip_time_group IS NULL
+                        
                         GROUP BY rec_frt.trip_time_group
                         ORDER BY rec_frt.trip_time_group
-                        );
+                    );
                     `);
-        }).then(() => {
-            return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
-                        (
+        })
+        .then(() => {
+            return client.query(`
+                    INSERT INTO data.rec_lid (version, line, variant, line_name)
+                    (
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
+                        
                         LEFT JOIN data.rec_lid
                             ON rec_frt.line = rec_lid.line
                             AND rec_frt.variant = rec_lid.variant
+                            
                         WHERE rec_lid.line IS NULL
+                        
                         GROUP BY rec_frt.line, rec_frt.variant
                         ORDER BY rec_frt.line, rec_frt.variant
-                        );
+                    );
                     `)
         })
 }
 
 function fillTeqData(client) {
-    return Promise.resolve()
-        .then(() => {
-            return new Promise(function (resolve) {
-                let firstLine = true;
+    return new Promise(function (resolve, reject) {
+        let firstLine = true;
 
-                reader.createInterface({
-                    input: fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING)
-                }).on('line', function (line) {
-                    if (!firstLine) {
-                        let numbers = line.split("\t");
-                        sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
-                    }
+        let stream = fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING);
+        stream.on("error", function (error) {
+            reject(error)
+        });
 
-                    firstLine = false;
-                }).on('close', function () {
-                    resolve()
-                });
-            })
-        })
-        .then(() => {
-            let chain = Promise.resolve();
-
-            for (let sql of sqlTeqChain) {
-                chain = chain.then(() => {
-                    return client.query(sql)
-                })
+        reader.createInterface({
+            input: stream
+        }).on('line', function (line) {
+            if (!firstLine) {
+                let numbers = line.split("\t");
+                sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
             }
 
-            return chain
-        })
+            firstLine = false;
+        }).on('close', function () {
+            resolve()
+        });
+    }).then(() => {
+        let chain = Promise.resolve();
+
+        for (let sql of sqlTeqChain) {
+            chain = chain.then(() => {
+                return client.query(sql)
+            })
+        }
+
+        return chain
+    })
 }
 
 function calculateTravelTimes(client) {
@@ -689,6 +705,17 @@ function generateZipForApp(client) {
     let mainFile = {};
 
     return getTrips(client)
+        .then(() => {
+            let files = fs.readdirSync(VDV_APP_ROOT);
+
+            for (let file of files) {
+                logger.debug(`Deleting file ${file}`);
+                fs.unlinkSync(path.join(VDV_APP_ROOT, file));
+            }
+
+            throw("TEST");
+        })
+
         .then(result => {
             let lines = {};
 

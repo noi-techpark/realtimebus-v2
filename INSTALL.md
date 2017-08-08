@@ -44,7 +44,7 @@ To run RealtimeServer you will need:
 
 You can install all needed dependencies using the following command:
 
-    sudo apt install nodejs npm postgresql postgis
+    sudo apt install nodejs npm postgresql postgresql-server-dev-9.5 postgis
     
 If you want to serve bus path overlays to use on a map (OSM, Google Maps), you need to install MapServer. 
 Please refer to the [official installation guide](http://www.mapserver.org/installation/index.html) for help.
@@ -100,27 +100,25 @@ Upload the data by executing a POST request to the VDV-endpoint like follows:
 
 ## Troubleshooting
 
-The Server runs on port 80 by default. On some Linux Distros listening on port 80 requires elevated permissions.
+The Server runs on port 80 by default. On some Linux distros listening on port 80 requires elevated permissions.
 
 To fix this error you can either:
 
 - Run this project using elevated permissions (Unrecommended)
     
-        sudo node app.js serve --port 80
+        sudo node app.js serve --port=80
         
-- Give Safe User Permission To Use Port 80 (Recommended)
+- Give node permission to use port 80 (Recommended)
 
         sudo apt-get install libcap2-bin
         sudo setcap cap_net_bind_service=+ep `readlink -f \`which node\``
       
     You can now launch the server using:
   
-        node app.js serve --port 80
+        node app.js serve --port=80
         
 - Change the port to a number over 1024
 
-    To change the port number, edit the appropriate line in `app.js`
+    To change the port number, pass a different port when launching `app.js`
       
-    You can now launch the server using:
-  
-        node app.js serve --port 80
+        node app.js serve --port=80

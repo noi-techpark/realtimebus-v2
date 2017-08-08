@@ -67,10 +67,9 @@ To run this server you need to import the VDV data first. This is done in three 
         DROP SCHEMA data CASCADE;
         DROP SCHEMA beacons CASCADE;
         
-2. Import both PostgreSQL database schemas:
-
-        beacons.sql
-        data.sql
+2. Import the database schemas `beacons.sql` and `data.sql`:
+        
+        psql database_name < schema.sql
    
 3. Import the VDV data. Download the latest version of the VDV data from [here](http://open.sasabz.it/files/vdv.zip).
 Upload the data by executing a POST request to the VDV-endpoint like follows:

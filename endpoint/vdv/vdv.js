@@ -1,6 +1,11 @@
 'use strict';
 
+// TODO: Check if imported date is in the past
+
 require("moment");
+
+const path = require('path');
+const mime = require('mime');
 
 const AdmZip = require("adm-zip");
 const fs = require("fs");
@@ -8,17 +13,26 @@ const http = require("http");
 const moment = require("moment-timezone");
 const reader = require("readline");
 
+const spawn = require('child_process').spawnSync;
+
 const VdvFile = require("../../model/vdv/VdvFile");
 const HttpError = require("../../util/HttpError");
+
+const ExtrapolatePositions = require("../../operation/ExtrapolatePositions");
 
 const logger = require("../../util/logger");
 const config = require("../../config");
 const database = require("../../database/database.js");
 const Utils = require("../../util/utils");
 
-const LATEST_VDV_ZIP = 'vdv/latest.zip';
-const LATEST_EXTRACTED_VDV_DATA = 'vdv/latest';
+const VDV_ROOT = 'vdv';
+const VDV_APP_ROOT = `${VDV_ROOT}/app`;
+
+const LATEST_VDV_ZIP = `${VDV_ROOT}/latest.zip`;
+const LATEST_EXTRACTED_VDV_DATA = `${VDV_ROOT}/latest`;
 const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
+
+const APP_ZIP_FILE = `${VDV_ROOT}/data.zip`;
 
 // import vdv data
 // curl --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://HOST/vdv
@@ -50,11 +64,14 @@ const VALID_FROM = "VER_GUELTIGKEIT";
 const VDV_COORDINATES_FORMAT = config.coordinate_wgs84;
 const DB_COORDINATES_FORMAT = 25832;
 
-const vdvFileList = [VALIDITY, DAY_TYPES, CALENDAR, LINES, BUS_STOPS, PATHS, TRIP_TYPES, TRIP_PEEK_TIMES, LINE_SERVICES,
+const vdvFileList = [
+    VALIDITY, DAY_TYPES, CALENDAR, LINES, BUS_STOPS, PATHS, TRIP_TYPES, TRIP_PEEK_TIMES, LINE_SERVICES,
     STOP_TYPES, BUS_STOP_TYPES, COMPANIES, BREAKS, TRIP_INFO_REDUCED, TRIP_INFO_EXTENDED, BUS_STOP_STOP_TIMES,
-    STOP_POINTS, VARIANTS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES];
+    STOP_POINTS, VARIANTS, BUS_STOP_CONNECTIONS, TRAVEL_TIMES
+];
 
 let response = {};
+
 let sqlTruncateChain = [];
 let sqlCreateChain = [];
 let sqlInsertChain = [];
@@ -69,11 +86,19 @@ module.exports.upload = function (req, res) {
         .then(client => {
             return Promise.resolve()
                 .then(() => {
+                    sqlTruncateChain.clear();
+                    sqlCreateChain.clear();
+                    sqlInsertChain.clear();
+                    sqlTeqChain.clear();
+                })
+
+                .then(() => {
                     return saveZipFiles(req)
                 })
                 .then(() => {
                     return parseVdvFiles(data)
                 })
+
                 .then(() => {
                     return new Promise(function (resolve) {
                         data.forEach(function (file) {
@@ -145,18 +170,23 @@ module.exports.upload = function (req, res) {
                 .then(() => {
                     return insertVdvData(client)
                 })
+
                 .then(() => {
                     return fillConfigTable(client)
                 })
+
                 .then(() => {
                     return performOtherQueries(client)
                 })
+
                 .then(() => {
                     return fillTeqData(client)
                 })
+
                 .then(() => {
                     return calculateTravelTimes(client)
                 })
+
                 .then(() => {
                     return client.query(`
                             INSERT INTO data.frt_ort_last (trip, onr_typ_nr, ort_nr)
@@ -240,46 +270,101 @@ module.exports.upload = function (req, res) {
                                 );
                         `)
                 })
-                .then(() => {
-                    return new Promise(function (resolve) {
-                        http.get({
-                            host: 'mail-pool.appspot.com',
-                            port: 80,
-                            path: '/sasa/vdv/import/success'
-                        });
 
-                        resolve()
-                    });
-                })
                 .then(() => {
-                    logger.warn("Import finished");
+                    return generateZipForApp(client)
+                })
+
+                .then(() => {
+                    logger.warn("========================================================");
+                    logger.warn("=================== Import finished! ===================");
+                    logger.warn("========================================================");
 
                     config.vdv_import_running = false;
 
+                    new ExtrapolatePositions().run();
+
                     response.success = true;
-                    res.status(200).json(Utils.sortObject(response))
+
+                    let json = Utils.sortObject(response);
+
+                    res.status(200).json(json);
+
+                    return json;
                 })
+                .then(json => {
+                    return sendSuccessMail(json);
+                })
+
                 .catch(err => {
-                    logger.error("Import failed!");
+                    logger.error("========================================================");
+                    logger.error("==================== Import failed! ====================");
+                    logger.error("========================================================");
+
                     logger.error(err);
 
                     config.vdv_import_running = false;
 
                     let status = err.status || 500;
 
-                    res.status(status).json({success: false, error: err})
+                    res.status(status).json({success: false, error: err});
+
+                    sendFailureMail(err);
                 });
         })
         .catch(error => {
             config.vdv_import_running = false;
 
             logger.error(`Error acquiring client: ${error}`);
+            res.status(500).jsonp({success: false, error: error});
+
+            sendFailureMail(error);
+        })
+};
+
+module.exports.testZip = function (req, res) {
+    return database.connect()
+        .then(client => {
+            return generateZipForApp(client)
+                .then(lines => {
+                    logger.warn("Zip generated");
+                    res.status(200).json(lines)
+                })
+                .catch(error => {
+                    logger.error("Zip generation failed!");
+                    logger.error(error);
+
+                    res.status(500).json({success: false, error: error})
+                });
+        })
+        .catch(error => {
+            logger.error(`Error acquiring client: ${error}`);
             res.status(500).jsonp({success: false, error: error})
         })
 };
 
+module.exports.asZip = function (req, res) {
+    let file = APP_ZIP_FILE;
+
+    let fileName = path.basename(file);
+    let mimeType = mime.lookup(file);
+
+    res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
+    res.setHeader('Content-type', mimeType);
+
+    let fileStream = fs.createReadStream(file);
+    fileStream.pipe(res);
+};
+
+
+// ================================================== VDV IMPORT =======================================================
 
 function saveZipFiles(req) {
+    if (!fs.existsSync(VDV_ROOT)) {
+        logger.info(`Creating directory '${VDV_ROOT}'`);
+        fs.mkdirSync(VDV_ROOT);
+    }
+
     return new Promise(function (resolve, reject) {
         fs.writeFile(LATEST_VDV_ZIP, req.body, function (err) {
             try {
@@ -386,11 +471,13 @@ function insertVdvData(client) {
         .then(() => {
             logger.debug("Created tables");
         })
+
         .then(() => {
             let chain = Promise.resolve();
 
             for (let sql of sqlTruncateChain) {
                 chain = chain.then(() => {
+                    logger.debug(`SQL: '${sql}'`);
                     return client.query(sql)
                 })
             }
@@ -400,6 +487,7 @@ function insertVdvData(client) {
         .then(() => {
             logger.debug("Truncated tables");
         })
+
         .then(() => {
             let chain = Promise.resolve();
 
@@ -421,63 +509,72 @@ function performOtherQueries(client) {
         .then(() => {
             return client.query(`
                     INSERT INTO data.menge_fgr (version, trip_time_group, trip_time_group_text)
-                        (
+                    (
                         SELECT 1, rec_frt.trip_time_group, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
+                        
                         LEFT JOIN data.menge_fgr
                             ON rec_frt.trip_time_group = menge_fgr.trip_time_group
+                            
                         WHERE menge_fgr.trip_time_group IS NULL
+                        
                         GROUP BY rec_frt.trip_time_group
                         ORDER BY rec_frt.trip_time_group
-                        );
+                    );
                     `);
-        }).then(() => {
-            return client.query(`INSERT INTO data.rec_lid (version, line, variant, line_name)
-                        (
+        })
+        .then(() => {
+            return client.query(`
+                    INSERT INTO data.rec_lid (version, line, variant, line_name)
+                    (
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
+                        
                         LEFT JOIN data.rec_lid
                             ON rec_frt.line = rec_lid.line
                             AND rec_frt.variant = rec_lid.variant
+                            
                         WHERE rec_lid.line IS NULL
+                        
                         GROUP BY rec_frt.line, rec_frt.variant
                         ORDER BY rec_frt.line, rec_frt.variant
-                        );
+                    );
                     `)
         })
 }
 
 function fillTeqData(client) {
-    return Promise.resolve()
-        .then(() => {
-            return new Promise(function (resolve) {
-                let firstLine = true;
+    return new Promise(function (resolve, reject) {
+        let firstLine = true;
 
-                reader.createInterface({
-                    input: fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING)
-                }).on('line', function (line) {
-                    if (!firstLine) {
-                        let numbers = line.split("\t");
-                        sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
-                    }
+        let stream = fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING);
+        stream.on("error", function (error) {
+            reject(error)
+        });
 
-                    firstLine = false;
-                }).on('close', function () {
-                    resolve()
-                });
-            })
-        })
-        .then(() => {
-            let chain = Promise.resolve();
-
-            for (let sql of sqlTeqChain) {
-                chain = chain.then(() => {
-                    return client.query(sql)
-                })
+        reader.createInterface({
+            input: stream
+        }).on('line', function (line) {
+            if (!firstLine) {
+                let numbers = line.split("\t");
+                sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
             }
 
-            return chain
-        })
+            firstLine = false;
+        }).on('close', function () {
+            resolve()
+        });
+    }).then(() => {
+        let chain = Promise.resolve();
+
+        for (let sql of sqlTeqChain) {
+            chain = chain.then(() => {
+                return client.query(sql)
+            })
+        }
+
+        return chain
+    })
 }
 
 function calculateTravelTimes(client) {
@@ -599,4 +696,435 @@ function parseVdvFile(file, data, cb) {
     }).on('close', function () {
         cb(file, table, formats, columns, records, data);
     })
+}
+
+
+// ============================================== APP ZIP GENERATION ===================================================
+
+function generateZipForApp(client) {
+    logger.warn("Generating planned data zip for app");
+
+    let mainFile = {};
+
+    return getTrips(client)
+        .then(() => {
+            let files = fs.readdirSync(VDV_APP_ROOT);
+
+            for (let file of files) {
+                logger.debug(`Deleting file ${file}`);
+                fs.unlinkSync(path.join(VDV_APP_ROOT, file));
+            }
+
+            throw("TEST");
+        })
+
+        .then(result => {
+            let lines = {};
+
+            for (let entry of result.rows) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type] == null) {
+                    lines[entry.day_type] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line] == null) {
+                    lines[entry.day_type][entry.line] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line].variants == null) {
+                    lines[entry.day_type][entry.line].variants = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line].variants[entry.variant] == null) {
+                    lines[entry.day_type][entry.line].variants[entry.variant] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (lines[entry.day_type][entry.line].variants[entry.variant].trips == null) {
+                    lines[entry.day_type][entry.line].variants[entry.variant].trips = [];
+                }
+
+                lines[entry.day_type][entry.line].line = entry.line;
+                lines[entry.day_type][entry.line].variants[entry.variant].variant = entry.variant;
+
+                lines[entry.day_type][entry.line].variants[entry.variant].trips.push({
+                    d: entry.departure,
+                    tg: entry.trip_time_group,
+                    t: entry.trip
+                });
+            }
+
+            Object.keys(lines).forEach(function (el1, key, array) {
+                Object.keys(lines[el1]).forEach(function (el2, key, array) {
+                    lines[el1][el2].variants = Object.keys(lines[el1][el2].variants)
+                        .map(p => lines[el1][el2].variants[p]);
+                });
+
+                lines[el1] = Object.keys(lines[el1])
+                    .map(p => lines[el1][p]);
+            });
+
+            return lines;
+        })
+
+        .then(lines => {
+            if (!fs.existsSync(VDV_APP_ROOT)) {
+                logger.info(`Creating directory '${VDV_APP_ROOT}'`);
+                fs.mkdirSync(VDV_APP_ROOT);
+            }
+
+            Object.keys(lines).forEach(function (element, key, array) {
+                let file = `${VDV_APP_ROOT}/trips_${element}.json`;
+                logger.info(`Writing file '${file}'`);
+                fs.writeFileSync(file, JSON.stringify(lines[element]));
+            });
+
+            return null
+        })
+
+        .then(() => {
+            return getCalendar(client)
+        })
+        .then(result => {
+            let calendar = [];
+
+            for (let entry of result.rows) {
+                calendar.push({
+                    dt: entry.day_type,
+                    da: entry.betriebstag,
+                });
+            }
+
+            mainFile.calendar = calendar;
+
+            return null
+        })
+
+        .then(() => {
+            return getBusStopStopTimes(client)
+        })
+        .then(result => {
+            let busStopStopTimes = [];
+
+            for (let entry of result.rows) {
+                busStopStopTimes.push({
+                    bs: entry.ort_nr,
+                    st: entry.hp_hzt,
+                    tg: entry.trip_time_group,
+                });
+            }
+
+            mainFile.bus_stop_stop_times = busStopStopTimes;
+
+            return null
+        })
+
+        .then(() => {
+            return getTravelTimes(client)
+        })
+        .then(result => {
+            let travelTimes = [];
+
+            for (let entry of result.rows) {
+                travelTimes.push({
+                    di: entry.sel_ziel,
+                    oi: entry.ort_nr,
+                    tg: entry.trip_time_group,
+                    tt: entry.sel_fzt,
+                });
+            }
+
+            mainFile.travel_times = travelTimes;
+
+            return null
+        })
+
+        .then(() => {
+            return getTripStopTimes(client)
+        })
+        .then(result => {
+            let tripStopTimes = [];
+
+            for (let entry of result.rows) {
+                tripStopTimes.push({
+                    bs: entry.ort_nr,
+                    st: entry.frt_hzt_zeit,
+                    tr: entry.trip,
+                });
+            }
+
+            mainFile.trip_stop_times = tripStopTimes;
+
+            return null
+        })
+
+        .then(() => {
+            return getLinePath(client)
+        })
+        .then(result => {
+            let linePath = {};
+
+            for (let entry of result.rows) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line] == null) {
+                    linePath[entry.line] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line].variants == null) {
+                    linePath[entry.line].variants = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line].variants[entry.variant] == null) {
+                    linePath[entry.line].variants[entry.variant] = {};
+                }
+
+                // noinspection EqualityComparisonWithCoercionJS
+                if (linePath[entry.line].variants[entry.variant].path == null) {
+                    linePath[entry.line].variants[entry.variant].path = [];
+                }
+
+                linePath[entry.line].line = entry.line;
+                linePath[entry.line].variants[entry.variant].variant = entry.variant;
+
+                linePath[entry.line].variants[entry.variant].path.push(entry.ort_nr);
+            }
+
+            Object.keys(linePath).forEach(function (el2, key, array) {
+                linePath[el2].variants = Object.keys(linePath[el2].variants)
+                    .map(p => linePath[el2].variants[p]);
+            });
+
+            linePath = Object.keys(linePath)
+                .map(p => linePath[p]);
+
+            mainFile.paths = linePath;
+
+            return null
+        })
+
+        .then(() => {
+            let file = `${VDV_APP_ROOT}/planned_data.json`;
+            logger.info(`Writing file '${file}'`);
+            fs.writeFileSync(file, JSON.stringify(mainFile));
+
+            if (fs.existsSync(`${VDV_APP_ROOT}/${APP_ZIP_FILE}`)) {
+                logger.info(`Deleting old zip '${APP_ZIP_FILE}'`);
+                fs.unlinkSync(`${VDV_APP_ROOT}/${APP_ZIP_FILE}`);
+            }
+
+            logger.info(`Compressing files as '${APP_ZIP_FILE}'`);
+
+            const command = `zip -j -D ${APP_ZIP_FILE} ${VDV_APP_ROOT}/*.json`;
+            const zip = spawn('/bin/sh', ['-c', command]);
+
+            console.log(`ZIP: stdout: ${zip.stdout.toString()}`);
+
+            if (zip.status !== 0) {
+                throw new HttpError(`zip exited with status code '${zip.status}', stderr=${zip.stderr.toString()}`, 500)
+            }
+
+            logger.info("File compression successful");
+
+            return null
+        })
+
+}
+
+function getTrips(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    day_type,
+                    trip,
+                    departure,
+                    trip_time_group,
+                    line,
+                    variant
+                    
+                FROM data.rec_frt
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getCalendar(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    day_type,
+                    betriebstag
+                    
+                FROM data.firmenkalender
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getBusStopStopTimes(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    trip_time_group,
+                    ort_nr,
+                    hp_hzt
+                    
+                FROM data.ort_hztf
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getTravelTimes(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    sel_ziel,
+                    ort_nr,
+                    trip_time_group,
+                    sel_fzt
+                    
+                FROM data.sel_fzt_feld
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getTripStopTimes(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    ort_nr,
+                    frt_hzt_zeit,
+                    trip
+                    
+                FROM data.rec_frt_hzt
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+function getLinePath(client) {
+    return Promise.resolve()
+        .then(() => {
+            return `
+                SELECT
+                    ort_nr,
+                    li_lfd_nr,
+                    line,
+                    variant
+                    
+                FROM data.lid_verlauf
+                ORDER BY line, li_lfd_nr
+            `
+        })
+        .then(sql => {
+            return client.query(sql)
+        })
+}
+
+
+// ==================================================== OTHER ==========================================================
+
+function sendSuccessMail(json) {
+    return new Promise(function (resolve, reject) {
+        logger.info("Sending success mail");
+
+        let options = {
+            host: 'mail-pool.appspot.com',
+            port: 80,
+            path: '/sasa/vdv/import/success',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+
+        let req = http.request(options, function (res) {
+            logger.info('Mail status: ' + res.statusCode);
+
+            let body = '';
+
+            res.on('data', function (chunk) {
+                body += chunk;
+            });
+
+            res.on('end', function () {
+                console.log("Mail response: " + body);
+
+                resolve();
+            });
+        });
+
+        req.on('error', function (e) {
+            console.log("Mail error: " + e.message);
+
+            reject(e);
+        });
+
+        req.write(JSON.stringify(json));
+        req.end();
+    });
+}
+
+function sendFailureMail(error) {
+    return new Promise(function (resolve, reject) {
+        logger.info("Sending failure mail");
+
+        let options = {
+            host: 'mail-pool.appspot.com',
+            port: 80,
+            path: '/sasa/vdv/import/failure',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+
+        let req = http.request(options, function (res) {
+            logger.info('Mail status: ' + res.statusCode);
+
+            res.setEncoding('utf8');
+
+            let body = '';
+
+            res.on('data', function (chunk) {
+                body += chunk;
+            });
+
+            res.on('end', function () {
+                logger.info("Mail response: " + body);
+
+                resolve();
+            });
+        });
+
+        req.on('error', function (e) {
+            logger.error('Mail error: ' + e.message);
+
+            reject(e);
+        });
+
+        req.write(JSON.stringify(error));
+        req.end();
+    });
 }

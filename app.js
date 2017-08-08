@@ -19,7 +19,8 @@ const v1Realtime = require("./endpoint/geojson/realtime");
 const v1Lines = require("./endpoint/geojson/lines");
 const v1Receiver = require("./endpoint/geojson/receiver");
 const v1Stops = require("./endpoint/geojson/stops");
-const v1Vdv = require("./endpoint/root/vdv");
+
+const vdv = require("./endpoint/vdv/vdv");
 
 const v2Realtime = require("./endpoint/v2/realtime");
 
@@ -27,7 +28,6 @@ const appRealtime = require("./endpoint/app/realtime");
 const appBeacons = require("./endpoint/app/beacons");
 
 const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
-const DropOldPositions = require("./operation/DropOldPositions");
 
 utils.startErrorReporting();
 
@@ -51,7 +51,7 @@ app.use(bodyParser.raw({
     limit: '10mb'
 }));
 
-app.use("/vdv", expressAuth({
+app.use("/vdv/import", expressAuth({
     users: {'sasa': 'sasabz2016!'}
 }));
 
@@ -87,7 +87,12 @@ function startDatabase() {
 }
 
 function startServer() {
-    app.post("/vdv", v1Vdv.upload);
+
+    app.group("/vdv", (router) => {
+        router.post("/import", vdv.upload);
+        router.get("/testZip", vdv.testZip);
+        router.get("/zip", vdv.asZip);
+    });
 
     app.group("/geojson", (router) => {
         router.get("/realtime", v1Realtime.positions);
@@ -112,7 +117,8 @@ function startServer() {
         router.get("/realtime/trip/:trip", appRealtime.positions);
         router.get("/realtime/vehicle/:vehicle", appRealtime.positions);
 
-        router.post("/beacons/bus", appBeacons.insertBus);
+        router.post("/beacons/buses", appBeacons.insertBuses);
+        router.post("/beacons/busstops", appBeacons.insertBusStops);
     });
 
     app.group("/gtfs", (router) => {
@@ -125,6 +131,7 @@ function startServer() {
 
     app.use(function (req, res) {
         logger.error(`404: ${req.method} ${req.url}`);
+
         res.status(404).json({
             error: {
                 code: 404,

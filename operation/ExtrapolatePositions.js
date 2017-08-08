@@ -2,6 +2,7 @@
 
 const database = require("../database/database");
 const logger = require("../util/logger");
+const config = require("../config");
 
 module.exports = class ExtrapolatePositions {
 
@@ -30,6 +31,11 @@ module.exports = class ExtrapolatePositions {
 
                 (function loop() {
                     let iterationStart = new Date().getTime();
+
+                    if (config.vdv_import_running) {
+                        logger.warn("Stopping extrapolation because import is running");
+                        return;
+                    }
 
                     client.query("SELECT data.data_extrapolate_positions()", function (err, result) {
                         let now = new Date().getTime();

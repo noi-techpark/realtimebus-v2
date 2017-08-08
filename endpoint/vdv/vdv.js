@@ -1,7 +1,5 @@
 'use strict';
 
-// TODO: Check if imported date is in the past
-
 require("moment");
 
 const path = require('path');
@@ -35,7 +33,7 @@ const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
 const APP_ZIP_FILE = `${VDV_ROOT}/data.zip`;
 
 // import vdv data
-// curl --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://HOST/vdv
+// curl --user sasa:sasabz2016! --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://10.4.1.2/vdv/import
 
 const VALIDITY = "BASIS_VER_GUELTIGKEIT.X10";
 const CALENDAR = "FIRMENKALENDER.X10";
@@ -120,7 +118,15 @@ module.exports.upload = function (req, res) {
                                     }
 
                                     if (response.calendar_days_first === response.calendar_days_last) {
-                                        logger.warn("The first day in the calendar is equal to the last one. Are you sure you uploaded the correct calendar data?");
+                                        throw new HttpError("The first day in the calendar is equal to the last one. Are you sure you uploaded the correct calendar data?", 400);
+                                    }
+
+                                    if (response.calendar_days_first.isAfter(moment(new Date()).add(-1, "days"))) {
+                                        throw new HttpError("The first day in the calendar is in the future. You are only allowed to upload data whose validity begin is past or within the next 24 hours.", 400);
+                                    }
+
+                                    if (response.calendar_days_last.isBefore(new Date())) {
+                                        throw new HttpError("The last day in the calendar is in the past. You are not allowed to upload expired data. Try using another calendar.", 400);
                                     }
                                 default:
                                     // CREATE
@@ -276,9 +282,9 @@ module.exports.upload = function (req, res) {
                 })
 
                 .then(() => {
-                    logger.warn("========================================================");
-                    logger.warn("=================== Import finished! ===================");
-                    logger.warn("========================================================");
+                    logger.warn("=========================================================");
+                    logger.warn("==================== Import succeeded! ==================");
+                    logger.warn("=========================================================");
 
                     config.vdv_import_running = false;
 
@@ -297,9 +303,9 @@ module.exports.upload = function (req, res) {
                 })
 
                 .catch(err => {
-                    logger.error("========================================================");
-                    logger.error("==================== Import failed! ====================");
-                    logger.error("========================================================");
+                    logger.error("=========================================================");
+                    logger.error("==================== Import failed! =====================");
+                    logger.error("=========================================================");
 
                     logger.error(err);
 

@@ -15,6 +15,9 @@ config.vdv_import_running = false;
 config.vdv_import_username = process.env.VDV_IMPORT_USERNAME;
 config.vdv_import_password = process.env.VDV_IMPORT_PASSWORD;
 
+config.firebase_messaging_key_sasabz = "AIzaSyACszhb6MXN1vTfPaT7WB1hkZVRgKyQRh8";
+config.firebase_messaging_key_sasabus = "AIzaSyC-vxbzitN6FF0tMZOG6E3RWU9GBShk3sg";
+
 config.lang_default = "en";
 
 module.exports = config;

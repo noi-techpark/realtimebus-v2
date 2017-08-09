@@ -24,6 +24,7 @@ const logger = require("../../util/logger");
 const config = require("../../config");
 const database = require("../../database/database.js");
 const utils = require("../../util/utils");
+const firebase = require("../../util/firebase");
 
 const VDV_ROOT = 'vdv';
 const VDV_APP_ROOT = `${VDV_ROOT}/app`;
@@ -293,8 +294,6 @@ module.exports.upload = function (req, res) {
 
                     config.vdv_import_running = false;
 
-                    new ExtrapolatePositions().run();
-
                     response.success = true;
 
                     let json = utils.sortObject(response);
@@ -304,6 +303,10 @@ module.exports.upload = function (req, res) {
                     return json;
                 })
                 .then(json => {
+                    new ExtrapolatePositions().run();
+
+                    firebase.syncAll();
+
                     return sendSuccessMail(json);
                 })
 

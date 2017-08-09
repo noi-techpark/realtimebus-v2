@@ -1,5 +1,7 @@
 'use strict';
 
+// TODO: Fix wrong character encoding in realtime api (e.g. Universit�tsplatz)
+
 require('express-group-routes');
 
 const yargs = require('yargs');
@@ -164,7 +166,7 @@ function logRequests(req, res, next) {
 
 function checkForRunningImport(req, res, next) {
     if (config.vdv_import_running) {
-        logger.info(`Import is running, skipping request '${req.url}'`);
+        // logger.info(`Import is running, skipping request '${req.url}'`);
         res.status(503).json({success: false, error: "VDV import is running. Please wait for it to complete."});
 
         return;

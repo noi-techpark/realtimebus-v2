@@ -32,7 +32,7 @@ const LATEST_VDV_ZIP = `${VDV_ROOT}/latest.zip`;
 const LATEST_EXTRACTED_VDV_DATA = `${VDV_ROOT}/latest`;
 const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
 
-const APP_ZIP_FILE = `${VDV_ROOT}/data.zip`;
+const APP_ZIP_FILE = `${VDV_APP_ROOT}/data.zip`;
 
 // import vdv data
 // curl --user sasa:sasabz2016! --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://10.4.1.2/vdv/import
@@ -551,8 +551,11 @@ function performOtherQueries(client) {
         })
 }
 
+// TODO: Improve efficiency
 function fillTeqData(client) {
     return new Promise(function (resolve, reject) {
+        logger.info("Starting TEQ conversion");
+
         let firstLine = true;
 
         let stream = fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING);
@@ -714,7 +717,7 @@ function generateZipForApp(client) {
 
     let mainFile = {};
 
-    return getTrips(client)
+    return Promise.resolve()
         .then(() => {
             let files = fs.readdirSync(VDV_APP_ROOT);
 
@@ -722,10 +725,11 @@ function generateZipForApp(client) {
                 logger.debug(`Deleting file ${file}`);
                 fs.unlinkSync(path.join(VDV_APP_ROOT, file));
             }
-
-            throw("TEST");
         })
 
+        .then(() => {
+            return getTrips(client)
+        })
         .then(result => {
             let lines = {};
 

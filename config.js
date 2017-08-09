@@ -12,6 +12,9 @@ config.realtimebus_timetable_time_horizon = 43200;
 
 config.vdv_import_running = false;
 
+config.vdv_import_username = process.env.VDV_IMPORT_USERNAME;
+config.vdv_import_password = process.env.VDV_IMPORT_PASSWORD;
+
 config.lang_default = "en";
 
 module.exports = config;

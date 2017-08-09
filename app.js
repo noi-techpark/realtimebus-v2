@@ -51,8 +51,11 @@ app.use(bodyParser.raw({
     limit: '10mb'
 }));
 
+let users = {};
+users[config.vdv_import_username] = config.vdv_import_password;
+
 app.use("/vdv/import", expressAuth({
-    users: {'sasa': 'sasabz2016!'}
+    users: users
 }));
 
 app.set('jsonp callback name', 'jsonp');

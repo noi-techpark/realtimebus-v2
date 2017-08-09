@@ -338,14 +338,17 @@ module.exports.validity = function (req, res) {
         .then(client => {
             return Promise.resolve()
                 .then(() => {
-                    return client.query(`SELECT data_uploaded_at FROM data.config`);
+                    return client.query(`SELECT key FROM data.config WHERE key = 'data_uploaded_at'`);
+                })
+                .then(result => {
+                    res.status(200).json({valid: moment.unix(req.params.date).isAfter(moment(result.rows[0]))})
                 })
                 .catch(err => {
-                    throw new HttpError(error.message, error.code)
+                    Utils.respondWithError(res, err)
                 });
         })
         .catch(error => {
-            throw new HttpError(error.message, error.code)
+            Utils.respondWithError(res, err)
         })
 };
 

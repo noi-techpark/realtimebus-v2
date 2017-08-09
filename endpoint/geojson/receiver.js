@@ -29,16 +29,22 @@ module.exports.updatePositions = function (req, res) {
 
                     if (!feature.hasOwnProperty("properties")) {
                         logger.error("Required property 'properties' is missing");
+                        logger.error(`Feature: '${feature}'`);
+
                         continue;
                     }
 
                     if (!feature.properties.hasOwnProperty("frt_fid")) {
                         logger.error("Required property 'frt_fid' is missing");
+                        logger.error(`Feature: '${feature}'`);
+
                         continue;
                     }
 
                     if (feature.properties.frt_fid === 0) {
                         logger.error("Required property 'frt_fid' is 0");
+                        logger.error(`Feature: '${feature}'`);
+
                         continue;
                     }
 

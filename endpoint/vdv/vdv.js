@@ -5,10 +5,12 @@ require("moment");
 const path = require('path');
 const mime = require('mime');
 
+const moment = require('moment');
+require("moment-timezone");
+
 const AdmZip = require("adm-zip");
 const fs = require("fs");
 const http = require("http");
-const moment = require("moment-timezone");
 const reader = require("readline");
 
 const spawn = require('child_process').spawnSync;

@@ -44,7 +44,7 @@ To run RealtimeServer you will need:
 
 You can install all needed dependencies using the following command:
 
-    sudo apt install nodejs npm postgresql postgresql-server-dev-9.5 postgis
+    sudo apt install nodejs npm postgresql postgresql-server-dev-9.5 postgis recode
     
 If you want to serve bus path overlays to use on a map (OSM, Google Maps), you need to install MapServer. 
 Please refer to the [official installation guide](http://www.mapserver.org/installation/index.html) for help.

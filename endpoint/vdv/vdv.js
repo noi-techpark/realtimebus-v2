@@ -76,7 +76,6 @@ let response = {};
 let sqlTruncateChain = [];
 let sqlCreateChain = [];
 let sqlInsertChain = [];
-let sqlTeqChain = [];
 
 module.exports.upload = function (req, res) {
     let data = [];
@@ -90,7 +89,6 @@ module.exports.upload = function (req, res) {
                     sqlTruncateChain.clear();
                     sqlCreateChain.clear();
                     sqlInsertChain.clear();
-                    sqlTeqChain.clear();
                 })
 
                 .then(() => {
@@ -408,20 +406,30 @@ function saveZipFiles(req) {
 
     return new Promise(function (resolve, reject) {
         fs.writeFile(LATEST_VDV_ZIP, req.body, function (err) {
+            if (err) {
+                return reject(err);
+            }
+
             try {
-                if (err) {
-                    return reject(err);
-                }
-
                 logger.debug("Saved zip file containing VDV data");
-
                 new AdmZip(LATEST_VDV_ZIP).extractAllTo(LATEST_EXTRACTED_VDV_DATA, true);
                 logger.debug("Extracted latest VDV data");
-
-                resolve()
             } catch (e) {
-                reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
+                return reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
             }
+
+            logger.debug("Recoding VDV files");
+
+            const command = `recode ms-ansi..UTF-8 ${VDV_FILES}/*.X10`;
+            const recode = spawn('/bin/sh', ['-c', command]);
+
+            console.log(`Recode: stdout: ${recode.stdout.toString()}`);
+
+            if (recode.status !== 0) {
+                return reject(new HttpError(`Recode exited with status code '${recode.status}', stderr=${recode.stderr.toString()}`, 500))
+            }
+
+            resolve()
         })
     }).then(() => {
         return new Promise(function (resolve, reject) {
@@ -586,6 +594,8 @@ function performOtherQueries(client) {
 
 // TODO: Improve efficiency
 function fillTeqData(client) {
+    let sqlTeqChain = [];
+
     return new Promise(function (resolve, reject) {
         logger.info("Starting TEQ conversion");
 
@@ -752,11 +762,16 @@ function generateZipForApp(client) {
 
     return Promise.resolve()
         .then(() => {
-            let files = fs.readdirSync(VDV_APP_ROOT);
+            if (fs.existsSync(VDV_APP_ROOT)) {
+                let files = fs.readdirSync(VDV_APP_ROOT);
 
-            for (let file of files) {
-                logger.debug(`Deleting file ${file}`);
-                fs.unlinkSync(path.join(VDV_APP_ROOT, file));
+                for (let file of files) {
+                    logger.debug(`Deleting file '${file}'`);
+                    fs.unlinkSync(path.join(VDV_APP_ROOT, file));
+                }
+            } else {
+                logger.info(`Creating directory '${VDV_APP_ROOT}'`);
+                fs.mkdirSync(VDV_APP_ROOT);
             }
         })
 
@@ -816,11 +831,6 @@ function generateZipForApp(client) {
         })
 
         .then(lines => {
-            if (!fs.existsSync(VDV_APP_ROOT)) {
-                logger.info(`Creating directory '${VDV_APP_ROOT}'`);
-                fs.mkdirSync(VDV_APP_ROOT);
-            }
-
             Object.keys(lines).forEach(function (element, key, array) {
                 let file = `${VDV_APP_ROOT}/trips_${element}.json`;
                 logger.info(`Writing file '${file}'`);
@@ -967,10 +977,10 @@ function generateZipForApp(client) {
             const command = `zip -j -D ${APP_ZIP_FILE} ${VDV_APP_ROOT}/*.json`;
             const zip = spawn('/bin/sh', ['-c', command]);
 
-            console.log(`ZIP: stdout: ${zip.stdout.toString()}`);
+            console.log(`Zip: stdout: ${zip.stdout.toString()}`);
 
             if (zip.status !== 0) {
-                throw new HttpError(`zip exited with status code '${zip.status}', stderr=${zip.stderr.toString()}`, 500)
+                throw new HttpError(`Zip exited with status code '${zip.status}', stderr=${zip.stderr.toString()}`, 500)
             }
 
             logger.info("File compression successful");

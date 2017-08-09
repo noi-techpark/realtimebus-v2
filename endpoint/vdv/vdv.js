@@ -101,9 +101,12 @@ module.exports.upload = function (req, res) {
 
                 .then(() => {
                     return new Promise(function (resolve) {
+                        response.data_uploaded_at = moment().format();
+
                         data.forEach(function (file) {
                             //noinspection FallThroughInSwitchStatementJS
                             switch (file.name) {
+
                                 case VALIDITY:
                                     response.data_valid_from = moment(file.rows[0][file.columns.indexOf(VALID_FROM)]).tz("Europe/Rome").format();
                                     logger.info(`Data is valid as of ${response.data_valid_from}`);
@@ -304,6 +307,43 @@ module.exports.upload = function (req, res) {
                     return sendSuccessMail(json);
                 })
 
+                .catch(err => {
+                    logger.error("=========================================================");
+                    logger.error("==================== Import failed! =====================");
+                    logger.error("=========================================================");
+
+                    logger.error(err);
+
+                    config.vdv_import_running = false;
+
+                    let status = err.status || 500;
+
+                    res.status(status).json({success: false, error: err});
+
+                    sendFailureMail(err);
+                });
+        })
+        .catch(error => {
+            config.vdv_import_running = false;
+
+            logger.error(`Error acquiring client: ${error}`);
+            res.status(500).jsonp({success: false, error: error});
+
+            sendFailureMail(error);
+        })
+};
+
+module.exports.validity = function (req, res) {
+    let data = [];
+
+    config.vdv_import_running = true;
+
+    return database.connect()
+        .then(client => {
+            return Promise.resolve()
+                .then(() => {
+                    return client.query(`SELECT `);
+                })
                 .catch(err => {
                     logger.error("=========================================================");
                     logger.error("==================== Import failed! =====================");
@@ -607,7 +647,7 @@ function fillConfigTable(client) {
             return client.query(`TRUNCATE TABLE data.config;`);
         })
         .then(() => {
-            return client.query(`INSERT INTO data.config VALUES('data_valid_from', '${response.data_valid_from}')`)
+            return client.query(`INSERT INTO data.config VALUES ('calendar_days_amount', '${response.calendar_days_amount}'), ('calendar_days_first', '${response.calendar_days_first}'), ('calendar_days_last', '${response.calendar_days_last}'), ('data_uploaded_at', '${response.data_uploaded_at}'), ('data_valid_from', '${response.data_valid_from}')`)
         })
 }
 

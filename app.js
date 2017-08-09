@@ -95,7 +95,7 @@ function startServer() {
 
     app.group("/vdv", (router) => {
         router.post("/import", vdv.upload);
-        router.get("/validity/:date", vdv.upload);
+        router.get("/validity/:date", vdv.validity);
         router.get("/testZip", vdv.testZip);
         router.get("/zip", vdv.asZip);
     });

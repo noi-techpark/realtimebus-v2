@@ -338,7 +338,7 @@ module.exports.validity = function (req, res) {
         .then(client => {
             return Promise.resolve()
                 .then(() => {
-                    return client.query(`SELECT data_uploaded_at FROM data.config WHERE`);
+                    return client.query(`SELECT data_uploaded_at FROM data.config`);
                 })
                 .catch(err => {
                     throw new HttpError(error.message, error.code)

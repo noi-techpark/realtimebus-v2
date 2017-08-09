@@ -334,39 +334,18 @@ module.exports.upload = function (req, res) {
 };
 
 module.exports.validity = function (req, res) {
-    let data = [];
-
-    config.vdv_import_running = true;
-
     return database.connect()
         .then(client => {
             return Promise.resolve()
                 .then(() => {
-                    return client.query(`SELECT `);
+                    return client.query(`SELECT data_uploaded_at FROM data.config WHERE`);
                 })
                 .catch(err => {
-                    logger.error("=========================================================");
-                    logger.error("==================== Import failed! =====================");
-                    logger.error("=========================================================");
-
-                    logger.error(err);
-
-                    config.vdv_import_running = false;
-
-                    let status = err.status || 500;
-
-                    res.status(status).json({success: false, error: err});
-
-                    sendFailureMail(err);
+                    throw new HttpError(error.message, error.code)
                 });
         })
         .catch(error => {
-            config.vdv_import_running = false;
-
-            logger.error(`Error acquiring client: ${error}`);
-            res.status(500).jsonp({success: false, error: error});
-
-            sendFailureMail(error);
+            throw new HttpError(error.message, error.code)
         })
 };
 

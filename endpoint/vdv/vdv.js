@@ -23,7 +23,7 @@ const ExtrapolatePositions = require("../../operation/ExtrapolatePositions");
 const logger = require("../../util/logger");
 const config = require("../../config");
 const database = require("../../database/database.js");
-const Utils = require("../../util/utils");
+const utils = require("../../util/utils");
 
 const VDV_ROOT = 'vdv';
 const VDV_APP_ROOT = `${VDV_ROOT}/app`;
@@ -297,7 +297,7 @@ module.exports.upload = function (req, res) {
 
                     response.success = true;
 
-                    let json = Utils.sortObject(response);
+                    let json = utils.sortObject(response);
 
                     res.status(200).json(json);
 
@@ -316,9 +316,7 @@ module.exports.upload = function (req, res) {
 
                     config.vdv_import_running = false;
 
-                    let status = err.status || 500;
-
-                    res.status(status).json({success: false, error: err});
+                    utils.respondWithError(res, err);
 
                     sendFailureMail(err);
                 });
@@ -334,6 +332,16 @@ module.exports.upload = function (req, res) {
 };
 
 module.exports.validity = function (req, res) {
+    let date = req.params.date;
+
+    if (!utils.checkForParam(res, date, 'date')) {
+        return;
+    }
+
+    if (!utils.checkIfParamIsNumber(res, date, 'date')) {
+        return;
+    }
+
     return database.connect()
         .then(client => {
             return Promise.resolve()
@@ -343,12 +351,12 @@ module.exports.validity = function (req, res) {
                 .then(result => {
                     res.status(200).json({valid: moment.unix(req.params.date).isAfter(moment(result.rows[0]))})
                 })
-                .catch(err => {
-                    Utils.respondWithError(res, err)
+                .catch(error => {
+                    utils.respondWithError(res, error)
                 });
         })
         .catch(error => {
-            Utils.respondWithError(res, err)
+            utils.respondWithError(res, error)
         })
 };
 

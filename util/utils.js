@@ -10,6 +10,8 @@ const config = require('../config');
 
 const enableErrorReporting = process.env.ERROR_REPORTING || false;
 
+const HttpError = require("./HttpError");
+
 if (!('toJSON' in Error.prototype)) {
     Object.defineProperty(Error.prototype, 'toJSON', {
         value: function () {
@@ -133,9 +135,40 @@ module.exports.handleError = function (error) {
 };
 
 module.exports.respondWithError = function (res, error) {
+
+    if (error instanceof HttpError) {
+        res.status(error.status).jsonp({success: false, error: error});
+
+        if (error.message.startsWith("Parameter '")) {
+            return;
+        }
+
+        exports.handleError(error);
+
+        return;
+    }
+
     exports.handleError(error);
 
     res.status(500).jsonp({success: false, error: error})
+};
+
+module.exports.checkForParam = function (res, value, name) {
+    if (exports.isEmpty(value)) {
+        exports.respondWithError(res, new HttpError(`Required param '${name}' is missing`));
+        return false;
+    }
+
+    return true;
+};
+
+module.exports.checkIfParamIsNumber = function (res, value, name) {
+    if (!exports.isNumeric(value)) {
+        exports.respondWithError(res, new HttpError(`Parameter '${name}' must be of type 'number', was '${value}'`));
+        return false;
+    }
+
+    return true;
 };
 
 
@@ -152,9 +185,19 @@ module.exports.isEmptyArray = function (array) {
 
 module.exports.isEmpty = function (field) {
     // noinspection EqualityComparisonWithCoercionJS
-    return typeof field == null
+
+    if (typeof field !== 'string') {
+        return true;
+    }
+
+    return field.length === 0
 };
 
 module.exports.throwTypeError = function (name, type, value) {
     throw(`Parameter '${name}' must be of type '${type}', was '${value}'`)
+};
+
+module.exports.isNumeric = function (value) {
+    // noinspection EqualityComparisonWithCoercionJS
+    return !isNaN(value) && parseInt(Number(value)) == value && !isNaN(parseInt(value, 10));
 };

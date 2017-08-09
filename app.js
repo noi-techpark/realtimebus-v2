@@ -1,5 +1,7 @@
 'use strict';
 
+// TODO: Fix wrong character encoding in realtime api (e.g. Universit�tsplatz)
+
 require('express-group-routes');
 
 const yargs = require('yargs');

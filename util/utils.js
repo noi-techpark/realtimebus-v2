@@ -8,8 +8,6 @@ const fs = require("fs");
 const logger = require('./logger');
 const config = require('../config');
 
-const enableErrorReporting = process.env.ERROR_REPORTING || false;
-
 const HttpError = require("./HttpError");
 
 if (!('toJSON' in Error.prototype)) {
@@ -68,33 +66,6 @@ module.exports.getZoneForLine = function (line) {
     ].includes(line) ? 'BZ' : 'ME'
 };
 
-module.exports.randomHex = function rand_string(n) {
-    if (n <= 0) {
-        return '';
-    }
-
-    let rs = '';
-    try {
-        rs = crypto.randomBytes(Math.ceil(n / 2)).toString('hex').slice(0, n);
-    } catch (ex) {
-        console.error('Exception generating random string: ' + ex);
-        rs = '';
-
-        let r = n % 8, q = (n - r) / 8, i;
-        for (i = 0; i < q; i++) {
-            rs += Math.random().toString(16).slice(2);
-        }
-        if (r > 0) {
-            rs += Math.random().toString(16).slice(2, i);
-        }
-    }
-    return rs;
-};
-
-module.exports.random = function (low, high) {
-    return Math.random() * (high - low) + low;
-};
-
 
 // =================================================== REQUESTS ========================================================
 
@@ -112,7 +83,7 @@ module.exports.getLanguage = function (req) {
 // ==================================================== ERRORS =========================================================
 
 module.exports.startErrorReporting = function () {
-    if (!enableErrorReporting) {
+    if (!config.enable_error_reporting) {
         logger.warn("Raven error reporting is disabled");
         return
     }
@@ -127,7 +98,7 @@ module.exports.startErrorReporting = function () {
 };
 
 module.exports.handleError = function (error) {
-    if (!enableErrorReporting) {
+    if (!config.enable_error_reporting) {
         return;
     }
 
@@ -153,6 +124,9 @@ module.exports.respondWithError = function (res, error) {
     res.status(500).jsonp({success: false, error: error})
 };
 
+
+// ================================================== PARAMETERS =======================================================
+
 module.exports.checkForParam = function (res, value, name) {
     if (exports.isEmpty(value)) {
         exports.respondWithError(res, new HttpError(`Required param '${name}' is missing`));
@@ -162,8 +136,14 @@ module.exports.checkForParam = function (res, value, name) {
     return true;
 };
 
+module.exports.checkForParamThrows = function (value, name) {
+    if (exports.isEmpty(value)) {
+        throw new HttpError(`Required param '${name}' is missing`);
+    }
+};
+
 module.exports.checkIfParamIsNumber = function (res, value, name) {
-    if (!exports.isNumeric(value)) {
+    if (!exports.isNumber(value)) {
         exports.respondWithError(res, new HttpError(`Parameter '${name}' must be of type 'number', was '${value}'`));
         return false;
     }
@@ -171,11 +151,16 @@ module.exports.checkIfParamIsNumber = function (res, value, name) {
     return true;
 };
 
+module.exports.throwTypeError = function (name, type, value) {
+    throw(`Parameter '${name}' must be of type '${type}', was '${value}'`)
+};
+
 
 // ================================================ TYPE VALIDATION ====================================================
 
-module.exports.isNumber = function (toTest) {
-    return !isNaN(parseFloat(toTest)) && isFinite(toTest);
+module.exports.isEmpty = function (field) {
+    // noinspection EqualityComparisonWithCoercionJS
+    return field == null;
 };
 
 module.exports.isEmptyArray = function (array) {
@@ -183,9 +168,7 @@ module.exports.isEmptyArray = function (array) {
     return array == null || array.length === 0
 };
 
-module.exports.isEmpty = function (field) {
-    // noinspection EqualityComparisonWithCoercionJS
-
+module.exports.isEmptyString = function (field) {
     if (typeof field !== 'string') {
         return true;
     }
@@ -193,11 +176,12 @@ module.exports.isEmpty = function (field) {
     return field.length === 0
 };
 
-module.exports.throwTypeError = function (name, type, value) {
-    throw(`Parameter '${name}' must be of type '${type}', was '${value}'`)
+
+module.exports.isNumber = function (toTest) {
+    return !isNaN(parseFloat(toTest)) && isFinite(toTest);
 };
 
-module.exports.isNumeric = function (value) {
+module.exports.isArray = function (array) {
     // noinspection EqualityComparisonWithCoercionJS
-    return !isNaN(value) && parseInt(Number(value)) == value && !isNaN(parseInt(value, 10));
+    return array != null && Array.isArray(array)
 };

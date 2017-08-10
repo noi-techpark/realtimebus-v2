@@ -2,10 +2,10 @@
 
 const database = require("../../database/database");
 const logger = require("../../util/logger");
-
 const utils = require("../../util/utils");
 
 const moment = require("moment");
+
 
 module.exports.insertBuses = function (req, res) {
     database.connect()
@@ -14,39 +14,15 @@ module.exports.insertBuses = function (req, res) {
                 .then(() => {
                     let body = req.body;
 
-                    if (body.length === 0) {
+                    if (!utils.isArray(body)) {
+                        throw("Uploaded bus beacons must be of type 'array'");
+                    }
+
+                    if (utils.isEmptyArray(body)) {
                         throw("No bus beacons uploaded");
                     }
 
-                    logger.debug(`Inserting buses: ${JSON.stringify(body)}`);
-
-                    let sql = `INSERT INTO beacons.buses (battery, firmware, hardware, mac_address, major, minor, recorded, system_id)
-                           VALUES `;
-
-                    for (let i = 0; i < body.length; i++) {
-                        let beacon = body[i];
-
-                        logger.debug(`Processing bus beacon: '${beacon}'`);
-
-                        let time = moment(beacon.recorded).format("DD MMM YYYY hh:mm:ss a");
-
-                        sql += `(
-                            ${beacon.battery},
-                            '${beacon.firmware}',
-                            '${beacon.hardware}',
-                            '${beacon.mac_address}',
-                            ${beacon.major},
-                            ${beacon.minor},
-                            '${time}',
-                            '${beacon.system_id}'
-                        ), `;
-                    }
-
-                    sql = sql.substring(0, sql.length - 2);
-
-                    logger.debug(`Sql: '${sql}'`);
-
-                    return sql
+                    return buildSql(body, "buses");
                 })
                 .then(sql => {
                     return client.query(sql)
@@ -75,39 +51,15 @@ module.exports.insertBusStops = function (req, res) {
                 .then(() => {
                     let body = req.body;
 
-                    if (body.length === 0) {
+                    if (!utils.isArray(body)) {
+                        throw("Uploaded bus stop beacons must be of type 'array'");
+                    }
+
+                    if (utils.isEmptyArray(body)) {
                         throw("No bus stop beacons uploaded");
                     }
 
-                    logger.debug(`Inserting bus stops: ${JSON.stringify(body)}`);
-
-                    let sql = `INSERT INTO beacons.bus_stops (battery, firmware, hardware, mac_address, major, minor, recorded, system_id)
-                           VALUES `;
-
-                    for (let i = 0; i < body.length; i++) {
-                        let beacon = body[i];
-
-                        logger.debug(`Processing bus stop beacon: '${beacon}'`);
-
-                        let time = moment(beacon.recorded).format("DD MMM YYYY hh:mm:ss a");
-
-                        sql += `(
-                            ${beacon.battery},
-                            '${beacon.firmware}',
-                            '${beacon.hardware}',
-                            '${beacon.mac_address}',
-                            ${beacon.major},
-                            ${beacon.minor},
-                            '${time}',
-                            '${beacon.system_id}'
-                        ), `;
-                    }
-
-                    sql = sql.substring(0, sql.length - 2);
-
-                    logger.debug(`Sql: '${sql}'`);
-
-                    return sql
+                    return buildSql(body, "bus_stops");
                 })
                 .then(sql => {
                     return client.query(sql)
@@ -128,3 +80,39 @@ module.exports.insertBusStops = function (req, res) {
             utils.respondWithError(res, error);
         })
 };
+
+
+function buildSql(body, table) {
+    let sql = `INSERT INTO beacons.${table} (battery, firmware, hardware, mac_address, major, minor, recorded, system_id)
+                           VALUES `;
+
+    for (let i = 0; i < body.length; i++) {
+        let beacon = body[i];
+
+        logger.debug(`Processing beacon: '${JSON.stringify(beacon)}'`);
+
+        utils.checkForParamThrows(beacon.battery, "battery");
+        utils.checkForParamThrows(beacon.firmware, "firmware");
+        utils.checkForParamThrows(beacon.hardware, "hardware");
+        utils.checkForParamThrows(beacon.mac_address, "mac_address");
+        utils.checkForParamThrows(beacon.major, "major");
+        utils.checkForParamThrows(beacon.major, "minor");
+        utils.checkForParamThrows(beacon.minor, "recorded");
+        utils.checkForParamThrows(beacon.minor, "system_id");
+
+        let time = moment(beacon.recorded).format("DD MMM YYYY hh:mm:ss a");
+
+        sql += `(
+            ${beacon.battery},
+            '${beacon.firmware}',
+            '${beacon.hardware}',
+            '${beacon.mac_address}',
+            ${beacon.major},
+            ${beacon.minor},
+            '${time}',
+            '${beacon.system_id}'
+        ), `;
+    }
+
+    return sql.substring(0, sql.length - 2);
+}

@@ -22,25 +22,25 @@ CREATE SCHEMA beacons;
 SET search_path = beacons, public, pg_catalog;
 
 CREATE TABLE buses (
-    battery SMALLINT,
-    firmware VARCHAR(10),
-    hardware VARCHAR(10),
+    battery SMALLINT NOT NULL,
+    firmware VARCHAR(10) NOT NULL,
+    hardware VARCHAR(10) NOT NULL,
     inserted TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    mac_address VARCHAR(17),
-    major SMALLINT,
-    minor SMALLINT,
+    mac_address VARCHAR(17) NOT NULL,
+    major SMALLINT NOT NULL,
+    minor SMALLINT NOT NULL,
     recorded TIMESTAMP WITH TIME ZONE,
-    system_id VARCHAR(12)
+    system_id VARCHAR(12) NOT NULL
 );
 
 CREATE TABLE bus_stops (
-    battery SMALLINT,
-    firmware VARCHAR(10),
-    hardware VARCHAR(10),
+    battery SMALLINT NOT NULL,
+    firmware VARCHAR(10) NOT NULL,
+    hardware VARCHAR(10) NOT NULL,
     inserted TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    mac_address VARCHAR(17),
-    major SMALLINT,
-    minor SMALLINT,
+    mac_address VARCHAR(17) NOT NULL,
+    major SMALLINT NOT NULL,
+    minor SMALLINT NOT NULL,
     recorded TIMESTAMP WITH TIME ZONE,
-    system_id VARCHAR(12)
+    system_id VARCHAR(12) NOT NULL
 );

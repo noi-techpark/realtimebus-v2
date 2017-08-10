@@ -592,10 +592,7 @@ function performOtherQueries(client) {
         })
 }
 
-// TODO: Improve efficiency
 function fillTeqData(client) {
-    let sqlTeqChain = [];
-
     return new Promise(function (resolve, reject) {
         logger.info("Starting TEQ conversion");
 
@@ -606,28 +603,33 @@ function fillTeqData(client) {
             reject(error)
         });
 
+        let sql = `
+            UPDATE data.rec_frt AS rec SET
+                  teq = rec2.teq
+            FROM (VALUES
+        `;
+
         reader.createInterface({
             input: stream
         }).on('line', function (line) {
             if (!firstLine) {
                 let numbers = line.split("\t");
-                sqlTeqChain.push(`UPDATE data.rec_frt SET teq = ${numbers[1]} WHERE trip = ${numbers[0]}`);
+                sql += `(${numbers[0]}, ${numbers[1]}),`;
             }
 
             firstLine = false;
         }).on('close', function () {
-            resolve()
+            sql = sql.substr(0, sql.length - 1);
+
+            sql += `
+                ) AS rec2(trip, teq)
+                WHERE rec2.trip = rec.trip;
+            `;
+
+            resolve(sql)
         });
-    }).then(() => {
-        let chain = Promise.resolve();
-
-        for (let sql of sqlTeqChain) {
-            chain = chain.then(() => {
-                return client.query(sql)
-            })
-        }
-
-        return chain
+    }).then(sql => {
+        return client.query(sql)
     })
 }
 

@@ -50,7 +50,8 @@ const DB_PARAMS = {
     ort_ref_ort: "next_rec_ort.ort_ref_ort",
     ort_ref_ort_kuerzel: "next_rec_ort.ort_ref_ort_kuerzel",
     ort_ref_ort_name: "next_rec_ort.ort_ref_ort_name",
-    str_li_var: "rec_frt.variant"
+    str_li_var: "rec_frt.variant",
+    teq: "teq"
 };
 
 module.exports = class Positions {
@@ -191,6 +192,8 @@ module.exports = class Positions {
                     if (row.hexcolor2 == "hexcolor2") {
                         row.hexcolor2 = hex.toUpperCase();
                     }
+
+                    row.teq = parseInt(row.teq);
 
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;

@@ -35,7 +35,9 @@ process.on('uncaughtException', (err) => {
     logger.error('Caught exception: ');
     console.log(err);
 
-    utils.handleError(err)
+    utils.handleError(err);
+
+    process.exit(1);
 });
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
@@ -71,6 +73,7 @@ const app = express();
 
 app.use(logRequests);
 app.use(checkForRunningImport);
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.raw({

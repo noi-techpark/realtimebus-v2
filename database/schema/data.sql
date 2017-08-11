@@ -113,7 +113,7 @@ BEGIN
     IF EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - CURRENT_DATE)) < frt.departure - 10
        AND pos_record.delay_sec = 0 THEN
 
-        -- Bus is waiting at departure
+       -- Bus is waiting at departure
        UPDATE data.vehicle_positions
        SET status = 'w'
        WHERE trip=teq_arg;
@@ -136,7 +136,7 @@ BEGIN
            pos_record.delay_sec,
            frt.departure + complete_travel_time + pos_record.delay_sec + 120;
 
-        -- Bus is waiting at departure
+       -- Bus is waiting at departure
        UPDATE data.vehicle_positions
        SET status = 'f'
        WHERE trip = teq_arg;

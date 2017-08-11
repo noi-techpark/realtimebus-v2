@@ -141,6 +141,10 @@ app.group("/firebase", (router) => {
     });
 });
 
+app.get("/status", function (req, res) {
+    res.status(200).json({success: true});
+});
+
 
 app.use(function (req, res) {
     logger.error(`404: ${req.method} ${req.url}`);

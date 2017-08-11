@@ -141,8 +141,14 @@ app.group("/firebase", (router) => {
     });
 });
 
+
 app.get("/status", function (req, res) {
     res.status(200).json({success: true});
+});
+
+app.get("/stop", function (req, res) {
+    res.status(200).json({success: true});
+    process.exit(1);
 });
 
 

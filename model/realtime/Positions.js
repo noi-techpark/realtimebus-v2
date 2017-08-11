@@ -53,8 +53,6 @@ const DB_PARAMS = {
     str_li_var: "rec_frt.variant"
 };
 
-let includeHexColor2 = false;
-
 module.exports = class Positions {
 
     constructor(outputFormat) {
@@ -93,7 +91,9 @@ module.exports = class Positions {
                     }
                 });
 
-                logger.info("SQL filter:" + sqlFilter);
+                if (sqlFilter.length !== 0) {
+                    logger.info("SQL filter:" + sqlFilter);
+                }
 
                 let lineFilter = '';
 

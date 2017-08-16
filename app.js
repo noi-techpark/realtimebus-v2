@@ -190,7 +190,7 @@ function startCommands() {
 // =================================================== MIDDLEWARE ======================================================
 
 function logRequests(req, res, next) {
-    logger.warn(`${req.method} ${req.url}`);
+    logger.warn(`${req.method} ${req.url} (${req.connection.remoteAddress})`);
     next();
 }
 

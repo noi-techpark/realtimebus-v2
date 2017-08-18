@@ -35,7 +35,7 @@ module.exports = {
             .then(sql => connection.query(sql))
             .then(result => {
                 if (result.rows[0].cnt > 0) {
-                    logger.log(`Updating trip ${tripId}`);
+                    logger.log(`Updating trip with TEQ ${tripId}`);
 
                     // logger.log(`Trip ${tripId} already in database, updating...`);
 

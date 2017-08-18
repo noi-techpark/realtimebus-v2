@@ -193,7 +193,9 @@ module.exports = class Positions {
                         row.hexcolor2 = hex.toUpperCase();
                     }
 
-                    row.teq = parseInt(row.teq);
+                    if (row.teq !== undefined) {
+                        row.teq = parseInt(row.teq);
+                    }
 
                     delete row.json_geom;
                     delete row.json_extrapolation_geom;

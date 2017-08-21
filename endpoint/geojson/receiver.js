@@ -87,18 +87,23 @@ module.exports.updatePositions = function (req, res) {
                 })
             })
                 .then(() => {
-                    client.release();
                     res.status(200).jsonp({success: true});
+
+                    client.release();
                 })
                 .catch(error => {
                     client.release();
 
                     logger.error(error);
+
                     utils.respondWithError(res, error);
+                    utils.handleError(error)
                 })
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
+
             utils.respondWithError(res, error);
+            utils.handleError(error)
         })
 };

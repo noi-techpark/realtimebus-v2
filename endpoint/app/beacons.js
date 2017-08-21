@@ -28,19 +28,21 @@ module.exports.insertBuses = function (req, res) {
                     return client.query(sql)
                 })
                 .then(() => {
-                    client.release();
                     res.status(200).jsonp({success: true});
+                    client.release();
                 })
                 .catch(error => {
-                    client.release();
-
                     logger.error(error);
                     utils.respondWithError(res, error);
+
+                    client.release();
                 })
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
+
             utils.respondWithError(res, error);
+            utils.handleError(error)
         })
 };
 
@@ -77,7 +79,9 @@ module.exports.insertBusStops = function (req, res) {
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
+
             utils.respondWithError(res, error);
+            utils.handleError(error)
         })
 };
 

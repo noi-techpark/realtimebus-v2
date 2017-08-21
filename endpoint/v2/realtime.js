@@ -73,14 +73,20 @@ module.exports.positions = function (req, res) {
                 })
                 .then(buffer => {
                     res.status(200).header("Content-Type", "application/x-protobuf").send(buffer);
+
+                    client.release()
                 })
                 .catch(error => {
                     logger.error(error);
                     utils.respondWithError(res, error);
+
+                    client.release()
                 })
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
+
             utils.respondWithError(error);
+            utils.handleError(error)
         })
 };

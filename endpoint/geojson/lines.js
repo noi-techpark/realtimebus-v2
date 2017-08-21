@@ -32,7 +32,9 @@ module.exports.fetchAllLinesAction = function (req, res) {
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
+
             utils.respondWithError(res, error);
+            utils.handleError(error)
         })
 };
 
@@ -61,6 +63,8 @@ module.exports.fetchLinesAction = function (req, res) {
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
+
             utils.respondWithError(res, error);
+            utils.handleError(error)
         })
 };

@@ -106,7 +106,6 @@ module.exports.handleError = function (error) {
 };
 
 module.exports.respondWithError = function (res, error) {
-
     if (error instanceof HttpError) {
         res.status(error.status).jsonp({success: false, error: error});
 

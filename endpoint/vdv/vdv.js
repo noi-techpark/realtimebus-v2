@@ -32,6 +32,9 @@ const VDV_APP_ROOT = `${VDV_ROOT}/app`;
 const LATEST_VDV_ZIP = `${VDV_ROOT}/latest.zip`;
 const LATEST_EXTRACTED_VDV_DATA = `${VDV_ROOT}/latest`;
 const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
+const VDV_ARCHIVED_DATE = new Date().toISOString();
+const VDV_ARCHIVED_DIR = VDV_ROOT + '/' + VDV_ARCHIVED_DATE;
+const VDV_ARCHIVED_ZIP = VDV_ARCHIVED_DIR + '.zip';
 
 const APP_ZIP_FILE = `${VDV_APP_ROOT}/data.zip`;
 
@@ -461,7 +464,7 @@ function saveZipFiles(req) {
         })
     }).then(() => {
         return new Promise(function (resolve, reject) {
-            fs.writeFile('vdv/' + new Date().toISOString() + '.zip', req.body, function (err) {
+            fs.writeFile(VDV_ARCHIVED_ZIP, req.body, function (err) {
                 try {
                     if (err) {
                         return reject(err);
@@ -473,7 +476,16 @@ function saveZipFiles(req) {
                 } catch (e) {
                     reject(new HttpError("The zip file could not be written to disk. Please try again later."))
                 }
-            })
+            });
+        })
+    }).then(() => {
+        return new Promise(function (resolve, reject) {
+            try {
+                new AdmZip(VDV_ARCHIVED_ZIP).extractAllTo(VDV_ARCHIVED_DIR, true);
+                logger.debug("Extracted archived VDV data");
+            } catch (e) {
+                return reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
+            }
         })
     })
 }

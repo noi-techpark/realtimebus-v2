@@ -395,6 +395,17 @@ module.exports.asZip = function (req, res) {
     fileStream.pipe(res);
 };
 
+module.exports.versions = function (req, res) {
+    let files = [];
+
+    fs.readdirSync(VDV_ROOT).forEach(file => {
+        if (path.extname(file) === ".zip") {
+            files.push(file);
+        }
+    });
+
+    res.status(200).json(files)
+};
 
 // ================================================== VDV IMPORT =======================================================
 

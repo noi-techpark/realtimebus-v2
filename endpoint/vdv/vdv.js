@@ -155,7 +155,7 @@ module.exports.upload = function (req, res) {
 
                                         row.forEach(function (cell) {
                                             if (cell === null) {
-                                                sql2 += `null, `;
+                                                sql2 += "null, ";
                                                 return
                                             }
 
@@ -298,6 +298,8 @@ module.exports.upload = function (req, res) {
 
                     res.status(200).json(json);
 
+                    client.release()
+
                     return json;
                 })
                 .then(json => {
@@ -319,6 +321,8 @@ module.exports.upload = function (req, res) {
 
                     utils.respondWithError(res, err);
 
+                    client.release();
+
                     sendFailureMail(err);
                 });
         })
@@ -326,7 +330,9 @@ module.exports.upload = function (req, res) {
             config.vdv_import_running = false;
 
             logger.error(`Error acquiring client: ${error}`);
-            res.status(500).jsonp({success: false, error: error});
+
+            utils.respondWithError(res, error);
+            utils.handleError(error);
 
             sendFailureMail(error);
         })
@@ -350,14 +356,19 @@ module.exports.validity = function (req, res) {
                     return client.query(`SELECT key FROM data.config WHERE key = 'data_uploaded_at'`);
                 })
                 .then(result => {
-                    res.status(200).json({valid: moment.unix(req.params.date).isAfter(moment(result.rows[0]))})
+                    res.status(200).json({valid: moment.unix(req.params.date).isAfter(moment(result.rows[0]))});
+
+                    client.release();
                 })
                 .catch(error => {
-                    utils.respondWithError(res, error)
+                    utils.respondWithError(res, error);
+
+                    client.release();
                 });
         })
         .catch(error => {
-            utils.respondWithError(res, error)
+            utils.respondWithError(res, error);
+            utils.handleError(error)
         })
 };
 
@@ -367,18 +378,24 @@ module.exports.testZip = function (req, res) {
             return generateZipForApp(client)
                 .then(lines => {
                     logger.warn("Zip generated");
-                    res.status(200).json(lines)
+                    res.status(200).json(lines);
+
+                    client.release()
                 })
                 .catch(error => {
                     logger.error("Zip generation failed!");
                     logger.error(error);
 
-                    res.status(500).json({success: false, error: error})
+                    utils.respondWithError(res, error);
+
+                    client.release()
                 });
         })
         .catch(error => {
             logger.error(`Error acquiring client: ${error}`);
-            res.status(500).jsonp({success: false, error: error})
+
+            utils.respondWithError(error);
+            utils.handleError(error);
         })
 };
 
@@ -475,7 +492,7 @@ function parseVdvFiles(data) {
                 vdvFileList.forEach(file => {
                     chain = chain.then(() => {
                         return new Promise(function (resolve, reject) {
-                            parseVdvFile(file, data, function (fileName, table, formats, columns, rows, data) {
+                            parseVdvFile(file, function (fileName, table, formats, columns, rows) {
                                 if (rows.length === 0) {
                                     return reject(new HttpError(`Table ${table} does not contain any records. VDV import was aborted. No changes have been applied to the current data.`, 400));
                                 }
@@ -659,7 +676,7 @@ function fillConfigTable(client) {
         })
 }
 
-function parseVdvFile(file, data, cb) {
+function parseVdvFile(file, cb) {
     let table = null;
     let columns = [];
     let formats = [];
@@ -705,6 +722,7 @@ function parseVdvFile(file, data, cb) {
                 break;
             case "frm": // record
                 formats = csv.map(function (format) {
+
                     format = format.slice(0, -1);
 
                     let split = format.split('[');
@@ -750,7 +768,7 @@ function parseVdvFile(file, data, cb) {
                 break;
         }
     }).on('close', function () {
-        cb(file, table, formats, columns, records, data);
+        cb(file, table, formats, columns, records);
     })
 }
 
@@ -803,6 +821,7 @@ function generateZipForApp(client) {
                 if (lines[entry.day_type][entry.line].variants[entry.variant] == null) {
                     lines[entry.day_type][entry.line].variants[entry.variant] = {};
                 }
+
 
                 // noinspection EqualityComparisonWithCoercionJS
                 if (lines[entry.day_type][entry.line].variants[entry.variant].trips == null) {

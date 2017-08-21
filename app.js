@@ -13,7 +13,6 @@ const express = require('express');
 const expressAuth = require('express-basic-auth');
 
 const bodyParser = require('body-parser');
-const fs = require('fs');
 
 const v1Realtime = require("./endpoint/geojson/realtime");
 const v1Lines = require("./endpoint/geojson/lines");
@@ -43,6 +42,19 @@ process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at: Promise', promise, 'reason:', reason);
 });
 
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
+console.log('\x1b[36m%s\x1b[0m', 'I am cyan');  //cyan
 
 // ====================================================== ARGS =========================================================
 
@@ -62,6 +74,10 @@ let args = yargs
     .demandCommand()
     .option('verbose', {
         alias: 'v',
+        default: false
+    })
+    .option('color', {
+        alias: 'c',
         default: false
     })
     .argv;

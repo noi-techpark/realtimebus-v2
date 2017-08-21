@@ -416,7 +416,7 @@ module.exports.versions = function (req, res) {
     let files = [];
 
     fs.readdirSync(VDV_ROOT).forEach(file => {
-        if (path.extname(file) === ".zip") {
+        if (path.extname(file) === ".zip" && file !== "latest.zip") {
             files.push(file);
         }
     });

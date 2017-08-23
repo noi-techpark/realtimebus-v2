@@ -88,11 +88,6 @@ let users = {};
 users[config.vdv_import_username] = config.vdv_import_password;
 
 
-app.get('/*', function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    next();
-});
-
 app.use("/vdv/import", expressAuth({users: users}));
 app.use("/firebase", expressAuth({users: users}));
 
@@ -102,6 +97,13 @@ app.use('/gtfs', express.static('static/gtfs'));
 
 
 app.set('jsonp callback name', 'jsonp');
+
+
+// This needs to be the first router. Do not move it further down.
+app.get('/*', function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    next();
+});
 
 app.group("/vdv", (router) => {
     router.post("/import", vdv.upload);

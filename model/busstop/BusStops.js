@@ -24,7 +24,7 @@ module.exports = class BusStops {
                 rec_ort.ort_name,
                 rec_ort.ort_ref_ort_name,
                 COALESCE(vpa.delay_sec, 0) delay_sec,
-                (departure + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) * INTERVAL '1 sec' AS time_est,
+                SUBSTRING(((departure + COALESCE(travel_time, 0) + COALESCE(delay_sec, 0)) * INTERVAL '1 sec')::text, 0, 6) AS time_est,
                 direction,
                 ST_AsGeoJSON(rec_ort.the_geom) as json_geom
                 

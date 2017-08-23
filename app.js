@@ -88,6 +88,11 @@ let users = {};
 users[config.vdv_import_username] = config.vdv_import_password;
 
 
+app.get('/*', function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    next();
+});
+
 app.use("/vdv/import", expressAuth({users: users}));
 app.use("/firebase", expressAuth({users: users}));
 
@@ -100,7 +105,7 @@ app.set('jsonp callback name', 'jsonp');
 
 app.group("/vdv", (router) => {
     router.post("/import", vdv.upload);
-    router.get("/versions", vdv.versions);
+    //router.get("/versions", vdv.versions);
     router.get("/validity/:date", vdv.validity);
     router.get("/testZip", vdv.testZip);
     router.get("/zip", vdv.asZip);

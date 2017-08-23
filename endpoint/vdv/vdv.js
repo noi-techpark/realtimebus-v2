@@ -301,7 +301,7 @@ module.exports.upload = function (req, res) {
 
                     res.status(200).json(json);
 
-                    client.release()
+                    client.release();
 
                     return json;
                 })
@@ -415,17 +415,45 @@ module.exports.asZip = function (req, res) {
     fileStream.pipe(res);
 };
 
-module.exports.versions = function (req, res) {
+/*module.exports.versions = function (req, res) {
     let files = [];
+    let records = [];
 
-    fs.readdirSync(VDV_ROOT).forEach(file => {
-        if (path.extname(file) === ".zip" && file !== "latest.zip") {
-            files.push(file);
-        }
+    new Promise(function (resolve, reject) {
+        fs.readdir(VDV_ROOT, (err, files) => {
+            try {
+                let chain = Promise.resolve();
+
+                files.forEach(file => {
+                    chain = chain.then(() => {
+                        if (path.extname(file) === ".zip" && file !== "latest.zip") {
+                            files.push(file);
+
+                            return new Promise(function (resolve, reject) {
+                                parseVdvFile(path.dirname(file) + "/" + path.basename(file, ".zip") + "/" + CALENDAR, function (fileName, table, formats, columns, rows) {
+                                    records.push(rows);
+                                    resolve()
+                                })
+                            })
+                        }
+                    });
+                });
+
+                chain = chain.then(() => {
+                    resolve()
+                }).catch(error => {
+                    reject(error)
+                })
+            } catch (e) {
+                reject(new HttpError("Failed to read from disk. Please try again later."))
+            }
+        })
+    }).then(() => {
+        res.status(200).json({files: files, records: records})
+    }).catch(function (err) {
+        utils.respondWithError(res, err)
     });
-
-    res.status(200).json(files)
-};
+};*/
 
 // ================================================== VDV IMPORT =======================================================
 

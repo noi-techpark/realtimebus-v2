@@ -1,9 +1,8 @@
 'use strict';
 
+const http = require("http");
+
 const raven = require('raven');
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const fs = require("fs");
 
 const logger = require('./logger');
 const config = require('../config');
@@ -64,6 +63,29 @@ module.exports.getZoneForLine = function (line) {
         1001, 1003, 1005, 1006, 1071, 1072, 1008, 1009, 1101, 1102, 1011,
         1012, 1014, 110, 111, 112, 116, 117, 1153, 183, 201, 202
     ].includes(line) ? 'BZ' : 'ME'
+};
+
+module.exports.getWebContent = function (host, path, cb) {
+    logger.warn(`GET: ${host}${path}`);
+
+    let options = {
+        host: host,
+        port: 80,
+        path: path
+    };
+
+    http.get(options, function (res) {
+        let data = "";
+
+        res.on("data", function (chunk) {
+            data += chunk;
+        });
+
+        res.on("end", function () {
+            console.log(data);
+            cb(data);
+        });
+    });
 };
 
 

@@ -202,7 +202,7 @@ module.exports = class PositionsApp {
                         rec_frt.trip::int,
                         vehicle,
                         
-                        ROUND(delay_sec / 60) AS delay_min,
+                        ROUND(delay_sec / 60::DECIMAL)::INT AS delay_min,
 
                         next_rec_ort.ort_nr AS bus_stop
                         

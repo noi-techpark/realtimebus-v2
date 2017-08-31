@@ -10,6 +10,7 @@ const config = require("../config");
 
 module.exports.syncAll = function () {
     exports.sync(config.firebase_messaging_key_sasabus);
+    exports.sync(config.firebase_messaging_key_sasaios);
     exports.sync(config.firebase_messaging_key_sasabz);
 };
 
@@ -37,6 +38,28 @@ module.exports.sync = function (key) {
             logger.error('Sync HTTP error: ' + response.statusCode + ' - ' + response.statusMessage + '\n' + body);
         } else {
             logger.log(`Sync successful: ${body}`)
+        }
+    });
+};
+
+module.exports.sendMessage = function (key, body) {
+    let config = {
+        url: 'https://fcm.googleapis.com/fcm/send',
+        method: 'POST',
+        headers: {
+            'Content-Type': ' application/json',
+            'Authorization': 'key=' + key
+        },
+        body: JSON.stringify(body)
+    };
+
+    request(config, function (error, response, body) {
+        if (error) {
+            logger.error("Could not send FCM: " + error);
+        } else if (response.statusCode >= 400) {
+            logger.error('FCM HTTP error: ' + response.statusCode + ' - ' + response.statusMessage + '\n' + body);
+        } else {
+            logger.log(`FCM successful: ${body}`)
         }
     });
 };

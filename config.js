@@ -16,6 +16,7 @@ config.vdv_import_username = process.env.VDV_IMPORT_USERNAME;
 config.vdv_import_password = process.env.VDV_IMPORT_PASSWORD;
 
 config.firebase_messaging_key_sasabz = process.env.FIREBASE_MESSAGING_KEY_SASABZ;
+config.firebase_messaging_key_sasaios = process.env.FIREBASE_MESSAGING_KEY_SASAIOS;
 config.firebase_messaging_key_sasabus = process.env.FIREBASE_MESSAGING_KEY_SASABUS;
 
 config.enable_error_reporting = process.env.ERROR_REPORTING || false;

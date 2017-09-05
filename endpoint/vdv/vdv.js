@@ -405,6 +405,12 @@ module.exports.testZip = function (req, res) {
 module.exports.asZip = function (req, res) {
     let file = APP_ZIP_FILE;
 
+    if (!fs.existsSync(file)) {
+        logger.warn(`${file} does not exist`);
+        res.status(503);
+        return;
+    }
+
     let fileName = path.basename(file);
     let mimeType = mime.lookup(file);
 

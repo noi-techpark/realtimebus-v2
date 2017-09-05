@@ -511,6 +511,8 @@ function saveZipFiles(req) {
             try {
                 new AdmZip(VDV_ARCHIVED_ZIP).extractAllTo(VDV_ARCHIVED_DIR, true);
                 logger.debug("Extracted archived VDV data");
+
+                resolve();
             } catch (e) {
                 return reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
             }

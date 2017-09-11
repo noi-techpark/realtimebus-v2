@@ -413,9 +413,11 @@ module.exports.asZip = function (req, res) {
 
     let fileName = path.basename(file);
     let mimeType = mime.lookup(file);
+    let size = fs.statSync(file);
 
-    res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
-    res.setHeader('Content-type', mimeType);
+    res.setHeader('Content-Disposition', 'attachment; filename=' + fileName);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Length', size);
 
     let fileStream = fs.createReadStream(file);
     fileStream.pipe(res);

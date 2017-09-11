@@ -417,7 +417,7 @@ module.exports.asZip = function (req, res) {
 
     res.setHeader('Content-Disposition', 'attachment; filename=' + fileName);
     res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Length', size);
+    res.setHeader('Content-Length', size.size);
 
     let fileStream = fs.createReadStream(file);
     fileStream.pipe(res);

@@ -1,45 +1,18 @@
 'use strict';
 
 const logger = require("../../util/logger");
-const moment = require("moment");
 
-module.exports = {
+module.exports.insertIntoDatabase = function (connection, trip, feature) {
+    return Promise.resolve(`
+            SELECT COUNT(*) AS cnt FROM data.vehicle_positions
+            WHERE trip=${feature.properties.frt_fid}
+        `)
+        .then(sql => connection.query(sql))
+        .then(result => {
+            if (result.rows[0].cnt > 0) {
+                logger.log(`Updating trip with TEQ ${trip}`);
 
-    /*checkIfInternal: function (connection, tripId, feature) {
-        // logger.log(`checkIfInternal() trip=${tripId}`);
-
-        return Promise.resolve(`
-                SELECT variant
-                FROM data.rec_frt
-                WHERE trip = ${feature.properties.frt_fid}
-            `)
-            .then(sql => connection.query(sql))
-            .then(result => {
-                if (result.rowCount === 0) {
-                    throw(`Trip '${feature.properties.frt_fid}' not found in 'data.rec_frt'`);
-                }
-
-                if (result.rows[0].variant >= 990) {
-                    throw(`Internal trip: ${result.rows[0].variant}`);
-                }
-            })
-    },*/
-
-    insertIntoDatabase: function (connection, tripId, feature) {
-        // logger.log(`insertIntoDatabase() trip=${tripId}`);
-
-        return Promise.resolve(`
-                SELECT COUNT(*) AS cnt FROM data.vehicle_positions
-                WHERE trip=${feature.properties.frt_fid}
-            `)
-            .then(sql => connection.query(sql))
-            .then(result => {
-                if (result.rows[0].cnt > 0) {
-                    logger.log(`Updating trip with TEQ ${tripId}`);
-
-                    // logger.log(`Trip ${tripId} already in database, updating...`);
-
-                    return `
+                return `
                         UPDATE data.vehicle_positions SET
                             gps_date = '${feature.properties.gps_date}',
                             delay_sec = ${feature.properties.delay_sec},
@@ -51,14 +24,12 @@ module.exports = {
                             the_geom = ${feature.geometry_sql},
                             vehicle = SPLIT_PART('${feature.properties.vehicleCode}', ' ', 1)::int,
                             depot = SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)
-                        WHERE trip=${tripId}
+                        WHERE trip=${trip}
                     `;
-                } else {
-                    // logger.debug(`Trip ${tripId} not yet in database, inserting...`);
+            } else {
+                logger.log(`Inserting trip ${trip}`);
 
-                    logger.log(`Inserting trip ${tripId}`);
-
-                    return `
+                return `
                         INSERT INTO data.vehicle_positions (
                             gps_date,
                             delay_sec,
@@ -85,11 +56,7 @@ module.exports = {
                             SPLIT_PART('${feature.properties.vehicleCode}', ' ', 2)
                         )
                    `;
-                }
-            })
-            .then(sql => connection.query(sql))
-            // .then(() => {
-                // logger.log(`Inserted/Updated trip ${tripId}`);
-            //})
-    }
+            }
+        })
+        .then(sql => connection.query(sql))
 };

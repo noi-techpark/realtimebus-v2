@@ -70,6 +70,7 @@ module.exports = class Positions {
                 let sqlFilter = '';
 
                 Object.keys(urlParams).sort().forEach(function (jsonParam) {
+                    // noinspection EqualityComparisonWithCoercionJS
                     if (DB_PARAMS[jsonParam] == null || jsonParam.slice(-3) === "_op") {
                         return;
                     }
@@ -79,6 +80,7 @@ module.exports = class Positions {
                     let opField = urlParams[jsonParam + "_op"];
                     let op = OPERATORS[opField];
 
+                    // noinspection EqualityComparisonWithCoercionJS
                     if (opField == null && op == null) {
                         sqlFilter += ` AND ${DB_PARAMS[jsonParam]} IN (${urlValue.split(',').map(function (value) {
                             return `'${value}'`;
@@ -105,9 +107,12 @@ module.exports = class Positions {
 
                 let select = '';
                 let groupBy = '';
+
+                // noinspection EqualityComparisonWithCoercionJS
                 let params = urlParams[PROPERTIES] == null ? null : urlParams[PROPERTIES].split(',');
 
                 Object.keys(DB_PARAMS).sort().forEach(function (key) {
+                    // noinspection EqualityComparisonWithCoercionJS
                     if (params == null || params.indexOf(key) > -1) {
                         select += `${DB_PARAMS[key]} AS ${key}, `;
 

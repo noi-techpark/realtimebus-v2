@@ -11,6 +11,7 @@ module.exports = class FeatureList {
     add(properties, geometry) {
         let feature = {};
 
+        // noinspection EqualityComparisonWithCoercionJS
         if (geometry != null) {
             feature.geometry = Utils.sortObject(geometry)
         }

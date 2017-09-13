@@ -4,6 +4,7 @@ const database = require("../../database/database");
 const logger = require('../../util/logger');
 const config = require("../../config");
 const utils = require("../../util/utils");
+
 const moment = require("moment");
 require("moment-timezone");
 
@@ -50,7 +51,9 @@ module.exports.updatePositions = function (req, res) {
                         continue;
                     }
 
-                    if (moment(feature.properties.gps_date).isAfter(moment(feature.properties.notification_date).add(config.realtime_bus_timeout_minutes, "minutes"))) {
+                    if (moment(feature.properties.gps_date)
+                            .isAfter(moment(feature.properties.notification_date).add(config.realtime_bus_timeout_minutes, "minutes"))) {
+
                         logger.error("Feature has timed out");
                         logger.error(`Feature: '${JSON.stringify(feature)}'`);
 

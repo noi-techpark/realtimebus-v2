@@ -23,7 +23,7 @@ const v1Stops = require("./endpoint/geojson/stops");
 
 const vdv = require("./endpoint/vdv/vdv");
 
-const v2Realtime = require("./endpoint/v2/realtime");
+const v2Realtime = require("./endpoint/gtfs/realtime");
 
 const appRealtime = require("./endpoint/app/realtime");
 const appBeacons = require("./endpoint/app/beacons");

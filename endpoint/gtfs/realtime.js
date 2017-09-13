@@ -13,10 +13,11 @@ const GtfsRealtimeBindings = require('gtfs-realtime-bindings');
 module.exports.positions = function (req, res) {
     database.connect()
         .then(client => {
-            Promise.resolve().then(() => {
-                let positions = new PositionsApp(client);
-                return positions.getBuses();
-            })
+            return Promise.resolve()
+                .then(() => {
+                    let positions = new PositionsApp(client);
+                    return positions.getBuses();
+                })
                 .then(positions => {
                     let buses = positions.buses;
 

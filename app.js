@@ -2,6 +2,8 @@
 
 require('express-group-routes');
 
+// <editor-fold desc="IMPORTS">
+
 const yargs = require('yargs');
 
 const database = require("./database/database");
@@ -27,6 +29,8 @@ const appRealtime = require("./endpoint/app/realtime");
 const appBeacons = require("./endpoint/app/beacons");
 
 const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
+
+// </editor-fold>
 
 utils.startErrorReporting();
 
@@ -88,6 +92,8 @@ let users = {};
 users[config.vdv_import_username] = config.vdv_import_password;
 
 
+// <editor-fold desc="ROUTES">
+
 app.use("/vdv/import", expressAuth({users: users}));
 app.use("/firebase", expressAuth({users: users}));
 
@@ -104,6 +110,7 @@ app.get('/*', function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     next();
 });
+
 
 app.group("/vdv", (router) => {
     router.post("/import", vdv.upload);
@@ -161,6 +168,8 @@ app.get("/stop", function (req, res) {
     res.status(200).json({success: true});
     process.exit(1);
 });
+
+// </editor-fold>
 
 
 app.use(function (req, res) {

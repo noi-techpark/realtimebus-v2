@@ -80,6 +80,7 @@ let sqlTruncateChain = [];
 let sqlCreateChain = [];
 let sqlInsertChain = [];
 
+
 module.exports.upload = function (req, res) {
     let data = [];
 
@@ -197,103 +198,10 @@ module.exports.upload = function (req, res) {
                 })
 
                 .then(() => {
-                    return calculateTravelTimes(client)
-                })
-
-                .then(() => {
-                    return client.query(`
-                            INSERT INTO data.frt_ort_last (trip, onr_typ_nr, ort_nr)
-                                (
-                                SELECT DISTINCT ON (trip) trip, onr_typ_nr, ort_nr
-                                FROM data.rec_frt
-                                LEFT JOIN data.lid_verlauf
-                                    ON rec_frt.line=lid_verlauf.line
-                                    AND rec_frt.variant=lid_verlauf.variant
-                                ORDER BY trip, li_lfd_nr DESC
-                                );
-                        `);
-                })
-                .then(() => {
-                    return client.query(`
-                        UPDATE data.rec_ort
-                            SET the_geom =
-                                ST_Transform(
-                                    ST_SetSRID(
-                                        ST_MakePoint(
-                                            data.data_bigint_2_degree(ort_pos_laenge),
-                                            data.data_bigint_2_degree(ort_pos_breite)
-                                        ), ${VDV_COORDINATES_FORMAT}
-                                    ), ${DB_COORDINATES_FORMAT}
-                                );
-                        `);
-                })
-                .then(() => {
-                    return client.query(`
-                            UPDATE data.lid_verlauf
-                            SET the_geom=ort_edges.the_geom
-                            FROM data.lid_verlauf verlauf_next, data.ort_edges
-                                WHERE lid_verlauf.line=verlauf_next.line
-                                    AND lid_verlauf.variant=verlauf_next.variant
-                                    AND lid_verlauf.li_lfd_nr+1=verlauf_next.li_lfd_nr
-                                    AND lid_verlauf.ort_nr=ort_edges.start_ort_nr
-                                    AND lid_verlauf.onr_typ_nr=ort_edges.start_onr_typ_nr
-                                    AND verlauf_next.ort_nr=ort_edges.end_ort_nr
-                                    AND verlauf_next.onr_typ_nr=ort_edges.end_onr_typ_nr;
-                        `);
-                })
-                .then(() => {
-                    return client.query(`
-                            UPDATE data.lid_verlauf
-                            SET the_geom =
-                                (
-                                SELECT
-                                ST_Force2D(ST_MakeLine(rec_ort_start.the_geom, rec_ort_end.the_geom))
-                                FROM data.rec_lid
-                                INNER JOIN data.lid_verlauf lid_verlauf_start
-                                    ON lid_verlauf_start.line=rec_lid.line
-                                    AND lid_verlauf_start.variant=rec_lid.variant
-                                INNER JOIN data.lid_verlauf lid_verlauf_end
-                                    ON lid_verlauf_start.line=lid_verlauf_end.line
-                                    AND lid_verlauf_start.variant=lid_verlauf_end.variant
-                                    AND lid_verlauf_start.li_lfd_nr + 1 = lid_verlauf_end.li_lfd_nr
-                                INNER JOIN data.rec_ort rec_ort_start
-                                    ON lid_verlauf_start.onr_typ_nr =  rec_ort_start.onr_typ_nr
-                                    AND lid_verlauf_start.ort_nr = rec_ort_start.ort_nr
-                                INNER JOIN data.rec_ort rec_ort_end
-                                    ON lid_verlauf_end.onr_typ_nr =  rec_ort_end.onr_typ_nr
-                                    AND lid_verlauf_end.ort_nr = rec_ort_end.ort_nr
-                                WHERE lid_verlauf.line=lid_verlauf_start.line
-                                    AND lid_verlauf.variant=lid_verlauf_start.variant
-                                    AND lid_verlauf.li_lfd_nr=lid_verlauf_start.li_lfd_nr
-                                )
-                            WHERE lid_verlauf.the_geom IS NULL;
-                        `)
-                })
-                .then(() => {
-                    return client.query(`
-                            UPDATE data.rec_lid
-                            SET the_geom =
-                                (SELECT
-                                ST_MakeLine(ST_Force2D(rec_ort.the_geom) ORDER BY li_lfd_nr)
-                                FROM data.lid_verlauf
-                                INNER JOIN data.rec_ort ON lid_verlauf.ort_nr=rec_ort.ort_nr
-                                    AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
-                                WHERE lid_verlauf.line=rec_lid.line
-                                    AND lid_verlauf.variant=rec_lid.variant
-                                );
-                        `)
-                })
-
-                .then(() => {
-                    return generateZipForApp(client)
-                })
-
-                .then(() => {
                     logger.warn("=========================================================");
                     logger.warn("==================== Import succeeded! ==================");
+                    logger.warn("================ Data calculation running! ==============");
                     logger.warn("=========================================================");
-
-                    config.vdv_import_running = false;
 
                     response.success = true;
 
@@ -301,16 +209,22 @@ module.exports.upload = function (req, res) {
 
                     res.status(200).json(json);
 
-                    client.release();
-
                     return json;
                 })
                 .then(json => {
+                    return sendSuccessMail(json);
+                })
+                .then(() => {
+                    return performDataCalculation(client);
+                })
+                .then(() => {
                     new ExtrapolatePositions().run();
 
                     firebase.syncAll();
 
-                    return sendSuccessMail(json);
+                    config.vdv_import_running = false;
+
+                    client.release();
                 })
 
                 .catch(err => {
@@ -375,7 +289,8 @@ module.exports.validity = function (req, res) {
         })
 };
 
-module.exports.testZip = function (req, res) {
+
+module.exports.generateAppZip = function (req, res) {
     return database.connect()
         .then(client => {
             return generateZipForApp(client)
@@ -402,7 +317,7 @@ module.exports.testZip = function (req, res) {
         })
 };
 
-module.exports.asZip = function (req, res) {
+module.exports.downloadAppZip = function (req, res) {
     let file = APP_ZIP_FILE;
 
     if (!fs.existsSync(file)) {
@@ -423,47 +338,10 @@ module.exports.asZip = function (req, res) {
     fileStream.pipe(res);
 };
 
-/*module.exports.versions = function (req, res) {
-    let files = [];
-    let records = [];
-
-    new Promise(function (resolve, reject) {
-        fs.readdir(VDV_ROOT, (err, files) => {
-            try {
-                let chain = Promise.resolve();
-
-                files.forEach(file => {
-                    chain = chain.then(() => {
-                        if (path.extname(file) === ".zip" && file !== "latest.zip") {
-                            files.push(file);
-
-                            return new Promise(function (resolve, reject) {
-                                parseVdvFile(path.dirname(file) + "/" + path.basename(file, ".zip") + "/" + CALENDAR, function (fileName, table, formats, columns, rows) {
-                                    records.push(rows);
-                                    resolve()
-                                })
-                            })
-                        }
-                    });
-                });
-
-                chain = chain.then(() => {
-                    resolve()
-                }).catch(error => {
-                    reject(error)
-                })
-            } catch (e) {
-                reject(new HttpError("Failed to read from disk. Please try again later."))
-            }
-        })
-    }).then(() => {
-        res.status(200).json({files: files, records: records})
-    }).catch(function (err) {
-        utils.respondWithError(res, err)
-    });
-};*/
 
 // ================================================== VDV IMPORT =======================================================
+
+// <editor-fold desc="VDV IMPORT">
 
 function saveZipFiles(req) {
     if (!fs.existsSync(VDV_ROOT)) {
@@ -706,21 +584,9 @@ function fillTeqData(client) {
 
             resolve(sql)
         });
-    }).then(sql => {
-        return client.query(sql)
     })
-}
-
-function calculateTravelTimes(client) {
-    return Promise.resolve()
-        .then(() => {
-            return client.query("DELETE FROM data.travel_times;")
-        })
-        .then(() => {
-            return client.query(`SELECT data.data_fill_travel_times();`)
-        })
-        .then(() => {
-            return client.query(`DELETE FROM data.frt_ort_last;`)
+        .then(sql => {
+            return client.query(sql)
         })
 }
 
@@ -733,7 +599,14 @@ function fillConfigTable(client) {
             return client.query(`TRUNCATE TABLE data.config;`);
         })
         .then(() => {
-            return client.query(`INSERT INTO data.config VALUES ('calendar_days_amount', '${response.calendar_days_amount}'), ('calendar_days_first', '${response.calendar_days_first}'), ('calendar_days_last', '${response.calendar_days_last}'), ('data_uploaded_at', '${response.data_uploaded_at}'), ('data_valid_from', '${response.data_valid_from}')`)
+            return client.query(
+                `INSERT INTO data.config VALUES 
+                    ('calendar_days_amount', '${response.calendar_days_amount}'), 
+                    ('calendar_days_first', '${response.calendar_days_first}'), 
+                    ('calendar_days_last', '${response.calendar_days_last}'), 
+                    ('data_uploaded_at', '${response.data_uploaded_at}'), 
+                    ('data_valid_from', '${response.data_valid_from}')`
+            )
         })
 }
 
@@ -834,7 +707,112 @@ function parseVdvFile(file, cb) {
 }
 
 
+function performDataCalculation(client) {
+    return Promise.resolve()
+        .then(() => {
+            return client.query("DELETE FROM data.travel_times;")
+        })
+        .then(() => {
+            return client.query(`SELECT data.data_fill_travel_times();`)
+        })
+        .then(() => {
+            return client.query(`DELETE FROM data.frt_ort_last;`)
+        })
+
+        .then(() => {
+            return client.query(`
+                            INSERT INTO data.frt_ort_last (trip, onr_typ_nr, ort_nr)
+                                (
+                                SELECT DISTINCT ON (trip) trip, onr_typ_nr, ort_nr
+                                FROM data.rec_frt
+                                LEFT JOIN data.lid_verlauf
+                                    ON rec_frt.line=lid_verlauf.line
+                                    AND rec_frt.variant=lid_verlauf.variant
+                                ORDER BY trip, li_lfd_nr DESC
+                                );
+                        `);
+        })
+        .then(() => {
+            return client.query(`
+                        UPDATE data.rec_ort
+                            SET the_geom =
+                                ST_Transform(
+                                    ST_SetSRID(
+                                        ST_MakePoint(
+                                            data.data_bigint_2_degree(ort_pos_laenge),
+                                            data.data_bigint_2_degree(ort_pos_breite)
+                                        ), ${VDV_COORDINATES_FORMAT}
+                                    ), ${DB_COORDINATES_FORMAT}
+                                );
+                        `);
+        })
+        .then(() => {
+            return client.query(`
+                            UPDATE data.lid_verlauf
+                            SET the_geom=ort_edges.the_geom
+                            FROM data.lid_verlauf verlauf_next, data.ort_edges
+                                WHERE lid_verlauf.line=verlauf_next.line
+                                    AND lid_verlauf.variant=verlauf_next.variant
+                                    AND lid_verlauf.li_lfd_nr+1=verlauf_next.li_lfd_nr
+                                    AND lid_verlauf.ort_nr=ort_edges.start_ort_nr
+                                    AND lid_verlauf.onr_typ_nr=ort_edges.start_onr_typ_nr
+                                    AND verlauf_next.ort_nr=ort_edges.end_ort_nr
+                                    AND verlauf_next.onr_typ_nr=ort_edges.end_onr_typ_nr;
+                        `);
+        })
+        .then(() => {
+            return client.query(`
+                            UPDATE data.lid_verlauf
+                            SET the_geom =
+                                (
+                                SELECT
+                                ST_Force2D(ST_MakeLine(rec_ort_start.the_geom, rec_ort_end.the_geom))
+                                FROM data.rec_lid
+                                INNER JOIN data.lid_verlauf lid_verlauf_start
+                                    ON lid_verlauf_start.line=rec_lid.line
+                                    AND lid_verlauf_start.variant=rec_lid.variant
+                                INNER JOIN data.lid_verlauf lid_verlauf_end
+                                    ON lid_verlauf_start.line=lid_verlauf_end.line
+                                    AND lid_verlauf_start.variant=lid_verlauf_end.variant
+                                    AND lid_verlauf_start.li_lfd_nr + 1 = lid_verlauf_end.li_lfd_nr
+                                INNER JOIN data.rec_ort rec_ort_start
+                                    ON lid_verlauf_start.onr_typ_nr =  rec_ort_start.onr_typ_nr
+                                    AND lid_verlauf_start.ort_nr = rec_ort_start.ort_nr
+                                INNER JOIN data.rec_ort rec_ort_end
+                                    ON lid_verlauf_end.onr_typ_nr =  rec_ort_end.onr_typ_nr
+                                    AND lid_verlauf_end.ort_nr = rec_ort_end.ort_nr
+                                WHERE lid_verlauf.line=lid_verlauf_start.line
+                                    AND lid_verlauf.variant=lid_verlauf_start.variant
+                                    AND lid_verlauf.li_lfd_nr=lid_verlauf_start.li_lfd_nr
+                                )
+                            WHERE lid_verlauf.the_geom IS NULL;
+                        `)
+        })
+        .then(() => {
+            return client.query(`
+                            UPDATE data.rec_lid
+                            SET the_geom =
+                                (SELECT
+                                ST_MakeLine(ST_Force2D(rec_ort.the_geom) ORDER BY li_lfd_nr)
+                                FROM data.lid_verlauf
+                                INNER JOIN data.rec_ort ON lid_verlauf.ort_nr=rec_ort.ort_nr
+                                    AND lid_verlauf.onr_typ_nr=rec_ort.onr_typ_nr
+                                WHERE lid_verlauf.line=rec_lid.line
+                                    AND lid_verlauf.variant=rec_lid.variant
+                                );
+                        `)
+        })
+
+        .then(() => {
+            return generateZipForApp(client)
+        })
+}
+
+// </editor-fold>
+
 // ============================================== APP ZIP GENERATION ===================================================
+
+// <editor-fold desc="APP ZIP GENERATION">
 
 function generateZipForApp(client) {
     logger.warn("Generating planned data zip for app");
@@ -1179,8 +1157,11 @@ function getLinePath(client) {
         })
 }
 
+// </editor-fold>
 
-// ==================================================== OTHER ==========================================================
+// ===================================================== MAIL ==========================================================
+
+// <editor-fold desc="MAIL">
 
 function sendSuccessMail(json) {
     return new Promise(function (resolve, reject) {
@@ -1265,3 +1246,5 @@ function sendFailureMail(error) {
         req.end();
     });
 }
+
+// </editor-fold>

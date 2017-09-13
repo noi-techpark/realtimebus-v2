@@ -109,8 +109,8 @@ app.group("/vdv", (router) => {
     router.post("/import", vdv.upload);
     //router.get("/versions", vdv.versions);
     router.get("/validity/:date", vdv.validity);
-    router.get("/testZip", vdv.testZip);
-    router.get("/zip", vdv.asZip);
+    router.get("/generateAppZip", vdv.generateAppZip);
+    router.get("/zip", vdv.downloadAppZip);
 });
 
 app.group("/geojson", (router) => {

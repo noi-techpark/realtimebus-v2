@@ -1,8 +1,8 @@
 'use strict';
 
-require('express-group-routes');
-
 // <editor-fold desc="IMPORTS">
+
+require('express-group-routes');
 
 const yargs = require('yargs');
 
@@ -88,14 +88,10 @@ app.use(bodyParser.raw({
 }));
 
 
-let users = {};
-users[config.vdv_import_username] = config.vdv_import_password;
-
-
 // <editor-fold desc="ROUTES">
 
-app.use("/vdv/import", expressAuth({users: users}));
-app.use("/firebase", expressAuth({users: users}));
+app.use("/vdv/import", expressAuth({users: config.users}));
+app.use("/firebase", expressAuth({users: config.users}));
 
 
 // TODO: Add better method to server GTFS (and upload)

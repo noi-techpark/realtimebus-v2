@@ -23,4 +23,7 @@ config.enable_error_reporting = process.env.ERROR_REPORTING || false;
 
 config.lang_default = "en";
 
+config.users = {};
+config.users[config.vdv_import_username] = config.vdv_import_password;
+
 module.exports = config;

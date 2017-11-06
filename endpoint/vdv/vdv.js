@@ -129,9 +129,9 @@ module.exports.upload = function (req, res) {
                                         throw new HttpError("The first day in the calendar is equal to the last one. Are you sure you uploaded the correct calendar data?", 400);
                                     }
 
-                                    if (moment(response.calendar_days_first).isAfter(moment(new Date()).add(-1, "days"))) {
-                                        throw new HttpError("The first day in the calendar is in the future. You are only allowed to upload data whose validity begin is past or within the next 24 hours.", 400);
-                                    }
+                                    //if (moment(response.calendar_days_first).isAfter(moment(new Date()).add(-1, "days"))) {
+                                    //    throw new HttpError("The first day in the calendar is in the future. You are only allowed to upload data whose validity begin is past or within the next 24 hours.", 400);
+                                    //}
 
                                     if (moment(response.calendar_days_last).isBefore(new Date())) {
                                         throw new HttpError("The last day in the calendar is in the past. You are not allowed to upload expired data. Try using another calendar.", 400);

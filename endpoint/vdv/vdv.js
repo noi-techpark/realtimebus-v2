@@ -270,10 +270,12 @@ module.exports.validity = function (req, res) {
         .then(client => {
             return Promise.resolve()
                 .then(() => {
-                    return client.query(`SELECT key FROM data.config WHERE key = 'data_uploaded_at'`);
+                    return client.query(`SELECT value FROM data.config WHERE key = 'data_uploaded_at'`);
                 })
                 .then(result => {
-                    res.status(200).json({valid: moment.unix(req.params.date).isAfter(moment(result.rows[0]))});
+                    console.log(result);
+
+                    res.status(200).json({valid: moment.unix(req.params.date).isAfter(moment(result.rows[0].value))});
 
                     client.release();
                 })

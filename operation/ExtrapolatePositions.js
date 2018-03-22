@@ -43,7 +43,7 @@ module.exports = class ExtrapolatePositions {
 
                         let updateText;
                         if (typeof result === 'undefined') {
-                            logger.error(`Interpolation did not return any result`);
+                            logger.error(`Interpolation did not return any result. error=${err}`);
                         } else {
                             updateText = `, updated ${result.rows[0].data_extrapolate_positions} positions`;
                         }

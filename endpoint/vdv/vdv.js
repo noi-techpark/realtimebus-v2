@@ -273,8 +273,6 @@ module.exports.validity = function (req, res) {
                     return client.query(`SELECT value FROM data.config WHERE key = 'data_uploaded_at'`);
                 })
                 .then(result => {
-                    console.log(result);
-
                     res.status(200).json({valid: moment.unix(req.params.date).isAfter(moment(result.rows[0].value))});
 
                     client.release();

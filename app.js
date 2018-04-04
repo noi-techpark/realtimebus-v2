@@ -111,8 +111,10 @@ app.get('/*', function (req, res, next) {
 app.group("/vdv", (router) => {
     router.post("/import", vdv.upload);
     router.get("/validity/:date", vdv.validity);
-    router.get("/generateAppZip", vdv.generateAppZip);
     router.get("/zip", vdv.downloadAppZip);
+
+    router.get("/generateAppZip", vdv.generateAppZip);
+    router.get("/generateGtfs", vdv.generateGtfs);
 
     router.get("/list", vdv.listVdvZips);
     router.get("/list/:name", vdv.downloadVdvZip);

@@ -319,6 +319,21 @@ module.exports.generateAppZip = function (req, res) {
         })
 };
 
+module.exports.generateGtfs = function (req, res) {
+    return generateGtfsFiles()
+        .then(lines => {
+            logger.warn("GTFS files generated");
+            res.status(200).json(lines);
+        })
+        .catch(error => {
+            logger.error("GTFS file generation failed!");
+            logger.error(error);
+
+            utils.respondWithError(res, error);
+        });
+};
+
+
 module.exports.downloadAppZip = function (req, res) {
     let file = APP_ZIP_FILE;
 
@@ -848,6 +863,9 @@ function performDataCalculation(client) {
         .then(() => {
             return generateZipForApp(client)
         })
+        .then(() => {
+            return generateGtfsFiles()
+        })
 }
 
 // </editor-fold>
@@ -1206,7 +1224,7 @@ function getLinePath(client) {
 
 // <editor-fold desc="GTFS FILES GENERATION">
 
-function generateGtfsFiles(client) {
+function generateGtfsFiles() {
     logger.warn("Generating GTFS files");
 
     let mainFile = {};

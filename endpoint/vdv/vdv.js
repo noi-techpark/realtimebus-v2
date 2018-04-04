@@ -338,6 +338,42 @@ module.exports.downloadAppZip = function (req, res) {
     fileStream.pipe(res);
 };
 
+module.exports.listVdvZips = function (req, res) {
+    let files = fs.readdirSync(VDV_ROOT);
+
+    let html = "<html><body>";
+
+    files.forEach(file => {
+        html += `<a href="/vdv/list/$file">$file</a><br>`
+    });
+
+    html += "</body></html>";
+
+    res.set('Content-Type', 'text/html');
+    res.send(new Buffer(html));
+};
+
+module.exports.downloadVdvZip = function (req, res) {
+    let file = VDV_ROOT + "/" + req.params.name;
+
+    if (!fs.existsSync(file)) {
+        logger.warn(`Zip file ${file} does not exist`);
+        res.status(404);
+        return;
+    }
+
+    let fileName = path.basename(file);
+    let mimeType = mime.lookup(file);
+    let size = fs.statSync(file);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=' + fileName);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Length', size.size);
+
+    let fileStream = fs.createReadStream(file);
+    fileStream.pipe(res);
+};
+
 
 // ================================================== VDV IMPORT =======================================================
 

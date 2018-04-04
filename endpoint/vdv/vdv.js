@@ -27,7 +27,7 @@ const utils = require("../../util/utils");
 const firebase = require("../../util/firebase");
 
 const VDV_ROOT = 'vdv';
-const GTFS_ROOT = 'gtfs';
+const GTFS_ROOT = 'static/gtfs';
 const VDV_APP_ROOT = `${VDV_ROOT}/app`;
 
 const LATEST_VDV_ZIP = `${VDV_ROOT}/latest.zip`;
@@ -1245,7 +1245,9 @@ function generateGtfsFiles() {
         })
 
         .then(() => {
-            const command = `java -jar tools/gtfs-converter.jar ${LATEST_VDV_FILES} static/gtfs`;
+            logger.info(`Vdv file dir is ${LATEST_VDV_FILES}`);
+
+            const command = `java -jar tools/gtfs-converter.jar ../${LATEST_VDV_FILES} static/gtfs`;
             const zip = spawn('/bin/sh', ['-c', command]);
 
             console.log(`GTFS Converter: stdout: ${zip.stdout.toString()}`);

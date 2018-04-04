@@ -422,14 +422,24 @@ function saveZipFiles(req) {
 
             logger.debug("Recoding VDV files");
 
-            const command = `recode ms-ansi..UTF-8 ${LATEST_VDV_FILES}/*.X10`;
-            const recode = spawn('/bin/sh', ['-c', command]);
+            const recodeCommand = `recode ms-ansi..UTF-8 ${LATEST_VDV_FILES}/*.X10`;
+            const recode = spawn('/bin/sh', ['-c', recodeCommand]);
 
             console.log(`Recode: stdout: ${recode.stdout.toString()}`);
 
             if (recode.status !== 0) {
                 return reject(new HttpError(`Recode exited with status code '${recode.status}', stderr=${recode.stderr.toString()}`, 500))
             }
+
+            let vdvFiles = fs.readdirSync(LATEST_VDV_FILES);
+            vdvFiles.forEach(file => {
+                if (file.endsWith(".X10")) {
+                    if (!fs.renameSync(path.join(LATEST_VDV_FILES, file),
+                            path.join(LATEST_VDV_FILES, file.replace("X10", "x10")))) {
+                        return reject(new HttpError(`Renaming file ${file} failed`))
+                    }
+                }
+            });
 
             resolve()
         })

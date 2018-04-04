@@ -433,16 +433,14 @@ function saveZipFiles(req) {
 
             let vdvFiles = fs.readdirSync(LATEST_VDV_FILES);
             vdvFiles.forEach(file => {
-                console.log(file);
-
                 if (file.endsWith(".X10")) {
                     let oldFile = path.join(LATEST_VDV_FILES, file);
                     let newFile = path.join(LATEST_VDV_FILES, file.replace("X10", "x10"));
 
-                    console.log(oldFile);
-                    console.log(newFile);
-                    console.log();
-                    console.log();
+                    logger.info(`Old: ${oldFile}`);
+                    logger.info(`New: ${newFile}`);
+                    logger.info("\n");
+                    logger.info("\n");
 
                     if (!fs.renameSync(oldFile, newFile)) {
                         return reject(new HttpError(`Renaming file ${oldFile} failed`))

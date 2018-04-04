@@ -344,7 +344,7 @@ module.exports.listVdvZips = function (req, res) {
     let html = "<html><body>";
 
     files.forEach(file => {
-        html += `<a href="/vdv/list/$file">$file</a><br>`
+        html += `<a href="/vdv/list/${file}">${file}</a><br>`
     });
 
     html += "</body></html>";

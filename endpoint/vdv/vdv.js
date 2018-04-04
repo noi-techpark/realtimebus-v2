@@ -442,9 +442,7 @@ function saveZipFiles(req) {
                     logger.info("\n");
                     logger.info("\n");
 
-                    if (!fs.renameSync(oldFile, newFile)) {
-                        return reject(new HttpError(`Renaming file ${oldFile} failed`))
-                    }
+                    fs.renameSync(oldFile, newFile)
                 }
             });
 

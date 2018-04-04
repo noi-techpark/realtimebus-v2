@@ -433,10 +433,19 @@ function saveZipFiles(req) {
 
             let vdvFiles = fs.readdirSync(LATEST_VDV_FILES);
             vdvFiles.forEach(file => {
+                console.log(file);
+
                 if (file.endsWith(".X10")) {
-                    if (!fs.renameSync(path.join(LATEST_VDV_FILES, file),
-                            path.join(LATEST_VDV_FILES, file.replace("X10", "x10")))) {
-                        return reject(new HttpError(`Renaming file ${file} failed`))
+                    let oldFile = path.join(LATEST_VDV_FILES, file);
+                    let newFile = path.join(LATEST_VDV_FILES, file.replace("X10", "x10"));
+
+                    console.log(oldFile);
+                    console.log(newFile);
+                    console.log();
+                    console.log();
+
+                    if (!fs.renameSync(oldFile, newFile)) {
+                        return reject(new HttpError(`Renaming file ${oldFile} failed`))
                     }
                 }
             });
@@ -879,6 +888,7 @@ function performDataCalculation(client) {
 }
 
 // </editor-fold>
+
 
 // ============================================== APP ZIP GENERATION ===================================================
 

@@ -1256,7 +1256,7 @@ function generateGtfsFiles() {
         })
 
         .then(() => {
-            logger.info(`Vdv file dir is ${LATEST_VDV_FILES}`);
+            logger.info(`VDV file dir is ${LATEST_VDV_FILES}`);
 
             const command = `java -jar tools/gtfs-converter.jar ${LATEST_VDV_FILES} static/gtfs`;
             const zip = spawn('/bin/sh', ['-c', command]);
@@ -1282,16 +1282,14 @@ function generateGtfsFiles() {
 function generateAgencyTxt() {
     logger.warn("Generating GTFS agency.txt");
 
-    let content = `
-    agency_id,agency_name,agency_url,agency_timezone,agency_lang
-    101,SASA SpA-AG,http://sasabz.it,Europe/Rome,it
-    `;
+    let header = "agency_id,agency_name,agency_url,agency_timezone,agency_lang";
+    let content = "101,SASA SpA-AG,http://sasabz.it,Europe/Rome,it";
 
-    let mainFile = {};
+    let text = header + "\n" + content;
 
     return Promise.resolve()
         .then(() => {
-            fs.writeFileSync(path.join(GTFS_ROOT, "agency.txt"), content);
+            fs.writeFileSync(path.join(GTFS_ROOT, "agency.txt"), text);
             return null
         })
 }

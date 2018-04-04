@@ -27,11 +27,13 @@ const utils = require("../../util/utils");
 const firebase = require("../../util/firebase");
 
 const VDV_ROOT = 'vdv';
+const GTFS_ROOT = 'gtfs';
 const VDV_APP_ROOT = `${VDV_ROOT}/app`;
 
 const LATEST_VDV_ZIP = `${VDV_ROOT}/latest.zip`;
 const LATEST_EXTRACTED_VDV_DATA = `${VDV_ROOT}/latest`;
-const VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
+const LATEST_VDV_FILES = LATEST_EXTRACTED_VDV_DATA + '/vdv';
+
 const VDV_ARCHIVED_DATE = new Date().toISOString();
 const VDV_ARCHIVED_DIR = VDV_ROOT + '/' + VDV_ARCHIVED_DATE;
 const VDV_ARCHIVED_ZIP = VDV_ARCHIVED_DIR + '.zip';
@@ -358,7 +360,7 @@ module.exports.listVdvZips = function (req, res) {
 };
 
 module.exports.downloadVdvZip = function (req, res) {
-    let file = VDV_ROOT + "/" + req.params.name;
+    let file = path.join(VDV_ROOT, req.params.name);
 
     if (!fs.existsSync(file)) {
         logger.warn(`Zip file ${file} does not exist`);
@@ -405,7 +407,7 @@ function saveZipFiles(req) {
 
             logger.debug("Recoding VDV files");
 
-            const command = `recode ms-ansi..UTF-8 ${VDV_FILES}/*.X10`;
+            const command = `recode ms-ansi..UTF-8 ${LATEST_VDV_FILES}/*.X10`;
             const recode = spawn('/bin/sh', ['-c', command]);
 
             console.log(`Recode: stdout: ${recode.stdout.toString()}`);
@@ -448,7 +450,7 @@ function saveZipFiles(req) {
 
 function parseVdvFiles(data) {
     return new Promise(function (resolve, reject) {
-        fs.readdir(VDV_FILES, (err, files) => {
+        fs.readdir(LATEST_VDV_FILES, (err, files) => {
             try {
                 if (err) {
                     return reject(err);
@@ -594,7 +596,7 @@ function fillTeqData(client) {
 
         let firstLine = true;
 
-        let stream = fs.createReadStream(VDV_FILES + '/' + TEQ_MAPPING);
+        let stream = fs.createReadStream(LATEST_VDV_FILES + '/' + TEQ_MAPPING);
         stream.on("error", function (error) {
             reject(error)
         });
@@ -657,7 +659,7 @@ function parseVdvFile(file, cb) {
     let records = [];
 
     reader.createInterface({
-        input: fs.createReadStream(VDV_FILES + '/' + file)
+        input: fs.createReadStream(LATEST_VDV_FILES + '/' + file)
     }).on('line', function (line) {
         let csv = line.split("; ");
 
@@ -1198,6 +1200,52 @@ function getLinePath(client) {
 }
 
 // </editor-fold>
+
+
+// ============================================= GTFS FILES GENERATION =================================================
+
+// <editor-fold desc="GTFS FILES GENERATION">
+
+function generateGtfsFiles(client) {
+    logger.warn("Generating GTFS files");
+
+    let mainFile = {};
+
+    return Promise.resolve()
+        .then(() => {
+            if (fs.existsSync(GTFS_ROOT)) {
+                let files = fs.readdirSync(GTFS_ROOT);
+
+                for (let file of files) {
+                    logger.debug(`Deleting file '${file}'`);
+                    fs.unlinkSync(path.join(GTFS_ROOT, file));
+                }
+            } else {
+                logger.info(`Creating directory '${GTFS_ROOT}'`);
+                fs.mkdirSync(GTFS_ROOT);
+            }
+        })
+
+        .then(() => {
+            const command = `java -jar tools/gtfs-converter.jar ${LATEST_VDV_FILES} static/gtfs`;
+            const zip = spawn('/bin/sh', ['-c', command]);
+
+            console.log(`GTFS Converter: stdout: ${zip.stdout.toString()}`);
+
+            if (zip.status !== 0) {
+                throw new HttpError(`GTFS Converter exited with non-zero status code '${zip.status}', 
+                        stderr=${zip.stderr.toString()}`, 500)
+            }
+
+            logger.info("GTFS conversion successful");
+
+            return null
+        })
+
+}
+
+// </editor-fold>
+
 
 // ===================================================== MAIL ==========================================================
 

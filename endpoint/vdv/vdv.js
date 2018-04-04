@@ -437,11 +437,6 @@ function saveZipFiles(req) {
                     let oldFile = path.join(LATEST_VDV_FILES, file);
                     let newFile = path.join(LATEST_VDV_FILES, file.replace("X10", "x10"));
 
-                    logger.info(`Old: ${oldFile}`);
-                    logger.info(`New: ${newFile}`);
-                    logger.info("\n");
-                    logger.info("\n");
-
                     fs.renameSync(oldFile, newFile)
                 }
             });
@@ -1278,6 +1273,27 @@ function generateGtfsFiles() {
             return null
         })
 
+        .then(() => {
+            return generateAgencyTxt()
+        })
+
+}
+
+function generateAgencyTxt() {
+    logger.warn("Generating GTFS agency.txt");
+
+    let content = ```
+    agency_id,agency_name,agency_url,agency_timezone,agency_lang
+    101,SASA SpA-AG,http://sasabz.it,Europe/Rome,it
+    ```;
+
+    let mainFile = {};
+
+    return Promise.resolve()
+        .then(() => {
+            fs.writeFileSync(path.join(GTFS_ROOT, "agency.txt"), content);
+            return null
+        })
 }
 
 // </editor-fold>

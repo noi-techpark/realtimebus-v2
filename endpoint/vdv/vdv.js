@@ -1247,7 +1247,7 @@ function generateGtfsFiles() {
         .then(() => {
             logger.info(`Vdv file dir is ${LATEST_VDV_FILES}`);
 
-            const command = `java -jar tools/gtfs-converter.jar ../${LATEST_VDV_FILES} static/gtfs`;
+            const command = `java -jar tools/gtfs-converter.jar ${LATEST_VDV_FILES} static/gtfs`;
             const zip = spawn('/bin/sh', ['-c', command]);
 
             console.log(`GTFS Converter: stdout: ${zip.stdout.toString()}`);

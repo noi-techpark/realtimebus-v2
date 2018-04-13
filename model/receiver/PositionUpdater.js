@@ -11,6 +11,7 @@ module.exports.insertIntoDatabase = function (connection, trip, feature) {
         .then(result => {
             if (result.rows[0].cnt > 0) {
                 logger.log(`Updating trip with TEQ ${trip}`);
+                logger.log(feature);
 
                 return `
                         UPDATE data.vehicle_positions SET

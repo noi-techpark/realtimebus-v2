@@ -72,7 +72,7 @@ module.exports.updatePositions = function (req, res) {
                     }).then((result) => {
                         feature.properties = Object.assign(feature.properties, result);
 
-                        // logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
+                        logger.log(`Properties: ${JSON.stringify(feature.properties)}`);
 
                         return result
                     }).then(() => {

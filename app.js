@@ -93,8 +93,6 @@ app.use(bodyParser.raw({
 app.use("/vdv/import", expressAuth({users: config.users}));
 app.use("/firebase", expressAuth({users: config.users}));
 
-logger.log(config.users);
-
 
 // TODO: Add better method to server GTFS (and upload)
 app.use('/gtfs', express.static('static/gtfs'));

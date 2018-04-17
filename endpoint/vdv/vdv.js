@@ -40,9 +40,6 @@ const VDV_ARCHIVED_ZIP = VDV_ARCHIVED_DIR + '.zip';
 
 const APP_ZIP_FILE = `${VDV_APP_ROOT}/data.zip`;
 
-// import vdv data
-// curl --user sasa:sasabz2016! --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://10.4.1.2/vdv/import
-
 const VALIDITY = "BASIS_VER_GUELTIGKEIT.x10";
 const CALENDAR = "FIRMENKALENDER.x10";
 const PATHS = "LID_VERLAUF.x10";

@@ -14,14 +14,17 @@ module.exports = class Extrapolator {
     }
 
     run() {
+        // noinspection JSIgnoredPromiseFromCall
         this.runExtrapolation();
     }
 
     async connect() {
-        logger.info(`${this.tag}: Connecting to database`);
+        logger.info(`${this.tag}: Connecting to database...`);
 
         this.client = await database.connect();
         await this.client.query("SET client_min_messages TO ERROR;");
+
+        logger.info(`${this.tag}: Connected to database`);
     }
 
     async runExtrapolation() {

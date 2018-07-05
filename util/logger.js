@@ -2,9 +2,8 @@
 
 let logConfig = {
     format: [
-        "{{timestamp}} {{title}}: {{message}} ({{file}}:{{line}})"
+        "{{title}}: {{message}} ({{file}}:{{line}})"
     ],
-    dateformat: "HH:MM:ss",
     preprocess: function (data) {
         data.title = data.title.toUpperCase();
     }

@@ -4,13 +4,14 @@
 // <editor-fold desc="IMPORTS">
 
 require('express-group-routes');
+require("./util/functions");
 
 const yargs = require('yargs');
 
+const utils = require("./util/utils");
 const database = require("./database/database");
 const logger = require("./util/logger");
 const config = require("./config");
-const utils = require("./util/utils");
 
 const express = require('express');
 const expressAuth = require('express-basic-auth');

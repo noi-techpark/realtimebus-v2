@@ -13,7 +13,7 @@ const pool = new Pool({
     port: 5432,
     max: 16,                                // max number of clients in the pool
     idleTimeoutMillis: 5 * 60 * 1000,       // how long a client is allowed to remain idle before being closed
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 2000,
     Client: NativeClient
 });
 

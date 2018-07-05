@@ -38,6 +38,8 @@ module.exports = class Extrapolator {
             return;
         }
 
+        let interval = this.interval;
+
         try {
             if (this.client == null) {
                 await this.connect();
@@ -55,8 +57,10 @@ module.exports = class Extrapolator {
 
             await this.client.release();
             this.client = null;
+
+            interval = 5000;
         }
 
-        setTimeout(() => instance.runExtrapolation(), this.interval);
+        setTimeout(() => instance.runExtrapolation(), interval);
     }
 };

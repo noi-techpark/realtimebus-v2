@@ -40,9 +40,13 @@ module.exports = class Extrapolator {
                 await this.connect();
             }
 
+            let start = Date.now();
+
             let result = await this.client.query("SELECT data.data_extrapolate_positions()");
 
-            logger.info(`${this.tag}: Updated ${result.rows[0].data_extrapolate_positions} positions`);
+            let end = Date.now() - start;
+
+            logger.info(`${this.tag}: Updated ${result.rows[0].data_extrapolate_positions} positions, took ${end} ms`);
         } catch (e) {
             logger.error(`${this.tag}: Error: ${e}`);
 

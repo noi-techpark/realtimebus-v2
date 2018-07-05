@@ -18,7 +18,7 @@ const spawn = require('child_process').spawnSync;
 const VdvFile = require("../../model/vdv/VdvFile");
 const HttpError = require("../../util/HttpError");
 
-const ExtrapolatePositions = require("../../operation/ExtrapolatePositions");
+const ExtrapolatePositions = require("../../operation/Extrapolator");
 
 const logger = require("../../util/logger");
 const config = require("../../config");
@@ -217,11 +217,9 @@ module.exports.upload = function (req, res) {
                     return performDataCalculation(client);
                 })
                 .then(() => {
-                    new ExtrapolatePositions().run();
+                    config.vdv_import_running = false;
 
                     firebase.syncAll();
-
-                    config.vdv_import_running = false;
 
                     client.release();
                 })

@@ -1,5 +1,6 @@
 'use strict';
 
+
 // <editor-fold desc="IMPORTS">
 
 require('express-group-routes');
@@ -28,9 +29,10 @@ const v2Realtime = require("./endpoint/gtfs/realtime");
 const appRealtime = require("./endpoint/app/realtime");
 const appBeacons = require("./endpoint/app/beacons");
 
-const ExtrapolatePositions = require("./operation/ExtrapolatePositions");
+const Extrapolator = require("./operation/Extrapolator");
 
 // </editor-fold>
+
 
 utils.startErrorReporting();
 
@@ -203,7 +205,7 @@ function startServer() {
 }
 
 function startCommands() {
-    new ExtrapolatePositions().run();
+    new Extrapolator().run();
 }
 
 

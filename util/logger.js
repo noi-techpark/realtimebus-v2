@@ -5,7 +5,7 @@ let logConfig = {
         "{{title}}: {{message}} ({{file}}:{{line}})"
     ],
     preprocess: function (data) {
-        data.title = data.title.toUpperCase();
+        data.title = data.title.toUpperCase().padEnd(5, " ");
     }
 };
 

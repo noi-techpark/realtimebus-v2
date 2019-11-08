@@ -569,7 +569,15 @@ module.exports = {
             for (var route in serviceRoutes.rows) {
                 var serviceRoute = serviceRoutes.rows[route]
 
-                await db.query('UPDATE data.rec_srv_route SET the_geom = rvg.geom FROM ( SELECT ST_Union(rl.the_geom) AS "geom" FROM data.rec_lid rl JOIN data.rec_srv_variant sv ON sv.line_id = rl.line AND sv.variant_id = rl.variant WHERE sv.service_id = $1 AND rl.line = $2 ) AS rvg WHERE service_id = $3 AND line_id = $4', [ serviceRoute.service, serviceRoute.line, serviceRoute.service, serviceRoute.line ])
+                try {
+                    await db.query('UPDATE data.rec_srv_route SET the_geom = rvg.geom FROM ( SELECT ST_Union(ST_MakeValid(ST_SnapToGrid(rl.the_geom, 0.0001))) AS "geom" FROM data.rec_lid rl JOIN data.rec_srv_variant sv ON sv.line_id = rl.line AND sv.variant_id = rl.variant WHERE sv.service_id = $1 AND rl.line = $2 ) AS rvg WHERE service_id = $3 AND line_id = $4', [ serviceRoute.service, serviceRoute.line, serviceRoute.service, serviceRoute.line ])
+                } catch (err) {
+                    try {
+                        await db.query('UPDATE data.rec_srv_route SET the_geom = rvg.geom FROM ( SELECT ST_Union(ST_Buffer(ST_SnapToGrid(rl.the_geom, 0.0001), 1e-5)) AS "geom" FROM data.rec_lid rl JOIN data.rec_srv_variant sv ON sv.line_id = rl.line AND sv.variant_id = rl.variant WHERE sv.service_id = $1 AND rl.line = $2 ) AS rvg WHERE service_id = $3 AND line_id = $4', [ serviceRoute.service, serviceRoute.line, serviceRoute.service, serviceRoute.line ])
+                    } catch (anoterhErr) {
+                        // noop
+                    }
+                }
             }
         }
 

@@ -27,6 +27,8 @@ const vdv = require("./endpoint/vdv/vdv");
 
 const v2Realtime = require("./endpoint/gtfs/realtime");
 
+const v2Api = require("./endpoint/geojson/api");
+
 const appRealtime = require("./endpoint/app/realtime");
 const appBeacons = require("./endpoint/app/beacons");
 
@@ -154,6 +156,51 @@ app.group("/gtfs", (router) => {
     router.get("/realtime", v2Realtime.positions);
 });
 
+app.group("/v2", (router) => {
+    router.get("/calendar.csv", v2Api.gtfs.getCalendar);
+    router.get("/calendar.txt", v2Api.gtfs.getCalendar);
+    router.get("/calendar_dates.csv", v2Api.gtfs.getCalendarDates);
+    router.get("/calendar_dates.txt", v2Api.gtfs.getCalendarDates);
+    router.get("/calendar", v2Api.getServices);
+
+    router.get("/services", v2Api.getServices);
+    router.get("/services/active", v2Api.getActiveServicesForToday);
+    router.get("/services/active/:date", v2Api.getActiveServicesForDate);
+
+    router.get("/agency.csv", v2Api.gtfs.getAgency);
+    router.get("/agency.txt", v2Api.gtfs.getAgency);
+
+    router.get("/routes.csv", v2Api.gtfs.getRoutes);
+    router.get("/routes.txt", v2Api.gtfs.getRoutes);
+    router.get("/routes", v2Api.getRoutes);
+    router.get("/routes/service/:serviceID", v2Api.getRoutesByService);
+    router.get("/routes/:routeID", v2Api.getRoute);
+    router.get("/routes/:routeID/:serviceID/geometry.geojson", v2Api.getRouteGeometry);
+    router.get("/routes/:routeID/:serviceID/:variantID/geometry.geojson", v2Api.getRouteVariantGeometry);
+
+    router.get("/trips.csv", v2Api.gtfs.getTrips);
+    router.get("/trips.txt", v2Api.gtfs.getTrips);
+    router.get("/trips", v2Api.getTrips);
+    router.get("/trips/route/:routeID", v2Api.getTripsByRoute);
+    router.get("/trips/service/:serviceID", v2Api.getTripsByService);
+    router.get("/trips/route/:routeID/service/:serviceID", v2Api.getTripsByRouteAndService);
+    router.get("/trips/:tripID", v2Api.getTrip);
+
+    router.get("/stops.csv", v2Api.gtfs.getStops);
+    router.get("/stops.txt", v2Api.gtfs.getStops);
+    router.get("/stops", v2Api.getStops);
+    router.get("/stops/:stopID", v2Api.getStop);
+
+    router.get("/stop_times.csv", v2Api.gtfs.getStopTimes);
+    router.get("/stop_times.txt", v2Api.gtfs.getStopTimes);
+    router.get("/stop-times", v2Api.getStopTimes);
+    router.get("/stop-times/after/:afterTime", v2Api.getStopAfter);
+    router.get("/stop-times/stop/:stopID", v2Api.getStopTimesByStop);
+    router.get("/stop-times/stop/:stopID/after/:afterTime", v2Api.getStopTimesByStopAfter);
+    router.get("/stop-times/trip/:tripID", v2Api.getStopTimesByTrip);
+    router.get("/stop-times/trip/:tripID/after/:afterTime", v2Api.getStopTimesByTripAfter);
+});
+
 app.group("/firebase", (router) => {
     router.get("/sync", function (req, res) {
         require("./util/firebase").syncAll();
@@ -162,11 +209,11 @@ app.group("/firebase", (router) => {
     });
 });
 
-
 app.get("/status", function (req, res) {
     res.status(200).json({success: true});
 });
 
+// TODO protect this endpoint
 app.get("/stop", function (req, res) {
     res.status(200).json({success: true});
     process.exit(1);

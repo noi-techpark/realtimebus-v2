@@ -3,14 +3,15 @@
 const Pool = require('pg-pool');
 const NativeClient = require('pg').native.Client;
 
+const config = require("../config");
 const logger = require("../util/logger");
 
 const pool = new Pool({
-    user: 'postgres',
-    database: 'realtimebus',
-    password: '1234',
-    host: 'localhost',
-    port: 5432,
+    host: config.database.host || '127.0.0.1',
+    database: config.database.name,
+    user: config.database.username,
+    password: config.database.password,
+    port: config.database.port || 5432,
     max: 16,                                // max number of clients in the pool
     idleTimeoutMillis: 5 * 60 * 1000,       // how long a client is allowed to remain idle before being closed
     connectionTimeoutMillis: 2000,

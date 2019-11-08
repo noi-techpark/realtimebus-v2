@@ -20,13 +20,15 @@ const HttpError = require("../../util/HttpError");
 
 const ExtrapolatePositions = require("../../operation/Extrapolator");
 
+const _ = require('underscore');
 const logger = require("../../util/logger");
 const config = require("../../config");
 const database = require("../../database/database.js");
 const utils = require("../../util/utils");
 const firebase = require("../../util/firebase");
+const csv = require('csvtojson');
 
-const VDV_ROOT = 'vdv';
+const VDV_ROOT = __dirname + '/vdv';
 const GTFS_ROOT = 'static/gtfs';
 const VDV_APP_ROOT = `${VDV_ROOT}/app`;
 
@@ -210,16 +212,24 @@ module.exports.upload = function (req, res) {
 
                     return json;
                 })
+
                 .then(json => {
-                    return sendSuccessMail(json);
+                    // return sendSuccessMail(json);
+                    return Promise.resolve();
                 })
+
                 .then(() => {
                     return performDataCalculation(client);
                 })
+
+                .then(() => {
+                    return importAdditionalDataFromGtfs(client)
+                })
+
                 .then(() => {
                     config.vdv_import_running = false;
 
-                    firebase.syncAll();
+                    // firebase.syncAll();
 
                     client.release();
                 })
@@ -237,7 +247,7 @@ module.exports.upload = function (req, res) {
 
                     client.release();
 
-                    sendFailureMail(err);
+                    // sendFailureMail(err);
                 });
         })
         .catch(error => {
@@ -248,7 +258,7 @@ module.exports.upload = function (req, res) {
             utils.respondWithError(res, error);
             utils.handleError(error);
 
-            sendFailureMail(error);
+            // sendFailureMail(error);
         })
 };
 
@@ -390,6 +400,10 @@ module.exports.downloadVdvZip = function (req, res) {
     fileStream.pipe(res);
 };
 
+module.exports.importDataFromGtfs = function(client) {
+    return importAdditionalDataFromGtfs(client);
+};
+
 
 // ================================================== VDV IMPORT =======================================================
 
@@ -415,17 +429,6 @@ function saveZipFiles(req) {
                 return reject(new HttpError("No zip file was found in the request's body. Be sure to add it and set the header 'Content-Type' to 'application/octet-stream'.", 400))
             }
 
-            logger.debug("Recoding VDV files");
-
-            const recodeCommand = `recode ms-ansi..UTF-8 ${LATEST_VDV_FILES}/*.X10`;
-            const recode = spawn('/bin/sh', ['-c', recodeCommand]);
-
-            console.log(`Recode: stdout: ${recode.stdout.toString()}`);
-
-            if (recode.status !== 0) {
-                return reject(new HttpError(`Recode exited with status code '${recode.status}', stderr=${recode.stderr.toString()}`, 500))
-            }
-
             let vdvFiles = fs.readdirSync(LATEST_VDV_FILES);
             vdvFiles.forEach(file => {
                 if (file.endsWith(".X10")) {
@@ -435,6 +438,17 @@ function saveZipFiles(req) {
                     fs.renameSync(oldFile, newFile)
                 }
             });
+
+            logger.debug("Recoding VDV files");
+
+            const recodeCommand = `recode ms-ansi..UTF-8 ${LATEST_VDV_FILES}/*.x10`;
+            const recode = spawn('/bin/sh', ['-c', recodeCommand]);
+
+            console.log(`Recode: stdout: ${recode.stdout.toString()}`);
+
+            if (recode.status !== 0) {
+                return reject(new HttpError(`Recode exited with status code '${recode.status}', stderr=${recode.stderr.toString()}`, 500))
+            }
 
             resolve()
         })
@@ -1221,6 +1235,103 @@ function getLinePath(client) {
         .then(sql => {
             return client.query(sql)
         })
+}
+
+function importAdditionalDataFromGtfs(client) {
+    logger.warn("Importing data from GTFS files");
+
+    return Promise.resolve()
+        .then(() => {
+            return `
+                TRUNCATE TABLE data.rec_srv;
+                TRUNCATE TABLE data.rec_srv_date;
+                TRUNCATE TABLE data.rec_srv_route;
+            `;
+        })
+        .then(sql => {
+            return client.query(sql);
+        })
+        .then(() => {
+            return Promise.all([
+                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar.txt'),
+                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar_dates.txt'),
+                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/trips.txt'),
+                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/stop_times.txt')
+            ]);
+        })
+        .then((datasets) => {
+            return Promise.resolve()
+                .then(() => {
+                    return `
+                        SELECT rl.line, rl.variant, CONCAT('[', STRING_AGG(lv.ort_nr::character varying, ',' ORDER BY lv.li_lfd_nr ASC), ']') AS "stops"
+                        FROM data.rec_lid rl
+                        JOIN data.lid_verlauf lv ON lv.line = rl.line AND lv.variant = rl.variant
+                        GROUP BY rl.line, rl.variant
+                    `;
+                })
+                .then(sql => {
+                    return client.query(sql);
+                })
+                .then((result) => {
+                    var variantsAndStops = result.rows;
+
+                    var trips = {}
+
+                    for (var i in datasets[2]) {
+                        var item = datasets[2][i];
+                        trips[item.trip_id] = item;
+                    }
+
+                    var stops = {};
+
+                    var stopTimes = _.groupBy(datasets[3], 'trip_id');
+                    for (var trip_id in stopTimes) {
+                        stops['[' + _.sortBy(stopTimes[trip_id], (stopTime) => parseInt(stopTime.stop_sequence)).map((item) => item.stop_id).join(',') + ']'] = trips[trip_id].service_id;
+                    }
+
+                    return Promise.resolve()
+                        .then(() => {
+                            return Promise.all([
+
+                                client.query("INSERT INTO data.rec_srv (service_id, on_mondays, on_tuesdays, on_wednesdays, on_thursdays, on_fridays, on_saturdays, on_sundays, start_date, end_date) VALUES " + datasets[0].map((tuple) => {
+                                    return "(" + [
+                                        tuple.service_id,
+                                        tuple.monday === '1' ? true : false,
+                                        tuple.tuesday === '1' ? true : false,
+                                        tuple.wednesday === '1' ? true : false,
+                                        tuple.thursday === '1' ? true : false,
+                                        tuple.friday === '1' ? true : false,
+                                        tuple.saturday === '1' ? true : false,
+                                        tuple.sunday === '1' ? true : false,
+                                        "'" + tuple.start_date.substring(0, 4) + "-" + tuple.start_date.substring(4, 6) + "-" + tuple.start_date.substring(6, 8) + "'",
+                                        "'" + tuple.end_date.substring(0, 4) + "-" + tuple.end_date.substring(4, 6) + "-" + tuple.end_date.substring(6, 8) + "'"
+                                    ].join(', ') + ")";
+                                }).join(', ') + ";"),
+
+                                client.query("INSERT INTO data.rec_srv_date (service_id, the_date, is_added) VALUES " + datasets[1].map((tuple) => {
+                                    return "(" + [
+                                        tuple.service_id,
+                                        "'" + tuple.date.substring(0, 4) + "-" + tuple.date.substring(4, 6) + "-" + tuple.date.substring(6, 8) + "'",
+                                        tuple.exception_type === '1' ? true : false
+                                    ].join(', ') + ")";
+                                }).join(', ') + ";"),
+
+                                client.query("INSERT INTO data.rec_srv_route (service_id, line_id) VALUES " + _.uniq(datasets[2], false, (tuple) => {
+                                    return [ tuple.service_id, tuple.route_id ].join(':');
+                                }).map((tuple) => {
+                                    return "(" + [ tuple.service_id, tuple.route_id ].join(', ') + ")";
+                                }) + ";"),
+
+                                client.query("INSERT INTO data.rec_srv_variant (service_id, line_id, variant_id) VALUES " + variantsAndStops.map((tuple) => {
+                                    return "(" + [ stops[tuple.stops], tuple.line, tuple.variant ].join(', ') + ")";
+                                }) + ";")
+
+                            ]);
+                        });
+                });
+        }).then(() => {
+            logger.info("Data imported from GTFS assets.");
+        });
 }
 
 // </editor-fold>

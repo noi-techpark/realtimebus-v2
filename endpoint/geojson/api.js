@@ -351,7 +351,7 @@ module.exports = {
                 })
                 .then(result => {
                     if (result.rows.length === 1 && !!result.rows[0].geom) {
-                        res.status(200).json(result.rows[0].geom);
+                        res.status(200).json(JSON.parse(result.rows[0].geom));
                     } else {
                         res.send(404);
                     }

@@ -23,8 +23,7 @@ platforms:
 You can clone the repository and all its submodules using the
 following command:
 
-    git clone https://sasagitlab.opensasa.info/development/realtimebus-v2.git
-
+    git clone https://github.com/noi-techpark/realtimebus-v2.git
 To update an existing clone you can use the following commands:
 
     cd realtimebus

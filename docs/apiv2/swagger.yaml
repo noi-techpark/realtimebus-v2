@@ -1,0 +1,774 @@
+swagger: "2.0"
+info:
+  version: "1.0.0"
+  title: "Realtimebus V2"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "realtimebus.noi.bz.it"
+basePath: "/v2"
+paths:
+  /calendar:
+    get:
+      tags:
+        - "services"
+      summary: "List all services"
+      description: "List all the defined services along with their information."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Service"
+  /services:
+    get:
+      tags:
+        - "services"
+      summary: "List all services"
+      description: "List all the defined services along with their information."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Service"
+  /services/active:
+    get:
+      tags:
+        - "services"
+      summary: "List all active services"
+      description: "List all the defined services active on the current day along with their information."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Service"
+  /services/active/{date}:
+    get:
+      tags:
+        - "services"
+      summary: "List all services for date"
+      description: "List all the defined services active on the given date along with their information."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "date"
+        in: "path"
+        description: "Date"
+        required: true
+        type: "string"
+        format: "date"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Service"
+  /calendar.txt:
+    get:
+      tags:
+        - "services"
+      summary: "List all services"
+      description: "List all services in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /calendar.csv:
+    get:
+      tags:
+        - "services"
+      summary: "List all services"
+      description: "List all services in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /calendar_dates.txt:
+    get:
+      tags:
+        - "services"
+      summary: "List all added/removed dates"
+      description: "List all service added or removed dates in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /calendar_dates.csv:
+    get:
+      tags:
+        - "services"
+      summary: "List all added/removed dates"
+      description: "List all service added or removed dates in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /routes:
+    get:
+      tags:
+        - "routes"
+      summary: "List all routes"
+      description: "List all routes along with their summary information."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/RouteSummary"
+  /routes/service/{serviceID}:
+    get:
+      tags:
+        - "routes"
+      summary: "List all routes for service"
+      description: "List all routes related to the given service along with their summary information."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "serviceID"
+        in: "path"
+        description: "Service identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/RouteSummary"
+  /routes/{routeID}:
+    get:
+      tags:
+        - "routes"
+      summary: "Get single route"
+      description: "Get all details concerning a single route, including all related services in which the route is defined/active."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "routeID"
+        in: "path"
+        description: "Route identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Route"
+        404:
+          description: "Route not found"
+  /routes/{routeID}/{serviceID}/geometry.geojson:
+    get:
+      tags:
+        - "routes"
+      summary: "Route as GeoJSON"
+      description: "Get the route's GeoJSON geometry and representation for a given service."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "routeID"
+        in: "path"
+        description: "Route identifier"
+        required: true
+        type: "string"
+      - name: "serviceID"
+        in: "path"
+        description: "Service identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+  /routes/{routeID}/{serviceID}/{variantID}/geometry.geojson:
+    get:
+      tags:
+        - "routes"
+      summary: "Route variant as GeoJSON"
+      description: "Get the route's GeoJSON geometry and representation for a given service and variant."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "routeID"
+        in: "path"
+        description: "Route identifier"
+        required: true
+        type: "string"
+      - name: "serviceID"
+        in: "path"
+        description: "Service identifier"
+        required: true
+        type: "string"
+      - name: "variantID"
+        in: "path"
+        description: "Variant identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+  /routes.txt:
+    get:
+      tags:
+        - "routes"
+      summary: "List all routes"
+      description: "List all routes in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /routes.csv:
+    get:
+      tags:
+        - "routes"
+      summary: "List all routes"
+      description: "List all routes in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /trips:
+    get:
+      tags:
+        - "trips"
+      summary: "List all trips"
+      description: "List all the trips along with their summary information."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TripSummary"
+  /trips/route/{routeID}:
+    get:
+      tags:
+        - "trips"
+      summary: "List all trips"
+      description: "List all the trips associated to the given route along with their summary information."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "routeID"
+        in: "path"
+        description: "Route identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TripSummary"
+  /trips/service/{serviceID}:
+    get:
+      tags:
+        - "trips"
+      summary: "List all trips for service"
+      description: "List all the trips associated to the given service along with their summary information."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "serviceID"
+        in: "path"
+        description: "Service identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TripSummary"
+  /trips/route/{routeID}/service/{serviceID}:
+    get:
+      tags:
+        - "trips"
+      summary: "List all trips"
+      description: "List all the trips associated to the given route and service along with their summary information."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "routeID"
+        in: "path"
+        description: "Route identifier"
+        required: true
+        type: "string"
+      - name: "serviceID"
+        in: "path"
+        description: "Service identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TripSummary"
+  /trips/{tripID}:
+    get:
+      tags:
+        - "trips"
+      summary: "Get single trip"
+      description: "Get all details concerning a single trip, including the stops with their arrival/departure times."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "tripID"
+        in: "path"
+        description: "Trip identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Trip"
+        404:
+          description: "Trip not found"
+  /trips.txt:
+    get:
+      tags:
+        - "trips"
+      summary: "List all trips"
+      description: "List all trips in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /trips.csv:
+    get:
+      tags:
+        - "trips"
+      summary: "List all trips"
+      description: "List all trips in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /stops:
+    get:
+      tags:
+        - "stops"
+      summary: "List all stops"
+      description: "List all the stops along with their summary information."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopSummary"
+  /stops/{stopID}:
+    get:
+      tags:
+        - "stops"
+      summary: "Get single stop"
+      description: "Get all details concerning a single stop."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "stopID"
+        in: "path"
+        description: "Stop identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Stop"
+        404:
+          description: "Stop not found"
+  /stop-times:
+    get:
+      tags:
+        - "stops"
+      summary: "List all times"
+      description: "List all the defined stop times."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopTime"
+  /stop-times/after/{afterTime}:
+    get:
+      tags:
+        - "stops"
+      summary: "List all times after time"
+      description: "List all the stop times equal or after the given time."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "afterTime"
+        in: "path"
+        description: "Formatted time"
+        required: true
+        type: "string"
+        pattern: '^\d{2}-\d{2}-\d{2}$'
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopTime"
+  /stop-times/stop/{stopID}:
+    get:
+      tags:
+        - "stops"
+      summary: "List all times for stop"
+      description: "List all the stop times related to a single stop."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "stopID"
+        in: "path"
+        description: "Stop identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopTime"
+  /stop-times/stop/{stopID}/after/{afterTime}:
+    get:
+      tags:
+        - "stops"
+      summary: "List all times for stop after time"
+      description: "List all the stop times related to a single stop equal or after the given time."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "stopID"
+        in: "path"
+        description: "Stop identifier"
+        required: true
+        type: "string"
+      - name: "afterTime"
+        in: "path"
+        description: "Formatted time"
+        required: true
+        type: "string"
+        pattern: '^\d{2}-\d{2}-\d{2}$'
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopTime"
+  /stop-times/trip/{tripID}:
+    get:
+      tags:
+        - "stops"
+      summary: "List all times for trip"
+      description: "List all the stop times related to a single trip."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "tripID"
+        in: "path"
+        description: "Trip identifier"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopTime"
+  /stop-times/trip/{tripID}/after/{afterTime}:
+    get:
+      tags:
+        - "stops"
+      summary: "List all times for trip after time"
+      description: "List all the stop times related to a single trip after the given time."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "tripID"
+        in: "path"
+        description: "Trip identifier"
+        required: true
+        type: "string"
+      - name: "afterTime"
+        in: "path"
+        description: "Formatted time"
+        required: true
+        type: "string"
+        pattern: '^\d{2}-\d{2}-\d{2}$'
+      responses:
+        200:
+          description: "Successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopTime"
+  /stops.txt:
+    get:
+      tags:
+        - "stops"
+      summary: "List all stops"
+      description: "List all stops in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /stops.csv:
+    get:
+      tags:
+        - "stops"
+      summary: "List all stops"
+      description: "List all stops in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /stop_times.txt:
+    get:
+      tags:
+        - "stops"
+      summary: "List all stop times"
+      description: "List all stop times in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /stop_times.csv:
+    get:
+      tags:
+        - "stops"
+      summary: "List all stop times"
+      description: "List all stop times in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /agency.txt:
+    get:
+      tags:
+        - "other"
+      summary: "Agency information"
+      description: "Expose agency's information in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+  /agency.csv:
+    get:
+      tags:
+        - "other"
+      summary: "Agency information"
+      description: "Expose agency's information in GTFS representation."
+      produces:
+      - "text/csv"
+      responses:
+        200:
+          description: "Successful operation"
+definitions:
+  Route:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      color:
+        type: "string"
+      shortName:
+        type: "string"
+      longName:
+        type: "string"
+      agencyId:
+        type: "string"
+      type:
+        type: "integer"
+        format: "int64"
+      services:
+        type: "object"
+        properties:
+          serviceId:
+            type: "integer"
+            format: "int64"
+          variantId:
+            type: "integer"
+            format: "int64"
+          stops:
+            type: "array"
+            items:
+              $ref: "#/definitions/StopSummary"
+  RouteSummary:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      color:
+        type: "string"
+      shortName:
+        type: "string"
+      longName:
+        type: "string"
+      agencyId:
+        type: "string"
+      type:
+        type: "integer"
+        format: "int64"
+  Trip:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      routeId:
+        type: "integer"
+        format: "int64"
+      variantId:
+        type: "integer"
+        format: "int64"
+      serviceId:
+        type: "integer"
+        format: "int64"
+      stops:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            id:
+              type: "integer"
+              format: "int64"
+            name:
+              type: "string"
+            latitude:
+              type: "number"
+            longitude:
+              type: "number"
+            arrivalTime:
+              type: "string"
+            departureTime:
+              type: "string"
+  TripSummary:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      routeId:
+        type: "integer"
+        format: "int64"
+      variantId:
+        type: "integer"
+        format: "int64"
+      serviceId:
+        type: "integer"
+        format: "int64"
+  Stop:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      name:
+        type: "string"
+      latitude:
+        type: "number"
+      longitude:
+        type: "number"
+  StopSummary:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      name:
+        type: "string"
+      latitude:
+        type: "number"
+      longitude:
+        type: "number"
+  StopTime:
+    type: "object"
+    properties:
+      tripId:
+        type: "integer"
+        format: "int64"
+      stopId:
+        type: "integer"
+        format: "int64"
+      arrivalTime:
+        type: "string"
+      departureTime:
+        type: "string"
+      sequence:
+        type: "integer"
+  Service:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      startDate:
+        type: "string"
+        format: "date"
+      endDate:
+        type: "string"
+        format: "date"
+      weekdays:
+        type: "object"
+        properties:
+          monday:
+            type: "boolean"
+          tuesday:
+            type: "boolean"
+          wednesday:
+            type: "boolean"
+          thursday:
+            type: "boolean"
+          friday:
+            type: "boolean"
+          saturday:
+            type: "boolean"
+          sunday:
+            type: "boolean"

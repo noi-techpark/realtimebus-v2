@@ -139,4 +139,10 @@ typings/
 .env
 .idea/inspectionProfiles/
 
+local-config.js
+
+latest.zip*
+
 vdv/
+
+static/gtfs/

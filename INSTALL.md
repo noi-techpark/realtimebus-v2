@@ -33,6 +33,50 @@ To update an existing clone you can use the following commands:
 
 <br/>
 
+
+# Quickstart
+
+First of all, you have to configure a `local-config.js` file in the project's folder by using the following snippet as a starting point:
+
+    exports.database = {
+        // database name and credentials
+        name: 'realtimebus',
+        username: 'realtimebus',
+        password: 's3cret'
+    }
+    
+    exports.application = {
+        // publicly accessible url of the server
+        baseUrl: 'http://127.0.0.1'
+    }
+    
+    exports.vdv = {
+        // credentials used for the remote update of VDV
+        username: 'vdv',
+        password: 's3cret'
+    }
+
+If you use a Debian-based system, you can use the provided script `tools/setup.sh` from the folder to quickly bootstrap the project and automate most of the required steps. This script will
+
+* Install and configure required software packages
+* Download and update the project's dependencies
+* Configure the database and database user
+* Setup the initial state and data of the database
+* Create and configure a system service called `realtimebus`
+
+You can fully update the data based on the latest VDV and CSV/KML assets by using the following two scripts from the server directly (which of course requires that the service is running):
+
+* `bash ./tools/update-vdv.sh`
+* `node ./tools/update-geometries.sh`
+
+That's it, after these steps you can start or stop the service using the system command
+
+* `sudo service realtimebus start`
+* `sudo service realtimebus stop`
+* `sudo service realtimebus status`
+
+<br/>
+
 # Dependencies
 
 To run RealtimeServer you will need:
@@ -58,6 +102,7 @@ To install all needed NodeJs dependencies run the following command in your proj
 
 <br/>
 
+
 # Import data
 
 To run this server you need to import the VDV data first. This is done in three steps:
@@ -67,9 +112,10 @@ To run this server you need to import the VDV data first. This is done in three 
         DROP SCHEMA data CASCADE;
         DROP SCHEMA beacons CASCADE;
         
-2. Import the database schemas `beacons.sql` and `data.sql`:
+2. Import the database schemas `beacons.sql` and `data.sql`, including all `changelog-*` scripts:
         
         psql database_name < schema.sql
+        psql database_name < changelog-v1.sql
    
 3. Import the VDV data. Download the latest version of the VDV data from [here](http://open.sasabz.it/files/vdv.zip).
 Upload the data by executing a POST request to the VDV-endpoint like follows:
@@ -80,7 +126,11 @@ Upload the data by executing a POST request to the VDV-endpoint like follows:
     your request with the validity dates for the uploaded VDV data.
    
    
-   To re-import the VDV data you only need to perform step 3. The existing tables will be truncated automatically. 
+    To re-import the VDV data you only need to perform step 3. The existing tables will be truncated automatically.
+   
+    You can also perform this step from the server directly, by running the `tools/update-vdv.sh` script.
+    
+4. Update the geometries, based on specifically prepared CSV/KML assets, by running the `tools/update-geometries.sh` script directly from the server.
    
 <br/>
 

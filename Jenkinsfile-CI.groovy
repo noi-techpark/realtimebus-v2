@@ -12,10 +12,12 @@ pipeline {
                 sh 'npm install'
             }
         }
+        /*TODO add test phase as soon as code also gets tested
         stage('Test') {
             steps {
                 sh 'npm run test'
             }
         }
+        */
     }
 }

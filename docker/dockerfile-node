@@ -1,0 +1,8 @@
+FROM node:12.13.0-stretch-slim
+ARG JENKINS_GROUP_ID=2000
+ARG JENKINS_USER_ID=2000
+
+RUN groupadd --gid $JENKINS_GROUP_ID jenkins && \
+    useradd --uid $JENKINS_USER_ID --gid $JENKINS_GROUP_ID --create-home jenkins
+RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main' > /etc/apt/sources.list.d/pgdg.list && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+RUN apt-get update && apt-get install -y postgresql-11 postgresql-server-dev-11 recode

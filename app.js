@@ -137,6 +137,7 @@ app.group("/geojson", (router) => {
     router.get("/:tripId/stops", v1Stops.stopsForTrip);
 
     router.get("/lines/all", v1Lines.fetchAllLinesAction);
+//TODO: fix this call since it's just throwing exceptions
     router.get("/lines", v1Lines.fetchLinesAction);
 });
 

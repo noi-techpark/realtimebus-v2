@@ -57,7 +57,7 @@ const DB_PARAMS = {
 module.exports = class Positions {
 
     constructor(outputFormat) {
-        this.outputFormat = outputFormat || config.coordinate_etrs89;
+        this.outputFormat = outputFormat || config.coordinate_wgs84;
     }
 
     setLines(lines) {

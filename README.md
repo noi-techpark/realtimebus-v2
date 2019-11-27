@@ -21,6 +21,10 @@ If you want to install this project, please refer to our [installation instructi
 - [PostgreSQL](https://www.postgresql.org) - Database
 - [PostGIS](http://postgis.net) - Spatial database extender for PostgreSQL
 
+### API
+
+For accessing the REST API interface, please refer to the documentation at `docs/apiv2/index.html`.
+
 ### Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests to us.

@@ -120,10 +120,10 @@ To run this server you need to import the VDV data first. This is done in three 
 3. Import the VDV data. Download the latest version of the VDV data from [here](http://open.sasabz.it/files/vdv.zip).
 Upload the data by executing a POST request to the VDV-endpoint like follows:
 
-        curl --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip http://HOST/vdv
+        curl --header "Content-Type:application/octet-stream" --data-binary @/path/to/vdv.zip --user USR:PWD http://HOST/vdv
         
     The import may take a while, please be patient. After the import is completed, the server will respond to 
-    your request with the validity dates for the uploaded VDV data.
+    your request with the validity dates for the uploaded VDV data. The credentials used for this command have to match with the ones defined in `local-config.js`.
    
    
     To re-import the VDV data you only need to perform step 3. The existing tables will be truncated automatically.

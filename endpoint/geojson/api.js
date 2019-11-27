@@ -405,8 +405,14 @@ module.exports = {
                         SELECT DISTINCT
                             rf.trip AS "trip_id",
                             rf.line AS "route_id",
+                            rl.line_name AS "route_short_name",
+                            rl.li_kuerzel AS "route_long_name",
+                            LOWER(lc.hex) AS "route_color",
+                            rf.variant AS "variant_id",
                             rf.day_type AS "service_id"
                         FROM data.rec_frt as rf
+                        JOIN data.rec_lid as rl ON rf.line = rl.line
+                        JOIN data.line_colors lc ON lc.line = rl.line
                     `;
                 })
                 .then(sql => {
@@ -416,7 +422,13 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             id: parseInt(row.trip_id),
-                            routeId: parseInt(row.route_id),
+                            route: {
+                                id: parseInt(row.route_id),
+                                color: '#' + row.route_color,
+                                shortName: row.route_short_name,
+                                longName: row.route_long_name
+                            },
+                            variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
                         }
                     }));
@@ -439,8 +451,14 @@ module.exports = {
                         SELECT DISTINCT
                             rf.trip AS "trip_id",
                             rf.line AS "route_id",
+                            rl.line_name AS "route_short_name",
+                            rl.li_kuerzel AS "route_long_name",
+                            LOWER(lc.hex) AS "route_color",
+                            rf.variant AS "variant_id",
                             rf.day_type AS "service_id"
                         FROM data.rec_frt as rf
+                        JOIN data.rec_lid as rl ON rf.line = rl.line
+                        JOIN data.line_colors lc ON lc.line = rl.line
                         WHERE rf.line = ${routeID}
                     `;
                 })
@@ -451,7 +469,13 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             id: parseInt(row.trip_id),
-                            routeId: parseInt(row.route_id),
+                            route: {
+                                id: parseInt(row.route_id),
+                                color: '#' + row.route_color,
+                                shortName: row.route_short_name,
+                                longName: row.route_long_name
+                            },
+                            variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
                         }
                     }));
@@ -474,9 +498,15 @@ module.exports = {
                         SELECT DISTINCT
                             rf.trip AS "trip_id",
                             rf.line AS "route_id",
+                            rl.line_name AS "route_short_name",
+                            rl.li_kuerzel AS "route_long_name",
+                            LOWER(lc.hex) AS "route_color",
+                            rf.variant AS "variant_id",
                             rf.day_type AS "service_id"
                         FROM data.rec_frt as rf
-                        WHERE rf.service = ${serviceID}
+                        JOIN data.rec_lid as rl ON rf.line = rl.line
+                        JOIN data.line_colors lc ON lc.line = rl.line
+                        WHERE rf.day_type = ${serviceID}
                     `;
                 })
                 .then(sql => {
@@ -486,7 +516,13 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             id: parseInt(row.trip_id),
-                            routeId: parseInt(row.route_id),
+                            route: {
+                                id: parseInt(row.route_id),
+                                color: '#' + row.route_color,
+                                shortName: row.route_short_name,
+                                longName: row.route_long_name
+                            },
+                            variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
                         }
                     }));
@@ -510,9 +546,15 @@ module.exports = {
                         SELECT DISTINCT
                             rf.trip AS "trip_id",
                             rf.line AS "route_id",
-                            rf.service AS "service_id"
+                            rl.line_name AS "route_short_name",
+                            rl.li_kuerzel AS "route_long_name",
+                            LOWER(lc.hex) AS "route_color",
+                            rf.variant AS "variant_id",
+                            rf.day_type AS "service_id"
                         FROM data.rec_frt as rf
-                        WHERE rf.line = ${routeID} AND rf.service = ${serviceID}
+                        JOIN data.rec_lid as rl ON rf.line = rl.line
+                        JOIN data.line_colors lc ON lc.line = rl.line
+                        WHERE rf.line = ${routeID} AND rf.day_type = ${serviceID}
                     `;
                 })
                 .then(sql => {
@@ -522,7 +564,13 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             id: parseInt(row.trip_id),
-                            routeId: parseInt(row.route_id),
+                            route: {
+                                id: parseInt(row.route_id),
+                                color: '#' + row.route_color,
+                                shortName: row.route_short_name,
+                                longName: row.route_long_name
+                            },
+                            variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
                         }
                     }));
@@ -544,10 +592,15 @@ module.exports = {
                     return `
                         SELECT
                             rf.trip AS "trip_id",
-                            rf.line AS "route_id",
+                            rl.line AS "route_id",
+                            rl.line_name AS "route_short_name",
+                            rl.li_kuerzel AS "route_long_name",
+                            LOWER(lc.hex) AS "route_color",
                             rf.variant AS "variant_id",
                             rf.day_type AS "service_id"
                         FROM data.rec_frt as rf
+                        JOIN data.rec_lid as rl ON rl.line = rf.line AND rl.variant = rf.variant
+                        JOIN data.line_colors lc ON lc.line = rf.line
                         WHERE rf.trip = ${tripID}
                     `;
                 })
@@ -599,7 +652,12 @@ module.exports = {
                         client.query(sql, (err, result) => {
                             res.status(200).json({
                                 id: parseInt(row.trip_id),
-                                routeId: parseInt(row.route_id),
+                                route: {
+                                    id: parseInt(row.route_id),
+                                    color: '#' + row.route_color,
+                                    shortName: row.route_short_name,
+                                    longName: row.route_long_name
+                                },
                                 serviceId: parseInt(row.service_id),
                                 stops: result.rows.map((row) => {
                                     return {
@@ -710,6 +768,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 (rf.departure * INTERVAL '1 sec')::text AS "arrival_time",
                                 (rf.departure * INTERVAL '1 sec')::text AS "departure_time",
@@ -721,6 +780,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "arrival_time",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "departure_time",
@@ -738,7 +798,8 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             tripId: parseInt(row.trip_id),
-                            stopId: row.stop_name,
+                            serviceId: row.service_id,
+                            stopId: row.stop_id,
                             arrivalTime: row.arrival_time,
                             departureTime: row.departure_time,
                             sequence: parseInt(row.stop_sequence)
@@ -763,6 +824,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 (rf.departure * INTERVAL '1 sec')::text AS "arrival_time",
                                 (rf.departure * INTERVAL '1 sec')::text AS "departure_time",
@@ -775,6 +837,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "arrival_time",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "departure_time",
@@ -794,7 +857,8 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             tripId: parseInt(row.trip_id),
-                            stopId: row.stop_name,
+                            serviceId: row.service_id,
+                            stopId: row.stop_id,
                             arrivalTime: row.arrival_time,
                             departureTime: row.departure_time,
                             sequence: parseInt(row.stop_sequence)
@@ -819,6 +883,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 (rf.departure * INTERVAL '1 sec')::text AS "arrival_time",
                                 (rf.departure * INTERVAL '1 sec')::text AS "departure_time",
@@ -831,6 +896,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "arrival_time",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "departure_time",
@@ -850,7 +916,8 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             tripId: parseInt(row.trip_id),
-                            stopId: row.stop_name,
+                            serviceId: row.service_id,
+                            stopId: row.stop_id,
                             arrivalTime: row.arrival_time,
                             departureTime: row.departure_time,
                             sequence: parseInt(row.stop_sequence)
@@ -876,6 +943,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 (rf.departure * INTERVAL '1 sec')::text AS "arrival_time",
                                 (rf.departure * INTERVAL '1 sec')::text AS "departure_time",
@@ -888,6 +956,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "arrival_time",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "departure_time",
@@ -907,7 +976,8 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             tripId: parseInt(row.trip_id),
-                            stopId: row.stop_name,
+                            serviceId: row.service_id,
+                            stopId: row.stop_id,
                             arrivalTime: row.arrival_time,
                             departureTime: row.departure_time,
                             sequence: parseInt(row.stop_sequence)
@@ -932,6 +1002,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 (rf.departure * INTERVAL '1 sec')::text AS "arrival_time",
                                 (rf.departure * INTERVAL '1 sec')::text AS "departure_time",
@@ -944,6 +1015,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "arrival_time",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "departure_time",
@@ -963,7 +1035,8 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             tripId: parseInt(row.trip_id),
-                            stopId: row.stop_name,
+                            serviceId: row.service_id,
+                            stopId: row.stop_id,
                             arrivalTime: row.arrival_time,
                             departureTime: row.departure_time,
                             sequence: parseInt(row.stop_sequence)
@@ -989,6 +1062,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 (rf.departure * INTERVAL '1 sec')::text AS "arrival_time",
                                 (rf.departure * INTERVAL '1 sec')::text AS "departure_time",
@@ -1001,6 +1075,7 @@ module.exports = {
                         (
                             SELECT
                                 rf.trip AS "trip_id",
+                                rf.day_type AS "service_id",
                                 lv.ort_nr AS "stop_id",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "arrival_time",
                                 ((rf.departure + tt.travel_time) * INTERVAL '1 sec')::text AS "departure_time",
@@ -1020,7 +1095,8 @@ module.exports = {
                     res.status(200).json(result.rows.map(row => {
                         return {
                             tripId: parseInt(row.trip_id),
-                            stopId: row.stop_name,
+                            serviceId: row.service_id,
+                            stopId: row.stop_id,
                             arrivalTime: row.arrival_time,
                             departureTime: row.departure_time,
                             sequence: parseInt(row.stop_sequence)

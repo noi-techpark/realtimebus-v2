@@ -1,7 +1,6 @@
 pipeline {
     agent {
         dockerfile {
-            dir 'frontend'
             filename 'docker/dockerfile-node'
             additionalBuildArgs '--build-arg JENKINS_USER_ID=`id -u jenkins` --build-arg JENKINS_GROUP_ID=`id -g jenkins`'
         }
@@ -9,8 +8,7 @@ pipeline {
 
     environment {
         CONFIG_FILE=credential('realtimebus_config')
-        KEY=credential('')
-        PRODUCTION_SERVER=credential('')
+        PRODUCTION_SERVER=credential('realtimebusV2-prod-ip')
     }
 
     stages {
@@ -29,7 +27,7 @@ pipeline {
             steps {
                 sh 'cat ${CONFIG_FILE} > local-config.js'
             }
-        }*/
+        }
         stage('Archive') {
             steps {
                 sh 'tar -czf workspace.tar.gz --exclude=build.tar.gz --exclude "./.*" .'
@@ -37,11 +35,12 @@ pipeline {
         }
         stage('Deploy'){
             steps{
-                sh 'scp -i ${KEY} build.tar.gz ${PRODUCTION_SERVER}:./'
+                sh 'scp build.tar.gz ${PRODUCTION_SERVER}:./'
                 //backup last deployment and deploy new one
                 sh '''
-                    ssh -i ${KEY} ${PRODUCTION_SERVER} tar -czf $(date '+%Y-%m-%d').realtimebus.tar.gz realtimebus-v2/ &&  mkdir tmp && tar -C tmp -xzvf build.tar.gz && mv tmp realtimebus-v2
+                    ssh ${PRODUCTION_SERVER} tar -czf $(date '+%Y-%m-%d').realtimebus.tar.gz realtimebus-v2/ &&  mkdir tmp && tar -C tmp -xzvf build.tar.gz && mv tmp realtimebus-v2
                 '''
+                sh 'sudo systemctl restart realtimebus.service'
             }
         }
     }

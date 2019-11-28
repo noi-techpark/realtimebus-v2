@@ -44,9 +44,9 @@ module.exports = class FeatureList {
         let instance = new FeatureList();
         let features = array.features;
 
-        for (let i in features) {
-            instance.add(features[i].properties, features[i].geometry)
-        }
+        features.forEach((feature) => {
+            instance.add(feature.properties, feature.geometry)
+        })
 
         return instance;
     }

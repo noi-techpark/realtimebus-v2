@@ -695,9 +695,9 @@ definitions:
       id:
         type: "integer"
         format: "int64"
-      routeId:
-        type: "integer"
-        format: "int64"
+      route:
+        type: "object"
+        $ref: "#/definitions/RouteSummary"
       variantId:
         type: "integer"
         format: "int64"
@@ -732,6 +732,9 @@ definitions:
     type: "object"
     properties:
       tripId:
+        type: "integer"
+        format: "int64"
+      serviceId:
         type: "integer"
         format: "int64"
       stopId:

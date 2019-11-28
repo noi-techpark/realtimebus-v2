@@ -6,6 +6,8 @@
 require('express-group-routes');
 require("./util/functions");
 
+const fs = require('fs');
+
 const yargs = require('yargs');
 
 const utils = require("./util/utils");
@@ -107,11 +109,16 @@ app.set('jsonp callback name', 'jsonp');
 
 
 // This needs to be the first router. Do not move it further down.
-app.get('/*', function (req, res, next) {
+app.get('/*', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     next();
 });
 
+if (fs.existsSync(__dirname + '/static/index.html')) {
+    app.get('/', (req, res) => {
+        res.sendFile(__dirname + '/static/index.html');
+    });
+}
 
 app.group("/vdv", (router) => {
     router.post("/import", vdv.upload);
@@ -202,6 +209,8 @@ app.group("/v2", (router) => {
     router.get("/stop-times/trip/:tripID/after/:afterTime", v2Api.getStopTimesByTripAfter);
 });
 
+app.use("/v2/docs", express.static('docs/apiv2'));
+
 app.group("/firebase", (router) => {
     router.get("/sync", function (req, res) {
         require("./util/firebase").syncAll();
@@ -214,11 +223,11 @@ app.get("/status", function (req, res) {
     res.status(200).json({success: true});
 });
 
-// TODO protect this endpoint
-app.get("/stop", function (req, res) {
-    res.status(200).json({success: true});
-    process.exit(1);
-});
+// TODO protect or remove this endpoint
+// app.get("/stop", function (req, res) {
+//     res.status(200).json({success: true});
+//     process.exit(1);
+// });
 
 // </editor-fold>
 

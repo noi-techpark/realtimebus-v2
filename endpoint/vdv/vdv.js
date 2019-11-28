@@ -1246,6 +1246,7 @@ function importAdditionalDataFromGtfs(client) {
                 TRUNCATE TABLE data.rec_srv;
                 TRUNCATE TABLE data.rec_srv_date;
                 TRUNCATE TABLE data.rec_srv_route;
+                TRUNCATE TABLE data.rec_srv_variant;
             `;
         })
         .then(sql => {
@@ -1255,79 +1256,46 @@ function importAdditionalDataFromGtfs(client) {
             return Promise.all([
                 csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar.txt'),
                 csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar_dates.txt'),
-                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/trips.txt'),
-                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/stop_times.txt')
+                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/trips.txt')
             ]);
         })
         .then((datasets) => {
             return Promise.resolve()
                 .then(() => {
-                    return `
-                        SELECT rl.line, rl.variant, CONCAT('[', STRING_AGG(lv.ort_nr::character varying, ',' ORDER BY lv.li_lfd_nr ASC), ']') AS "stops"
-                        FROM data.rec_lid rl
-                        JOIN data.lid_verlauf lv ON lv.line = rl.line AND lv.variant = rl.variant
-                        GROUP BY rl.line, rl.variant
-                    `;
-                })
-                .then(sql => {
-                    return client.query(sql);
-                })
-                .then((result) => {
-                    var variantsAndStops = result.rows;
+                    return Promise.all([
 
-                    var trips = {}
+                        client.query("INSERT INTO data.rec_srv (service_id, on_mondays, on_tuesdays, on_wednesdays, on_thursdays, on_fridays, on_saturdays, on_sundays, start_date, end_date) VALUES " + datasets[0].map((tuple) => {
+                            return "(" + [
+                                tuple.service_id,
+                                tuple.monday === '1' ? true : false,
+                                tuple.tuesday === '1' ? true : false,
+                                tuple.wednesday === '1' ? true : false,
+                                tuple.thursday === '1' ? true : false,
+                                tuple.friday === '1' ? true : false,
+                                tuple.saturday === '1' ? true : false,
+                                tuple.sunday === '1' ? true : false,
+                                "'" + tuple.start_date.substring(0, 4) + "-" + tuple.start_date.substring(4, 6) + "-" + tuple.start_date.substring(6, 8) + "'",
+                                "'" + tuple.end_date.substring(0, 4) + "-" + tuple.end_date.substring(4, 6) + "-" + tuple.end_date.substring(6, 8) + "'"
+                            ].join(', ') + ")";
+                        }).join(', ') + ";"),
 
-                    for (var i in datasets[2]) {
-                        var item = datasets[2][i];
-                        trips[item.trip_id] = item;
-                    }
+                        client.query("INSERT INTO data.rec_srv_date (service_id, the_date, is_added) VALUES " + datasets[1].map((tuple) => {
+                            return "(" + [
+                                tuple.service_id,
+                                "'" + tuple.date.substring(0, 4) + "-" + tuple.date.substring(4, 6) + "-" + tuple.date.substring(6, 8) + "'",
+                                tuple.exception_type === '1' ? true : false
+                            ].join(', ') + ")";
+                        }).join(', ') + ";"),
 
-                    var stops = {};
+                        client.query("INSERT INTO data.rec_srv_route (service_id, line_id) VALUES " + _.uniq(datasets[2], false, (tuple) => {
+                            return [ tuple.service_id, tuple.route_id ].join(':');
+                        }).map((tuple) => {
+                            return "(" + [ tuple.service_id, tuple.route_id ].join(', ') + ")";
+                        }).join(', ') + ";"),
 
-                    var stopTimes = _.groupBy(datasets[3], 'trip_id');
-                    for (var trip_id in stopTimes) {
-                        stops['[' + _.sortBy(stopTimes[trip_id], (stopTime) => parseInt(stopTime.stop_sequence)).map((item) => item.stop_id).join(',') + ']'] = trips[trip_id].service_id;
-                    }
+                        client.query("INSERT INTO data.rec_srv_variant (service_id, line_id, variant_id) (SELECT DISTINCT day_type, line, variant FROM data.rec_frt ORDER BY 1 ASC, 2 ASC, 3 ASC);")
 
-                    return Promise.resolve()
-                        .then(() => {
-                            return Promise.all([
-
-                                client.query("INSERT INTO data.rec_srv (service_id, on_mondays, on_tuesdays, on_wednesdays, on_thursdays, on_fridays, on_saturdays, on_sundays, start_date, end_date) VALUES " + datasets[0].map((tuple) => {
-                                    return "(" + [
-                                        tuple.service_id,
-                                        tuple.monday === '1' ? true : false,
-                                        tuple.tuesday === '1' ? true : false,
-                                        tuple.wednesday === '1' ? true : false,
-                                        tuple.thursday === '1' ? true : false,
-                                        tuple.friday === '1' ? true : false,
-                                        tuple.saturday === '1' ? true : false,
-                                        tuple.sunday === '1' ? true : false,
-                                        "'" + tuple.start_date.substring(0, 4) + "-" + tuple.start_date.substring(4, 6) + "-" + tuple.start_date.substring(6, 8) + "'",
-                                        "'" + tuple.end_date.substring(0, 4) + "-" + tuple.end_date.substring(4, 6) + "-" + tuple.end_date.substring(6, 8) + "'"
-                                    ].join(', ') + ")";
-                                }).join(', ') + ";"),
-
-                                client.query("INSERT INTO data.rec_srv_date (service_id, the_date, is_added) VALUES " + datasets[1].map((tuple) => {
-                                    return "(" + [
-                                        tuple.service_id,
-                                        "'" + tuple.date.substring(0, 4) + "-" + tuple.date.substring(4, 6) + "-" + tuple.date.substring(6, 8) + "'",
-                                        tuple.exception_type === '1' ? true : false
-                                    ].join(', ') + ")";
-                                }).join(', ') + ";"),
-
-                                client.query("INSERT INTO data.rec_srv_route (service_id, line_id) VALUES " + _.uniq(datasets[2], false, (tuple) => {
-                                    return [ tuple.service_id, tuple.route_id ].join(':');
-                                }).map((tuple) => {
-                                    return "(" + [ tuple.service_id, tuple.route_id ].join(', ') + ")";
-                                }) + ";"),
-
-                                client.query("INSERT INTO data.rec_srv_variant (service_id, line_id, variant_id) VALUES " + variantsAndStops.map((tuple) => {
-                                    return "(" + [ stops[tuple.stops], tuple.line, tuple.variant ].join(', ') + ")";
-                                }) + ";")
-
-                            ]);
-                        });
+                    ]);
                 });
         }).then(() => {
             logger.info("Data imported from GTFS assets.");

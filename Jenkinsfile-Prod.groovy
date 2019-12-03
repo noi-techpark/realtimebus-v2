@@ -30,7 +30,7 @@ pipeline {
         }
         stage('Archive') {
             steps {
-                sh 'tar -czf workspace.tar.gz --exclude=build.tar.gz --exclude "./.*" .'
+                sh 'tar -czf build.tar.gz --exclude=build.tar.gz --exclude "./.*" .'
             }
         }
         stage('Deploy'){

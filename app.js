@@ -88,17 +88,26 @@ const app = express();
 app.use(logRequests);
 app.use(checkForRunningImport);
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.raw({
-    limit: '10mb'
+app.use(bodyParser.json({
+    limit: '16mb'
 }));
 
+app.use(bodyParser.urlencoded({
+    extended: false,
+    limit: '16mb'
+}));
+
+app.use(bodyParser.raw({
+    limit: '16mb'
+}));
 
 // <editor-fold desc="ROUTES">
 
-app.use("/vdv/import", expressAuth({users: config.users}));
-app.use("/firebase", expressAuth({users: config.users}));
+const authConfig = { users: config.users }
+
+app.use("/vdv/import", expressAuth(authConfig));
+app.use("/v2/import", expressAuth(authConfig));
+app.use("/firebase", expressAuth(authConfig));
 
 
 // TODO: Add better method to server GTFS (and upload)
@@ -165,6 +174,8 @@ app.group("/gtfs", (router) => {
 });
 
 app.group("/v2", (router) => {
+    router.post("/import", v2Api.importData);
+
     router.get("/calendar.csv", v2Api.gtfs.getCalendar);
     router.get("/calendar.txt", v2Api.gtfs.getCalendar);
     router.get("/calendar_dates.csv", v2Api.gtfs.getCalendarDates);
@@ -183,8 +194,9 @@ app.group("/v2", (router) => {
     router.get("/routes", v2Api.getRoutes);
     router.get("/routes/service/:serviceID", v2Api.getRoutesByService);
     router.get("/routes/:routeID", v2Api.getRoute);
-    router.get("/routes/:routeID/:serviceID/geometry.geojson", v2Api.getRouteGeometry);
-    router.get("/routes/:routeID/:serviceID/:variantID/geometry.geojson", v2Api.getRouteVariantGeometry);
+
+    router.get("/variants/:variantID.geojson", v2Api.getVariantGeometryAsGeoJSON);
+    router.get("/variants/:variantID.kml", v2Api.getVariantGeometryAsKML);
 
     router.get("/trips.csv", v2Api.gtfs.getTrips);
     router.get("/trips.txt", v2Api.gtfs.getTrips);
@@ -207,6 +219,12 @@ app.group("/v2", (router) => {
     router.get("/stop-times/stop/:stopID/after/:afterTime", v2Api.getStopTimesByStopAfter);
     router.get("/stop-times/trip/:tripID", v2Api.getStopTimesByTrip);
     router.get("/stop-times/trip/:tripID/after/:afterTime", v2Api.getStopTimesByTripAfter);
+});
+
+app.get("/v2/docs/swagger.yaml", function (req, res) {
+    var swagger = fs.readFileSync(__dirname + '/docs/apiv2/swagger.yaml', 'utf8');
+    swagger = swagger.replace('host: "realtimebus.noi.bz.it"', 'host: "' + config.application.baseUrl.replace(/(^\w+:|^)\/\//, '') + '"');
+    res.status(200).send(swagger);
 });
 
 app.use("/v2/docs", express.static('docs/apiv2'));

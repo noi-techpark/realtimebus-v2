@@ -4,6 +4,7 @@ let localConfig = require('./local-config')
 
 let config = {};
 
+config.application = localConfig.application;
 config.database = localConfig.database;
 
 config.coordinate_etrs89 = 25832;  // ETRS89, UTM zone 32N

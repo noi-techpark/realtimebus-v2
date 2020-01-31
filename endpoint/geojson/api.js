@@ -1,9 +1,20 @@
-const _ = require("underscore");
-const fs = require("fs");
-const moment = require("moment");
-require("moment-timezone");
-const database = require("../../database/database");
-const config = require("../../config");
+const _ = require('underscore');
+const fs = require('fs');
+const moment = require('moment');
+require('moment-timezone');
+const Color = require('color');
+const crypto = require('crypto');
+const csv = require('csvtojson');
+const dom = require('xmldom').DOMParser;
+const { parseAsync } = require('json2csv');
+const logger = require('../../util/logger');
+const tj = require('@mapbox/togeojson');
+const tk = require('@maphubs/tokml');
+const turf = require('@turf/turf');
+const utils = require('../../util/utils');
+const vdv = require('../vdv/vdv');
+const database = require('../../database/database');
+const config = require('../../config');
 
 var redirectToGtfs = (req, res, path) => {
     res
@@ -12,6 +23,336 @@ var redirectToGtfs = (req, res, path) => {
 };
 
 module.exports = {
+
+    importData: (req, res) => {
+        let importPaths = async (client, mapping, paths, callback) => {
+            let routeSlugs = (await client.query('SELECT DISTINCT rl.li_kuerzel AS "slug" FROM data.rec_lid as rl ORDER BY 1 ASC')).rows.map((row) => row.slug)
+
+            for (var slug = 0; slug < routeSlugs.length; slug++) {
+                let routeSlug = routeSlugs[slug]
+
+                logger.info(`Generating paths for: ${routeSlug}`)
+
+                let routeMappedPaths = mapping.filter((tuple) => tuple.Abbreviazione === routeSlug).map((tuple) => tuple.Teilstuecke)
+
+                let routePaths = []
+
+                routeMappedPaths.forEach((mappedPaths) => {
+                    mappedPaths.forEach((mappedPath) => {
+                        routePaths = [].concat(routePaths, paths.filter((path) => path.name === mappedPath))
+                    })
+                })
+
+                let routeVariants = (await client.query('SELECT rl.line AS "line", rl.variant AS "variant", rl.li_kuerzel AS "slug", rl.direction AS "direction" FROM data.rec_lid as rl WHERE rl.li_kuerzel = $1 ORDER BY 1 ASC, 2 ASC', [ routeSlug ])).rows
+
+                for (var variant = 0; variant < routeVariants.length; routeVariants++) {
+                    let routeVariant = routeVariants[variant]
+
+                    let routeVariantStops = (await client.query('SELECT ro.ort_nr AS "stop", ST_X(ST_Transform(ro.the_geom, 4326)) AS "lng", ST_Y(ST_Transform(ro.the_geom, 4326)) AS "lat" FROM data.lid_verlauf as lv JOIN data.rec_ort as ro ON lv.ort_nr = ro.ort_nr WHERE lv.line = $1 AND lv.variant = $2 ORDER BY lv.li_lfd_nr ASC', [ routeVariant.line, routeVariant.variant ])).rows
+
+                    if (routeVariantStops.length > 1) {
+                        var routeCandidates = []
+
+                        for (var path = 0; path < routePaths.length; path++) {
+                            let pathLine = turf.lineString(routePaths[path].geometry)
+
+                            var segments = []
+                            var buffer = null
+
+                            var queue = routePaths[path].geometry.slice()
+                            var stops = routeVariantStops.map((stop) => [ stop.lng, stop.lat ])
+                            var currentStop = stops.shift()
+
+                            var lastPoint = queue.shift()
+                            var stopPoint = turf.nearestPointOnLine(pathLine, turf.point(currentStop))
+
+                            do {
+                                let point = queue.shift()
+                                let segment = turf.lineString([ lastPoint, point ])
+                                let matchedPoint = turf.nearestPointOnLine(segment, stopPoint.geometry)
+
+                                if (!buffer) {
+                                    if (turf.booleanContains(segment, stopPoint.geometry) || matchedPoint.properties.dist <= 0.01) {
+                                        queue = [].concat([ stopPoint.geometry.coordinates ], queue)
+
+                                        buffer = {
+                                            from: currentStop,
+                                            fromDistance: stopPoint.properties.dist,
+                                            to: null,
+                                            toDistance: null,
+                                            geometry: [ stopPoint.geometry.coordinates ]
+                                        }
+
+                                        currentStop = stops.shift()
+
+                                        stopPoint = turf.nearestPointOnLine(pathLine, turf.point(currentStop))
+                                    }
+                                } else {
+                                    if (turf.booleanContains(segment, stopPoint.geometry) || matchedPoint.properties.dist <= 0.01) {
+                                        buffer.geometry.push(stopPoint.geometry.coordinates)
+
+                                        buffer.to = currentStop
+                                        buffer.toDistance = stopPoint.properties.dist
+
+                                        queue = [].concat([ stopPoint.geometry.coordinates ], queue)
+
+                                        segments.push(buffer)
+
+                                        if (stops.length === 0) {
+                                            break
+                                        }
+
+                                        buffer = {
+                                            from: currentStop,
+                                            fromDistance: stopPoint.properties.dist,
+                                            to: null,
+                                            toDistance: null,
+                                            geometry: [ stopPoint.geometry.coordinates ]
+                                        }
+
+                                        currentStop = stops.shift()
+
+                                        stopPoint = turf.nearestPointOnLine(pathLine, turf.point(currentStop))
+                                    } else {
+                                        buffer.geometry.push(point)
+                                    }
+                                }
+
+                                lastPoint = point
+                            } while (queue.length > 0)
+
+                            if (segments.length === (routeVariantStops.length - 1)) {
+                                var distances = []
+                                distances = [].concat(distances, segments.map((s) => s.fromDistance))
+                                distances = [].concat(distances, segments.map((s) => s.toDistance))
+
+                                routeCandidates.push({
+                                    distance: distances.reduce((a, b) => a + b, 0),
+                                    path: routePaths[path],
+                                    segments: segments.map((s) => s.geometry)
+                                })
+                            }
+                        }
+
+                        routeCandidates = _.sortBy(routeCandidates, 'distance')
+
+                        var routeColor = Color('#000000')
+                        var routeOverallLine = routeVariantStops.map((s) => [s.lng, s.lat])
+                        var routeSegments = []
+
+                        for (var i = 1; i < routeVariantStops.length; i++) {
+                            let from = routeVariantStops[i - 1]
+                            let to = routeVariantStops[i]
+                            routeSegments.push([ [from.lng, from.lat], [to.lng, to.lat] ])
+                        }
+
+                        if (routeCandidates.length > 0) {
+                            let routeCandidate = routeCandidates[0]
+
+                            routeColor = Color(routeCandidate.path.color)
+                            routeOverallLine = routeCandidate.path.geometry
+                            routeSegments = routeCandidate.segments
+                        }
+
+                        await client.query("UPDATE data.line_colors SET red = $1, green = $2, blue = $3, hex = $4, hue = $5 WHERE line = $6;", [routeColor.red(), routeColor.green(), routeColor.blue(), routeColor.hex().replace('#', ''), parseInt(routeColor.hue()), routeVariant.line])
+
+                        await client.query("UPDATE data.rec_lid SET the_geom = ST_Transform(ST_GeomFromText('LINESTRING(" + routeOverallLine.map((point) => point[0] + ' ' + point[1]).join(',') + ")', 4326), 25832) WHERE line = $1 AND variant = $2;", [routeVariant.line, routeVariant.variant])
+
+                        let pathHash = crypto.createHash('md5').update(JSON.stringify(routeOverallLine)).digest('hex')
+
+                        let matchingPaths = (await client.query("SELECT id FROM data.rec_path WHERE hash = $1", [pathHash])).rows
+
+                        var pathID = 0
+
+                        if (matchingPaths.length === 0) {
+                            let insertedPath = await client.query("INSERT INTO data.rec_path (hash, the_geom) VALUES ($1, ST_Transform(ST_GeomFromText('LINESTRING(" + routeOverallLine.map((point) => point[0] + ' ' + point[1]).join(',') + ")', 4326), 25832)) RETURNING id;", [pathHash])
+                            pathID = insertedPath.rows[0].id
+                        } else {
+                            pathID = matchingPaths[0].id
+                        }
+
+                        await client.query("UPDATE data.rec_vnt SET path_id = $1 WHERE line_id = $2 AND variant_id = $3;", [pathID, routeVariant.line, routeVariant.variant])
+
+                        await client.query("UPDATE data.lid_verlauf SET the_geom = NULL WHERE line = $1 AND variant = $2 AND li_lfd_nr = $3;", [routeVariant.line, routeVariant.variant, routeVariantStops.length])
+
+                        for (var i = 0; i < routeSegments.length; i++) {
+                            let from = routeVariantStops[i]
+                            let to = routeVariantStops[i + 1]
+                            let segment = routeSegments[i]
+
+                            await client.query("UPDATE data.lid_verlauf SET the_geom = ST_Transform(ST_GeomFromText('LINESTRING(" + segment.map((point) => point[0] + ' ' + point[1]).join(',') + ")', 4326), 25832) WHERE line = $1 AND variant = $2 AND li_lfd_nr = $3;", [routeVariant.line, routeVariant.variant, i])
+
+                            await client.query("UPDATE data.ort_edges SET the_geom = ST_Transform(ST_GeomFromText('LINESTRING(" + segment.map((point) => point[0] + ' ' + point[1]).join(',') + ")', 4326), 25832) WHERE start_ort_nr = $1 AND end_ort_nr = $2;", [from.stop, to.stop])
+                        }
+                    } else {
+                        await client.query("UPDATE data.rec_lid SET the_geom = NULL WHERE line = $1 AND variant = $2;", [routeVariant.line, routeVariant.variant])
+                    }
+                }
+            }
+
+            callback()
+        }
+
+        let augmentGtfsFiles = (client, callback) => {
+            Promise.resolve()
+                .then(() => {
+                    return Promise.all([
+                        csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/trips.txt'),
+                        client.query("SELECT rf.trip, rv.path_id FROM data.rec_vnt rv JOIN data.rec_frt rf ON (rv.service_id = rf.day_type AND rv.line_id = rf.line AND rv.variant_id = rf.variant);"),
+                        client.query("SELECT id, ST_AsGeoJSON(ST_Transform(the_geom, 4326)) AS geom FROM data.rec_path;")
+                    ])
+                })
+                .then((results) => {
+                    let trips = results[0]
+
+                    var pathsForTrips = {}
+                    results[1].rows.forEach((row) => {
+                        pathsForTrips[parseInt(row.trip)] = row.path_id
+                    })
+
+                    var shapes = []
+                    results[2].rows.forEach((row) => {
+                        let id = parseInt(row.id)
+                        let path = JSON.parse(row.geom)
+
+                        for (var i = 0; i < path.coordinates.length; i++) {
+                            shapes.push({
+                                shape_id: id,
+                                shape_pt_lat: path.coordinates[i][1],
+                                shape_pt_lng: path.coordinates[i][0],
+                                shape_pt_sequence: i
+                            })
+                        }
+                    })
+
+                    return Promise.all([
+                        parseAsync(trips.map((trip) => _.extend({}, trip, {
+                            shape_id: String(pathsForTrips[parseInt(trip.trip_id)] || "")
+                        })), [].concat(_.keys(trips[0]), 'shape_id')),
+                        parseAsync(shapes, ['shape_id', 'shape_pt_lat', 'shape_pt_lon', 'shape_pt_sequence' ])
+                    ])
+                })
+                .then((csvs) => {
+                    fs.writeFileSync(__dirname + '/../../static/gtfs/trips.txt', csvs[0])
+                    fs.writeFileSync(__dirname + '/../../static/gtfs/shapes.txt', csvs[1])
+                })
+                .then(() => {
+                    callback()
+                })
+        }
+
+        req.setTimeout(0)
+
+        logger.info(`Generating paths/geometries...`)
+
+        database.connect().then(client => {
+            let payload = req.body
+
+            if (!payload || !payload.data || !payload.geometries || !payload.geometries.mapping || !payload.geometries.paths) {
+                res.send(400)
+                return
+            }
+
+            let base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+            if (!base64Regex.test(payload.data) || !base64Regex.test(payload.geometries.mapping) || !base64Regex.test(payload.geometries.paths)) {
+                res.send(400)
+                return
+            }
+
+            let mappingString = Buffer.from(payload.geometries.mapping, 'base64').toString('utf8')
+            let pathsString = Buffer.from(payload.geometries.paths, 'base64').toString('utf8')
+
+            var paths = tj.kml(new dom().parseFromString(pathsString))
+
+            paths = paths.features.filter((route) => route.geometry.type === 'LineString').map((route) => {
+                var geometry = route.geometry.coordinates.map((coord) => [ coord[0], coord[1] ])
+
+                var normalizedGeometry = []
+
+                geometry.forEach((point) => {
+                    if (normalizedGeometry.length === 0) {
+                        normalizedGeometry.push(point)
+                    } else {
+                        let lastPoint = normalizedGeometry[normalizedGeometry.length - 1]
+
+                        if (lastPoint[0] !== point[0] || lastPoint[1] !== point[1]) {
+                            normalizedGeometry.push(point)
+                        }
+                    }
+                })
+
+                return {
+                    name: route.properties.name,
+                    color: route.properties.stroke,
+                    geometry: normalizedGeometry
+                }
+            })
+
+            csv({
+                delimiter: ';',
+                colParser: {
+                    'Teilstuecke': (item) => {
+                        return _.map(item.split(','), (part) => part.trim())
+                    }
+                }
+            }).fromString(mappingString).then((mapping) => {
+                var warnings = []
+
+                let referencedNames = _.uniq(_.flatten(mapping.map((tuple) => tuple.Teilstuecke)))
+                let pathNames = paths.map((path) => path.name)
+
+                referencedNames.forEach((name) => {
+                    if (!_.contains(pathNames, name)) {
+                        warnings.push(`The mapping (CSV) file contains a missing/non-existing path: '${name}'`)
+                    }
+                })
+
+                let multipleEntries = _.filter(_.countBy(pathNames), (count) => count > 1)
+                if (multipleEntries.length > 0) {
+                    multipleEntries.forEach((entry, key) => warnings.push(`Detected non-unique path named: '${key}' in the KML file.`))
+                }
+
+                let pathsWithoutName = _.filter(paths, (path) => !path.name)
+                if (pathsWithoutName.length > 0) {
+                    warnings.push(`Detected one or more elements without <name/> in the KML file.`)
+                }
+
+                let pathsWithoutColor = _.filter(paths, (path) => !path.color)
+                if (pathsWithoutColor.length > 0) {
+                    warnings.push(`Detected one or more elements without <stroke/> (color) in the KML file.`)
+                }
+
+                vdv.process(Buffer.from(payload.data, 'base64'), {
+                    finished: (response) => {
+                        importPaths(client, mapping, paths, (err) => {
+                            if (!!err) {
+                                logger.error(err)
+
+                                utils.respondWithError(res, err)
+                                utils.handleError(err)
+
+                                return
+                            }
+
+                            augmentGtfsFiles(client, (err) => {
+                                client.release()
+
+                                logger.info(`Generated paths/geometries for the existing routes!`)
+
+                                res.status(200).json(_.extend({}, response, { warnings: warnings }))
+                            })
+                        })
+                    },
+                    failed: (error) => {
+                        client.release()
+
+                        utils.respondWithError(res, error, { warnings: warnings })
+                        utils.handleError(error)
+                    }
+                })
+            })
+        })
+    },
 
     getServices: (req, res) => {
         database.connect().then(client => {
@@ -208,7 +549,7 @@ module.exports = {
                             LOWER(lc.hex) AS "color"
                         FROM data.line_colors as lc
                         JOIN data.rec_lid as rl ON lc.line = rl.line
-                        JOIN data.rec_srv_route rsr ON rl.line = rsr.line_id AND rsr.service_id = ${serviceID}
+                        JOIN data.rec_srv_variant rv ON rl.line = rv.line_id AND rv.service_id = ${serviceID}
                     `;
                 })
                 .then(sql => {
@@ -276,9 +617,9 @@ module.exports = {
                     .then(() => {
                         return `
                             SELECT *
-                            FROM data.rec_srv_variant rsv
-                            WHERE rsv.line_id = ${routeID}
-                            ORDER BY rsv.service_id ASC, rsv.variant_id ASC
+                            FROM data.rec_srv_variant rv
+                            WHERE rv.line_id = ${routeID}
+                            ORDER BY rv.service_id ASC, rv.variant_id ASC
                         `;
                     })
                     .then(sql => {
@@ -309,8 +650,8 @@ module.exports = {
                     res.status(200).json(_.extend({}, trip, {
                         services: variants.map((row) => {
                             return {
+                                id: row.id,
                                 serviceId: row.service_id,
-                                variantId: row.variant_id,
                                 stops: result.rows
                                     .filter((stopRow) => row.variant_id === stopRow.variant_id)
                                     .map((stopRow) => {
@@ -333,17 +674,17 @@ module.exports = {
         });
     },
 
-    getRouteGeometry: (req, res) => {
-        let routeID = parseInt(req.params.routeID);
-        let serviceID = parseInt(req.params.serviceID);
+    getVariantGeometryAsGeoJSON: (req, res) => {
+        let variantID = parseInt(req.params.variantID);
 
         database.connect().then(client => {
             return Promise.resolve()
                 .then(() => {
                     return `
-                        SELECT ST_AsGeoJSON(ST_Transform(rsr.the_geom, 4326)) AS "geom"
-                        FROM data.rec_srv_route as rsr
-                        WHERE rsr.line_id = ${routeID} AND rsr.service_id = ${serviceID}
+                        SELECT ST_AsGeoJSON(ST_Transform(rl.the_geom, 4326)) AS "geom"
+                        FROM data.rec_vnt rv
+                        JOIN data.rec_path rp ON rv.path_id = rp.id
+                        WHERE rv.id = ${variantID}
                     `;
                 })
                 .then(sql => {
@@ -353,7 +694,7 @@ module.exports = {
                     if (result.rows.length === 1 && !!result.rows[0].geom) {
                         res.status(200).json(JSON.parse(result.rows[0].geom));
                     } else {
-                        res.send(404);
+                        res.status(404);
                     }
 
                     client.release();
@@ -364,9 +705,7 @@ module.exports = {
         });
     },
 
-    getRouteVariantGeometry: (req, res) => {
-        let routeID = parseInt(req.params.routeID);
-        let serviceID = parseInt(req.params.serviceID);
+    getVariantGeometryAsKML: (req, res) => {
         let variantID = parseInt(req.params.variantID);
 
         database.connect().then(client => {
@@ -374,9 +713,9 @@ module.exports = {
                 .then(() => {
                     return `
                         SELECT ST_AsGeoJSON(ST_Transform(rl.the_geom, 4326)) AS "geom"
-                        FROM data.rec_lid rl
-                        JOIN data.rec_srv_variant rsv ON (rl.line = rsv.line_id AND rl.variant = rsv.variant_id)
-                        WHERE rl.line = ${routeID} AND rl.variant = ${variantID} AND rsv.service_id = ${serviceID}
+                        FROM data.rec_vnt rv
+                        JOIN data.rec_path rp ON rv.path_id = rp.id
+                        WHERE rv.id = ${variantID}
                     `;
                 })
                 .then(sql => {
@@ -384,9 +723,11 @@ module.exports = {
                 })
                 .then(result => {
                     if (result.rows.length === 1 && !!result.rows[0].geom) {
-                        res.status(200).json(JSON.parse(result.rows[0].geom));
+                        res.status(200)
+                            .header('Content-Type', 'application/vnd.google-earth.kml+xml')
+                            .end(tk(JSON.parse(result.rows[0].geom)));
                     } else {
-                        res.send(404);
+                        res.status(404);
                     }
 
                     client.release();

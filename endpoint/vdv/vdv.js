@@ -83,6 +83,25 @@ let sqlInsertChain = [];
 
 
 module.exports.upload = function (req, res) {
+    exports.process(req.body, {
+        imported: (response) => {
+            let json = utils.sortObject(response);
+
+            res.status(200).json(json);
+            sendSuccessMail(json);
+        },
+        finished: (response) => {
+            firebase.syncAll();
+        },
+        failed: (error) => {
+            utils.respondWithError(res, error);
+            utils.handleError(error);
+            sendFailureMail(error);
+        }
+    });
+};
+
+module.exports.process = function(fileData, callbacks) {
     let data = [];
 
     config.vdv_import_running = true;
@@ -95,14 +114,12 @@ module.exports.upload = function (req, res) {
                     sqlCreateChain.clear();
                     sqlInsertChain.clear();
                 })
-
                 .then(() => {
-                    return saveZipFiles(req)
+                    return saveZipFiles(fileData);
                 })
                 .then(() => {
-                    return parseVdvFiles(data)
+                    return parseVdvFiles(data);
                 })
-
                 .then(() => {
                     return new Promise(function (resolve) {
                         response.data_uploaded_at = moment().format();
@@ -185,19 +202,15 @@ module.exports.upload = function (req, res) {
                 .then(() => {
                     return insertVdvData(client)
                 })
-
                 .then(() => {
                     return fillConfigTable(client)
                 })
-
                 .then(() => {
                     return performOtherQueries(client)
                 })
-
                 .then(() => {
                     return fillTeqData(client)
                 })
-
                 .then(() => {
                     logger.warn("=========================================================");
                     logger.warn("==================== Import succeeded! ==================");
@@ -206,34 +219,29 @@ module.exports.upload = function (req, res) {
 
                     response.success = true;
 
-                    let json = utils.sortObject(response);
+                    response.data_imported_at = moment().format();
 
-                    res.status(200).json(json);
-
-                    return json;
+                    if (!!callbacks.imported) {
+                        callbacks.imported(response);
+                    }
                 })
-
-                .then(json => {
-                    // return sendSuccessMail(json);
-                    return Promise.resolve();
-                })
-
                 .then(() => {
                     return performDataCalculation(client);
                 })
-
                 .then(() => {
                     return importAdditionalDataFromGtfs(client)
                 })
-
                 .then(() => {
                     config.vdv_import_running = false;
 
-                    // firebase.syncAll();
+                    response.data_processed_at = moment().format();
+
+                    if (!!callbacks.finished) {
+                        callbacks.finished(response);
+                    }
 
                     client.release();
                 })
-
                 .catch(err => {
                     logger.error("=========================================================");
                     logger.error("==================== Import failed! =====================");
@@ -243,11 +251,11 @@ module.exports.upload = function (req, res) {
 
                     config.vdv_import_running = false;
 
-                    utils.respondWithError(res, err);
+                    if (!!callbacks.failed) {
+                        callbacks.failed(err);
+                    }
 
                     client.release();
-
-                    // sendFailureMail(err);
                 });
         })
         .catch(error => {
@@ -255,12 +263,11 @@ module.exports.upload = function (req, res) {
 
             logger.error(`Error acquiring client: ${error}`);
 
-            utils.respondWithError(res, error);
-            utils.handleError(error);
-
-            // sendFailureMail(error);
+            if (!!callbacks.failed) {
+                callbacks.failed(error);
+            }
         })
-};
+}
 
 module.exports.validity = function (req, res) {
     let date = req.params.date;
@@ -409,14 +416,14 @@ module.exports.importDataFromGtfs = function(client) {
 
 // <editor-fold desc="VDV IMPORT">
 
-function saveZipFiles(req) {
+function saveZipFiles(data) {
     if (!fs.existsSync(VDV_ROOT)) {
         logger.info(`Creating directory '${VDV_ROOT}'`);
         fs.mkdirSync(VDV_ROOT);
     }
 
     return new Promise(function (resolve, reject) {
-        fs.writeFile(LATEST_VDV_ZIP, req.body, function (err) {
+        fs.writeFile(LATEST_VDV_ZIP, data, function (err) {
             if (err) {
                 return reject(err);
             }
@@ -454,7 +461,7 @@ function saveZipFiles(req) {
         })
     }).then(() => {
         return new Promise(function (resolve, reject) {
-            fs.writeFile(VDV_ARCHIVED_ZIP, req.body, function (err) {
+            fs.writeFile(VDV_ARCHIVED_ZIP, data, function (err) {
                 try {
                     if (err) {
                         return reject(err);
@@ -593,12 +600,12 @@ function performOtherQueries(client) {
                     (
                         SELECT 1, rec_frt.trip_time_group, 'Generated during import on ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
-                        
+
                         LEFT JOIN data.menge_fgr
                             ON rec_frt.trip_time_group = menge_fgr.trip_time_group
-                            
+
                         WHERE menge_fgr.trip_time_group IS NULL
-                        
+
                         GROUP BY rec_frt.trip_time_group
                         ORDER BY rec_frt.trip_time_group
                     );
@@ -610,13 +617,13 @@ function performOtherQueries(client) {
                     (
                         SELECT 1, rec_frt.line, rec_frt.variant, 'Generated during import of ' || to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD')
                         FROM data.rec_frt
-                        
+
                         LEFT JOIN data.rec_lid
                             ON rec_frt.line = rec_lid.line
                             AND rec_frt.variant = rec_lid.variant
-                            
+
                         WHERE rec_lid.line IS NULL
-                        
+
                         GROUP BY rec_frt.line, rec_frt.variant
                         ORDER BY rec_frt.line, rec_frt.variant
                     );
@@ -676,11 +683,11 @@ function fillConfigTable(client) {
         })
         .then(() => {
             return client.query(
-                `INSERT INTO data.config VALUES 
-                    ('calendar_days_amount', '${response.calendar_days_amount}'), 
-                    ('calendar_days_first', '${response.calendar_days_first}'), 
-                    ('calendar_days_last', '${response.calendar_days_last}'), 
-                    ('data_uploaded_at', '${response.data_uploaded_at}'), 
+                `INSERT INTO data.config VALUES
+                    ('calendar_days_amount', '${response.calendar_days_amount}'),
+                    ('calendar_days_first', '${response.calendar_days_first}'),
+                    ('calendar_days_last', '${response.calendar_days_last}'),
+                    ('data_uploaded_at', '${response.data_uploaded_at}'),
                     ('data_valid_from', '${response.data_valid_from}')`
             )
         })
@@ -1141,7 +1148,7 @@ function getTrips(client) {
                     trip_time_group,
                     line,
                     variant
-                    
+
                 FROM data.rec_frt
             `
         })
@@ -1157,7 +1164,7 @@ function getCalendar(client) {
                 SELECT
                     day_type,
                     betriebstag
-                    
+
                 FROM data.firmenkalender
             `
         })
@@ -1174,7 +1181,7 @@ function getBusStopStopTimes(client) {
                     trip_time_group,
                     ort_nr,
                     hp_hzt
-                    
+
                 FROM data.ort_hztf
             `
         })
@@ -1192,7 +1199,7 @@ function getTravelTimes(client) {
                     ort_nr,
                     trip_time_group,
                     sel_fzt
-                    
+
                 FROM data.sel_fzt_feld
             `
         })
@@ -1209,7 +1216,7 @@ function getTripStopTimes(client) {
                     ort_nr,
                     frt_hzt_zeit,
                     trip
-                    
+
                 FROM data.rec_frt_hzt
             `
         })
@@ -1227,7 +1234,7 @@ function getLinePath(client) {
                     li_lfd_nr,
                     line,
                     variant
-                    
+
                 FROM data.lid_verlauf
                 ORDER BY line, li_lfd_nr
             `
@@ -1245,8 +1252,8 @@ function importAdditionalDataFromGtfs(client) {
             return `
                 TRUNCATE TABLE data.rec_srv;
                 TRUNCATE TABLE data.rec_srv_date;
-                TRUNCATE TABLE data.rec_srv_route;
-                TRUNCATE TABLE data.rec_srv_variant;
+                TRUNCATE TABLE data.rec_path;
+                TRUNCATE TABLE data.rec_vnt;
             `;
         })
         .then(sql => {
@@ -1255,8 +1262,7 @@ function importAdditionalDataFromGtfs(client) {
         .then(() => {
             return Promise.all([
                 csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar.txt'),
-                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar_dates.txt'),
-                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/trips.txt')
+                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar_dates.txt')
             ]);
         })
         .then((datasets) => {
@@ -1287,13 +1293,7 @@ function importAdditionalDataFromGtfs(client) {
                             ].join(', ') + ")";
                         }).join(', ') + ";"),
 
-                        client.query("INSERT INTO data.rec_srv_route (service_id, line_id) VALUES " + _.uniq(datasets[2], false, (tuple) => {
-                            return [ tuple.service_id, tuple.route_id ].join(':');
-                        }).map((tuple) => {
-                            return "(" + [ tuple.service_id, tuple.route_id ].join(', ') + ")";
-                        }).join(', ') + ";"),
-
-                        client.query("INSERT INTO data.rec_srv_variant (service_id, line_id, variant_id) (SELECT DISTINCT day_type, line, variant FROM data.rec_frt ORDER BY 1 ASC, 2 ASC, 3 ASC);")
+                        client.query("INSERT INTO data.rec_vnt (service_id, line_id, variant_id) (SELECT DISTINCT day_type, line, variant FROM data.rec_frt ORDER BY 1 ASC, 2 ASC, 3 ASC);")
 
                     ]);
                 });
@@ -1338,7 +1338,7 @@ function generateGtfsFiles() {
             console.log(`GTFS Converter: stdout: ${zip.stdout.toString()}`);
 
             if (zip.status !== 0) {
-                throw new HttpError(`GTFS Converter exited with non-zero status code '${zip.status}', 
+                throw new HttpError(`GTFS Converter exited with non-zero status code '${zip.status}',
                         stderr=${zip.stderr.toString()}`, 500)
             }
 

@@ -40,7 +40,8 @@ fi
 
 PGPASSWORD=${DATABASE_PASSWORD} psql -d ${DATABASE_NAME} -U ${DATABASE_USERNAME} < ./database/schema/data.sql
 PGPASSWORD=${DATABASE_PASSWORD} psql -d ${DATABASE_NAME} -U ${DATABASE_USERNAME} < ./database/schema/beacons.sql
-PGPASSWORD=${DATABASE_PASSWORD} psql -d ${DATABASE_NAME} -U ${DATABASE_USERNAME} < ./database/schema/changelog-v1.sql
+PGPASSWORD=${DATABASE_PASSWORD} psql -d ${DATABASE_NAME} -U ${DATABASE_USERNAME} < ./database/schema/changelog-v01.sql
+PGPASSWORD=${DATABASE_PASSWORD} psql -d ${DATABASE_NAME} -U ${DATABASE_USERNAME} < ./database/schema/changelog-v02.sql
 
 echo "SETTING UP SERVICE..."
 

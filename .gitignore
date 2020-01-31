@@ -141,8 +141,10 @@ typings/
 
 local-config.js
 
+tmp-*
+
 latest.zip*
 
-vdv/
+endpoint/vdv/vdv/
 
 static/gtfs/

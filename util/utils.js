@@ -2,6 +2,8 @@
 
 require("./functions");
 
+const _ = require("underscore");
+
 const http = require("http");
 
 const raven = require('raven');
@@ -107,9 +109,14 @@ module.exports.handleError = function (error) {
     raven.captureException(error);
 };
 
-module.exports.respondWithError = function (res, error) {
+module.exports.respondWithError = function (res, error, base) {
+    let result = _.extend({}, base, {
+        success: false,
+        error: error
+    })
+
     if (error instanceof HttpError) {
-        res.status(error.status).jsonp({success: false, error: error});
+        res.status(error.status).jsonp(result);
 
         if (error.message.startsWith("Parameter '")) {
             return;
@@ -122,7 +129,7 @@ module.exports.respondWithError = function (res, error) {
 
     exports.handleError(error);
 
-    res.status(500).jsonp({success: false, error: error})
+    res.status(500).jsonp(result)
 };
 
 

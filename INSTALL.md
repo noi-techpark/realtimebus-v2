@@ -122,7 +122,7 @@ To run this server you need to import the VDV data first. This is done in three 
 
 2. Import the database schemas `beacons.sql` and `data.sql`, including all `changelog-*` scripts:
 
-        psql database_name < schema.sql
+        psql database_name < data.sql
         psql database_name < changelog-v01.sql
         psql database_name < changelog-v02.sql
 

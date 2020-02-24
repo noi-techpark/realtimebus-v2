@@ -14,7 +14,7 @@ pipeline {
         }
         stage('Deploy') {
             steps {
-                sh 'ssh ${PRODUCTION_SERVER} [ -d foo ] || mkdir realtimebus-v2'
+                sh 'ssh ${PRODUCTION_SERVER} \'[ -d realtimebus-v2 ] || mkdir realtimebus-v2\''
                 sh 'scp  local-config.js ${PRODUCTION_SERVER}:realtimebus-v2/local-config.js'
                 sh '''
                     ssh ${PRODUCTION_SERVER} \

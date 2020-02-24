@@ -14,10 +14,11 @@ pipeline {
         }
         stage('Deploy') {
             steps {
+                sh 'ssh ${PRODUCTION_SERVER} [ -d foo ] || mkdir realtimebus-v2'
                 sh 'scp  local-config.js ${PRODUCTION_SERVER}:realtimebus-v2'
                 sh '''
                     ssh ${PRODUCTION_SERVER} \
-                       "[ -d foo ] || mkdir realtimebus-v2 && cd realtimebus-v2/ && git fetch --all --prune && git reset --hard origin/master && git pull && npm install && sudo systemctl restart realtimebus.service"
+                       "cd realtimebus-v2/ && git fetch --all --prune && git reset --hard origin/master && git pull && npm install && sudo systemctl restart realtimebus.service"
                   '''
             }
         }

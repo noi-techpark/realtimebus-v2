@@ -45,7 +45,7 @@ module.exports = {
 
                 let routeVariants = (await client.query('SELECT rl.line AS "line", rl.variant AS "variant", rl.li_kuerzel AS "slug", rl.direction AS "direction" FROM data.rec_lid as rl WHERE rl.li_kuerzel = $1 ORDER BY 1 ASC, 2 ASC', [ routeSlug ])).rows
 
-                for (var variant = 0; variant < routeVariants.length; routeVariants++) {
+                for (var variant = 0; variant < routeVariants.length; variant++) {
                     let routeVariant = routeVariants[variant]
 
                     let routeVariantStops = (await client.query('SELECT ro.ort_nr AS "stop", ST_X(ST_Transform(ro.the_geom, 4326)) AS "lng", ST_Y(ST_Transform(ro.the_geom, 4326)) AS "lat" FROM data.lid_verlauf as lv JOIN data.rec_ort as ro ON lv.ort_nr = ro.ort_nr WHERE lv.line = $1 AND lv.variant = $2 ORDER BY lv.li_lfd_nr ASC', [ routeVariant.line, routeVariant.variant ])).rows
@@ -249,13 +249,13 @@ module.exports = {
             let payload = req.body
 
             if (!payload || !payload.data || !payload.geometries || !payload.geometries.mapping || !payload.geometries.paths) {
-                res.send(400)
+                res.status(400).send()
                 return
             }
 
             let base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
             if (!base64Regex.test(payload.data) || !base64Regex.test(payload.geometries.mapping) || !base64Regex.test(payload.geometries.paths)) {
-                res.send(400)
+                res.status(400).send()
                 return
             }
 
@@ -398,6 +398,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -448,10 +452,24 @@ module.exports = {
                             rs.start_date AS "start_date",
                             rs.end_date AS "end_date"
                         FROM data.rec_srv rs
-                        WHERE
+                        WHERE (
                             rs.start_date <= '${formattedDate}' AND
                             rs.end_date >= '${formattedDate}' AND
-                            rs.${weekdayColumn} = true
+                            rs.${weekdayColumn} = true AND
+                            NOT EXISTS (
+                                SELECT *
+                                FROM data.rec_srv_date rsd
+                                WHERE rsd.service_id = rs.service_id
+                                    AND rsd.the_date = '${formattedDate}'
+                                    AND rsd.is_added = FALSE
+                            )
+                        ) OR EXISTS (
+                            SELECT *
+                            FROM data.rec_srv_date rsd
+                            WHERE rsd.service_id = rs.service_id
+                                AND rsd.the_date = '${formattedDate}'
+                                AND rsd.is_added = TRUE
+                        )
                         ORDER BY rs.service_id ASC
                     `;
                 })
@@ -479,6 +497,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -530,6 +552,10 @@ module.exports = {
 
                     client.release();
                 }).catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -549,7 +575,7 @@ module.exports = {
                             LOWER(lc.hex) AS "color"
                         FROM data.line_colors as lc
                         JOIN data.rec_lid as rl ON lc.line = rl.line
-                        JOIN data.rec_srv_variant rv ON rl.line = rv.line_id AND rv.service_id = ${serviceID}
+                        JOIN data.rec_vnt rv ON rl.line = rv.line_id AND rv.service_id = ${serviceID}
                     `;
                 })
                 .then(sql => {
@@ -569,6 +595,10 @@ module.exports = {
 
                     client.release();
                 }).catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -617,7 +647,7 @@ module.exports = {
                     .then(() => {
                         return `
                             SELECT *
-                            FROM data.rec_srv_variant rv
+                            FROM data.rec_vnt rv
                             WHERE rv.line_id = ${routeID}
                             ORDER BY rv.service_id ASC, rv.variant_id ASC
                         `;
@@ -669,6 +699,10 @@ module.exports = {
                     client.release();
                 });
             }).catch(error => {
+                logger.error(error);
+                utils.respondWithError(res, error);
+                utils.handleError(error);
+
                 client.release();
             });
         });
@@ -681,7 +715,7 @@ module.exports = {
             return Promise.resolve()
                 .then(() => {
                     return `
-                        SELECT ST_AsGeoJSON(ST_Transform(rl.the_geom, 4326)) AS "geom"
+                        SELECT ST_AsGeoJSON(ST_Transform(rp.the_geom, 4326)) AS "geom"
                         FROM data.rec_vnt rv
                         JOIN data.rec_path rp ON rv.path_id = rp.id
                         WHERE rv.id = ${variantID}
@@ -694,12 +728,16 @@ module.exports = {
                     if (result.rows.length === 1 && !!result.rows[0].geom) {
                         res.status(200).json(JSON.parse(result.rows[0].geom));
                     } else {
-                        res.status(404);
+                        res.status(404).send();
                     }
 
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -712,7 +750,7 @@ module.exports = {
             return Promise.resolve()
                 .then(() => {
                     return `
-                        SELECT ST_AsGeoJSON(ST_Transform(rl.the_geom, 4326)) AS "geom"
+                        SELECT ST_AsGeoJSON(ST_Transform(rp.the_geom, 4326)) AS "geom"
                         FROM data.rec_vnt rv
                         JOIN data.rec_path rp ON rv.path_id = rp.id
                         WHERE rv.id = ${variantID}
@@ -727,12 +765,16 @@ module.exports = {
                             .header('Content-Type', 'application/vnd.google-earth.kml+xml')
                             .end(tk(JSON.parse(result.rows[0].geom)));
                     } else {
-                        res.status(404);
+                        res.status(404).send();
                     }
 
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -777,6 +819,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -824,6 +870,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -871,6 +921,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -919,6 +973,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1015,12 +1073,16 @@ module.exports = {
                             client.release();
                         });
                     } else {
-                        res.status(404);
+                        res.status(404).send();
 
                         client.release();
                     }
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1056,6 +1118,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1091,11 +1157,15 @@ module.exports = {
                             longitude: row.stop_lon
                         });
                     } else {
-                        res.status(404);
+                        res.status(404).send();
                     }
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1150,6 +1220,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1209,6 +1283,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1268,6 +1346,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1328,6 +1410,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1387,6 +1473,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });
@@ -1447,6 +1537,10 @@ module.exports = {
                     client.release();
                 })
                 .catch(error => {
+                    logger.error(error);
+                    utils.respondWithError(res, error);
+                    utils.handleError(error);
+
                     client.release();
                 });
         });

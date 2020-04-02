@@ -785,7 +785,7 @@ CREATE UNLOGGED TABLE vehicle_positions (
     arrival_time timestamp without time zone,
     status VARCHAR(1),
     vehicle SMALLINT NOT NULL,
-    depot VARCHAR(2)
+    depot VARCHAR(255)
 );
 
 

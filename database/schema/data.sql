@@ -255,7 +255,7 @@ BEGIN
             (1 - extrapolated_completion) * pos_record.dx,
             (1 - extrapolated_completion) * pos_record.dy;
 
-    SELECT ST_LineInterpolatePoint(the_geom, extrapolated_linear_ref_var) INTO extrapolated_position_var
+    SELECT the_geom INTO extrapolated_position_var
     FROM data.lid_verlauf
     WHERE lid_verlauf.line=pos_record.line
         AND lid_verlauf.variant=pos_record.variant

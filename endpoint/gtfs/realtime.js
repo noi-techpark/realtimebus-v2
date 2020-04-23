@@ -8,7 +8,7 @@ const utils = require("../../util/utils");
 const LineUtils = require("../../model/line/LineUtils");
 const PositionsApp = require("../../model/realtime/PositionsApp");
 
-const GtfsRealtimeBindings = require('gtfs-realtime-bindings');
+const GtfsRealtimeBindings = require('gtfs-realtime-bindings').transit_realtime;
 
 module.exports.positions = function (req, res) {
     database.connect()
@@ -22,8 +22,6 @@ module.exports.positions = function (req, res) {
                     let buses = positions.buses;
 
                     let message = new GtfsRealtimeBindings.FeedMessage();
-
-                    console.log(message);
 
                     let header = new GtfsRealtimeBindings.FeedHeader();
                     header.gtfs_realtime_version = "1.0";
@@ -70,7 +68,7 @@ module.exports.positions = function (req, res) {
                     message.header = header;
                     message.entity = entities;
 
-                    return message.encode().toBuffer();
+                    return GtfsRealtimeBindings.FeedMessage.encode(message).finish();
                 })
                 .then(buffer => {
                     res.status(200).header("Content-Type", "application/x-protobuf").send(buffer);

@@ -152,6 +152,12 @@ If you want also to import the paths/geometries, you can use a different endpoin
             <csv file or url> \
             <kml file or url>
 
+## Update database structure
+
+If the database has been already setup previously and you want to update only the database structure schema/structure use the following command
+
+    bash ./tools/update-schema.sh
+
 <br/>
 
 # Running the project

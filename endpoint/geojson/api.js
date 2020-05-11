@@ -253,8 +253,7 @@ module.exports = {
                 return
             }
 
-            let base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
-            if (!base64Regex.test(payload.data) || !base64Regex.test(payload.geometries.mapping) || !base64Regex.test(payload.geometries.paths)) {
+            if (typeof payload.data !== 'string' || typeof payload.geometries.mapping !== 'string' || typeof payload.geometries.paths !== 'string') {
                 res.status(400).send()
                 return
             }

@@ -250,10 +250,17 @@ paths:
       tags:
         - "gtfs"
       summary: "Realtime data"
-      description: ""
+      description: "Realtime data feed according to the GTFS Realtime specification."
+      produces:
+        - application/x-protobuf
       responses:
         200:
           description: "Successful operation"
+          content:
+            application/x-protobuf:
+              schema:
+                type: string
+                format: binary
   /status:
     get:
       tags:

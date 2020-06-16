@@ -22,6 +22,18 @@ var redirectToGtfs = (req, res, path) => {
         .send(fs.readFileSync(__dirname + '/../../static/gtfs/' + path));
 };
 
+var resolveAreaName = (shortName) => {
+    if (shortName.endsWith(' BZ')) {
+        return 'Bozen/Bolzano';
+    }
+
+    if (shortName.endsWith(' ME')) {
+        return 'Meran/Merano';
+    }
+
+    return null;
+};
+
 module.exports = {
 
     importData: (req, res) => {
@@ -544,6 +556,7 @@ module.exports = {
                             color: '#' + row.color,
                             shortName: row.short_name,
                             longName: row.long_name,
+                            areaName: resolveAreaName(row.long_name),
                             agencyId: 101,
                             type: 3
                         }
@@ -587,6 +600,7 @@ module.exports = {
                             color: '#' + row.color,
                             shortName: row.short_name,
                             longName: row.long_name,
+                            areaName: resolveAreaName(row.long_name),
                             agencyId: 101,
                             type: 3
                         }
@@ -634,6 +648,7 @@ module.exports = {
                                 color: '#' + row.color,
                                 shortName: row.short_name,
                                 longName: row.long_name,
+                                areaName: resolveAreaName(row.long_name),
                                 agencyId: 101,
                                 type: 3
                             });
@@ -656,11 +671,28 @@ module.exports = {
                     })
                     .then(result => {
                         return Promise.resolve(result.rows);
+                    }),
+
+                Promise.resolve()
+                    .then(() => {
+                        return `
+                            SELECT rv.id AS "id", ST_AsGeoJSON(ST_Transform(rp.the_geom, 4326)) AS "geom"
+                            FROM data.rec_vnt rv
+                            JOIN data.rec_path rp ON rv.path_id = rp.id
+                            WHERE rv.line_id = ${routeID} AND rp.the_geom IS NOT NULL
+                        `;
+                    })
+                    .then(sql => {
+                        return client.query(sql);
+                    })
+                    .then(result => {
+                        return Promise.resolve(result.rows);
                     })
 
             ]).then((results) => {
                 let trip = results[0];
                 let variants = results[1];
+                let paths = results[2];
 
                 var sql = `
                     SELECT
@@ -678,9 +710,19 @@ module.exports = {
                 client.query(sql, (err, result) => {
                     res.status(200).json(_.extend({}, trip, {
                         services: variants.map((row) => {
+                            var geometry = null
+
+                            if (paths.filter((pathsRow) => pathsRow.id === row.id).length === 1) {
+                                geometry = {
+                                    geojson: '/v2/variants/' + row.id + '.geojson',
+                                    kml: '/v2/variants/' + row.id + '.kml'
+                                };
+                            }
+
                             return {
                                 id: row.id,
                                 serviceId: row.service_id,
+                                geometry: geometry,
                                 stops: result.rows
                                     .filter((stopRow) => row.variant_id === stopRow.variant_id)
                                     .map((stopRow) => {
@@ -808,7 +850,8 @@ module.exports = {
                                 id: parseInt(row.route_id),
                                 color: '#' + row.route_color,
                                 shortName: row.route_short_name,
-                                longName: row.route_long_name
+                                longName: row.route_long_name,
+                                areaName: resolveAreaName(row.route_long_name)
                             },
                             variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
@@ -859,7 +902,8 @@ module.exports = {
                                 id: parseInt(row.route_id),
                                 color: '#' + row.route_color,
                                 shortName: row.route_short_name,
-                                longName: row.route_long_name
+                                longName: row.route_long_name,
+                                areaName: resolveAreaName(row.route_long_name)
                             },
                             variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
@@ -910,7 +954,8 @@ module.exports = {
                                 id: parseInt(row.route_id),
                                 color: '#' + row.route_color,
                                 shortName: row.route_short_name,
-                                longName: row.route_long_name
+                                longName: row.route_long_name,
+                                areaName: resolveAreaName(row.route_long_name)
                             },
                             variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
@@ -962,7 +1007,8 @@ module.exports = {
                                 id: parseInt(row.route_id),
                                 color: '#' + row.route_color,
                                 shortName: row.route_short_name,
-                                longName: row.route_long_name
+                                longName: row.route_long_name,
+                                areaName: resolveAreaName(row.route_long_name)
                             },
                             variantId: parseInt(row.variant_id),
                             serviceId: parseInt(row.service_id)
@@ -1054,7 +1100,8 @@ module.exports = {
                                     id: parseInt(row.route_id),
                                     color: '#' + row.route_color,
                                     shortName: row.route_short_name,
-                                    longName: row.route_long_name
+                                    longName: row.route_long_name,
+                                    areaName: resolveAreaName(row.route_long_name)
                                 },
                                 serviceId: parseInt(row.service_id),
                                 stops: result.rows.map((row) => {

@@ -17,6 +17,7 @@ const config = require("./config");
 
 const express = require('express');
 const expressAuth = require('express-basic-auth');
+const expressWs = require('express-ws');
 
 const bodyParser = require('body-parser');
 
@@ -33,8 +34,6 @@ const v2Api = require("./endpoint/geojson/api");
 
 const appRealtime = require("./endpoint/app/realtime");
 const appBeacons = require("./endpoint/app/beacons");
-
-const Extrapolator = require("./operation/Extrapolator");
 
 // </editor-fold>
 
@@ -84,6 +83,7 @@ let args = yargs
 // ======================================================= APP =========================================================
 
 const app = express();
+const ws = expressWs(app);
 
 app.use(logRequests);
 app.use(checkForRunningImport);
@@ -146,14 +146,21 @@ app.group("/geojson", (router) => {
     router.get("/realtime/lines/:lines", v1Realtime.positions);
     router.get("/realtime/vehicle/:vehicle", v1Realtime.positions);
 
-    router.post("/receiver", v1Receiver.updatePositions);
+    router.post("/receiver", (req, res) => {
+        v1Receiver.updatePositions(req, res);
+
+        setTimeout(notifyPositionsSubscribers, 0);
+    });
+
+    router.ws("/realtime/stream", registerPositionsSubscriber);
 
     router.get("/stops", v1Stops.stops);
     router.get("/:stop/buses", v1Stops.nextBusesAtStop);
     router.get("/:tripId/stops", v1Stops.stopsForTrip);
 
     router.get("/lines/all", v1Lines.fetchAllLinesAction);
-//TODO: fix this call since it's just throwing exceptions
+
+    // TODO: fix this call since it's just throwing exceptions
     router.get("/lines", v1Lines.fetchLinesAction);
 });
 
@@ -268,20 +275,28 @@ function startDatabase() {
     database.connect().then(() => {
         logger.warn("Connected to database");
 
-        startCommands();
         startServer();
     });
 }
 
 function startServer() {
-
     let listener = app.listen(args.port, function () {
         logger.warn(`Server started on port ${listener.address().port}`)
     })
 }
 
-function startCommands() {
-    new Extrapolator().run();
+function registerPositionsSubscriber(client) {
+    client.channel = 'positions';
+}
+
+function notifyPositionsSubscribers() {
+    v1Realtime.getPositions().then((positions) => {
+        ws.getWss().clients.forEach((client) => {
+            if (client.channel === 'positions') {
+                client.send(JSON.stringify(positions));
+            }
+        });
+    });
 }
 
 

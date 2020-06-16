@@ -90,7 +90,7 @@ module.exports.updatePositions = function (req, res) {
                 })
             })
                 .then(() => {
-                    res.status(200).jsonp({success: true});
+                    res.status(200).jsonp({ success: true });
 
                     client.release();
                 })

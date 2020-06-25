@@ -7,6 +7,13 @@ const utils = require("../../util/utils");
 const LineUtils = require("../../model/line/LineUtils");
 const Positions = require("../../model/realtime/Positions");
 
+module.exports.getPositions = function (coordinates) {
+    return Promise.resolve().then(() => {
+        let positions = new Positions(coordinates);
+        return positions.getBuses('');
+    });
+};
+
 module.exports.positions = function (req, res) {
     Promise.resolve().then(() => {
         let positions = new Positions(req.query.coordinates);

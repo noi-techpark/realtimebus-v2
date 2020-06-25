@@ -18,8 +18,6 @@ const spawn = require('child_process').spawnSync;
 const VdvFile = require("../../model/vdv/VdvFile");
 const HttpError = require("../../util/HttpError");
 
-const ExtrapolatePositions = require("../../operation/Extrapolator");
-
 const _ = require('underscore');
 const logger = require("../../util/logger");
 const config = require("../../config");
@@ -239,6 +237,10 @@ module.exports.process = function(fileData, callbacks) {
                     if (!!callbacks.finished) {
                         callbacks.finished(response);
                     }
+                    
+                    logger.info("=========================================================");
+                    logger.info("==================== Import completed! ==================");
+                    logger.info("=========================================================");
 
                     client.release();
                 })
@@ -1247,6 +1249,16 @@ function getLinePath(client) {
 function importAdditionalDataFromGtfs(client) {
     logger.warn("Importing data from GTFS files");
 
+    let gtfsFolder = __dirname + '/../../static/gtfs/';
+
+    if (!fs.existsSync(gtfsFolder + '/calendar.txt')) {
+        fs.closeSync(fs.openSync(gtfsFolder + '/calendar.txt', 'w'));
+    }
+
+    if (!fs.existsSync(gtfsFolder + '/calendar_dates.txt')) {
+        fs.closeSync(fs.openSync(gtfsFolder + '/calendar_dates.txt', 'w'));
+    }
+
     return Promise.resolve()
         .then(() => {
             return `
@@ -1261,8 +1273,8 @@ function importAdditionalDataFromGtfs(client) {
         })
         .then(() => {
             return Promise.all([
-                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar.txt'),
-                csv({ delimiter: ',' }).fromFile(__dirname + '/../../static/gtfs/calendar_dates.txt')
+                csv({ delimiter: ',' }).fromFile(gtfsFolder + '/calendar.txt'),
+                csv({ delimiter: ',' }).fromFile(gtfsFolder + '/calendar_dates.txt')
             ]);
         })
         .then((datasets) => {
@@ -1285,13 +1297,13 @@ function importAdditionalDataFromGtfs(client) {
                             ].join(', ') + ")";
                         }).join(', ') + ";"),
 
-                        client.query("INSERT INTO data.rec_srv_date (service_id, the_date, is_added) VALUES " + datasets[1].map((tuple) => {
+                        (!!datasets[1] && datasets[1].length > 0) ? client.query("INSERT INTO data.rec_srv_date (service_id, the_date, is_added) VALUES " + datasets[1].map((tuple) => {
                             return "(" + [
                                 tuple.service_id,
                                 "'" + tuple.date.substring(0, 4) + "-" + tuple.date.substring(4, 6) + "-" + tuple.date.substring(6, 8) + "'",
                                 tuple.exception_type === '1' ? true : false
                             ].join(', ') + ")";
-                        }).join(', ') + ";"),
+                        }).join(', ') + ";") : Promise.resolve(),
 
                         client.query("INSERT INTO data.rec_vnt (service_id, line_id, variant_id) (SELECT DISTINCT day_type, line, variant FROM data.rec_frt ORDER BY 1 ASC, 2 ASC, 3 ASC);")
 

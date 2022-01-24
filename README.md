@@ -3,6 +3,8 @@
 This is the backend code of [http://realtimetest.opensasa.info](http://realtimetest.opensasa.info). 
 It provides real-time positions of the public transport vehicles managed by SASA SpA-AG in South Tyrol. 
 
+[![CI](https://github.com/noi-techpark/realtimebus-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/noi-techpark/realtimebus-v2/actions/workflows/ci.yml)
+
 ### Architecture
 
 The server is written in [Node.js](https://nodejs.org/) and is backed by a [PostgreSQL](https://www.postgresql.org) database.

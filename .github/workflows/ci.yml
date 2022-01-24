@@ -10,6 +10,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: '12'
-          cache: 'npm'
+        # disable cache: no package-lock.json found  
+        # cache: 'npm'
       - name: install
         run: npm install

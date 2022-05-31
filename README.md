@@ -1,3 +1,5 @@
+# DEPRECATED
+
 ## SASA SpA-AG real-time server
 
 This is the backend code of [http://realtimetest.opensasa.info](http://realtimetest.opensasa.info). 
